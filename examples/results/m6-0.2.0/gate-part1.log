@@ -1,0 +1,197 @@
+== host: grammar
+freq codex 17-token (P(a) ~ 0.5025)     chi2    3.5 df 1 ok
+freq digits, full                       chi2    7.3 df 3 ok
+freq digits, top_k 2                    chi2    0.9 df 1 ok
+freq digits, top_k 3, temp 0.7          chi2    2.0 df 2 ok
+freq digits, top_p 0.6                  chi2    0.9 df 1 ok
+freq digits, top_p 0.9, top_k 3, temp 1.3 chi2    5.1 df 2 ok
+80/80 passed
+   ok
+== host: json
+json_test: 84/84 passed
+   ok
+== host: spill
+spill: checksum mismatch in /tmp/spill_test.9HzPfi/inferd-spill/ba86c5c5d71154d83: discarding it
+spill: checksum mismatch in /tmp/spill_test.9HzPfi/inferd-spill/s75bfafe081c5a043: discarding it
+spill_test: 39/39 passed
+   ok
+== host: weights
+ok   valid                    exit 0 (want 0)
+ok   valid with metadata      exit 0 (want 0)
+ok   header length past EOF   exit 1 (want 1)
+ok   header length 2^64-1     exit 1 (want 1)
+ok   header length 0          exit 1 (want 1)
+ok   truncated header         exit 1 (want 1)
+ok   header not JSON          exit 1 (want 1)
+ok   header not an object     exit 1 (want 1)
+ok   offsets past data        exit 1 (want 1)
+ok   offsets reversed         exit 1 (want 1)
+ok   offset 2^64-1            exit 1 (want 1)
+ok   negative offset          exit 1 (want 1)
+ok   shape/range mismatch     exit 1 (want 1)
+ok   dtype size mismatch      exit 1 (want 1)
+ok   shape product overflow   exit 1 (want 1)
+ok   negative dim             exit 1 (want 1)
+ok   fractional dim           exit 1 (want 1)
+ok   unknown dtype            exit 1 (want 1)
+ok   missing offsets          exit 1 (want 1)
+ok   three offsets            exit 1 (want 1)
+ok   tensor not an object     exit 1 (want 1)
+weights_test: 21/21 passed
+ok   ngram I64[3]                   exit 0 (want 0)
+ok   ngram I64[32] (R01 repro)      exit 1 (want 1)
+ok   ngram F64[3]                   exit 1 (want 1)
+ok   ngram I64[2] short             exit 1 (want 1)
+ok   ngram_size 5                   exit 1 (want 1)
+ok   ngram heads 0                  exit 1 (want 1)
+ok   qlinear 4-bit                  exit 0 (want 0)
+ok   qlinear 8-bit                  exit 0 (want 0)
+ok   qlinear F32 scales             exit 1 (want 1)
+ok   qlinear biases shape           exit 1 (want 1)
+ok   qlinear rank-3 weight          exit 1 (want 1)
+ok   qlinear 5-bit                  exit 1 (want 1)
+ok   qlinear I32 weight             exit 1 (want 1)
+ok   qlinear bf16                   exit 0 (want 0)
+ok   qlinear bf16 rank 1            exit 1 (want 1)
+ok   qlinear_any 5-bit              exit 0 (want 0)
+ok   qlinear_w 5-bit                exit 0 (want 0)
+ok   qlinear_any 4-bit g32          exit 0 (want 0)
+ok   qlinear_any scales too wide    exit 1 (want 1)
+ok   qlinear_any scales rows        exit 1 (want 1)
+ok   qlinear_any bits 0             exit 1 (want 1)
+ok   qlinear_any group 0            exit 1 (want 1)
+ok   qlinear_any group 48           exit 1 (want 1)
+ok   qlinear_any bits string        exit 1 (want 1)
+ok   qlinear_any 0 rows             exit 1 (want 1)
+ok   qlinear_any 3-bit partial row  exit 1 (want 1)
+ok   qlinear_any F32 biases         exit 1 (want 1)
+ok   bf16 rows                      exit 0 (want 0)
+ok   bf16 rows K mismatch           exit 1 (want 1)
+ok   bf16 rows quantized            exit 0 (want 0)
+ok   bf16 rows scales too wide      exit 1 (want 1)
+ok   bf16_q8                        exit 0 (want 0)
+ok   bf16_q8 K 100                  exit 1 (want 1)
+ok   bf16_q8 rank 3                 exit 1 (want 1)
+ok   moe                            exit 0 (want 0)
+ok   moe 2-D                        exit 0 (want 0)
+ok   moe rank-1 weight              exit 1 (want 1)
+ok   moe scales K (2-bit)           exit 1 (want 1)
+ok   moe scales N                   exit 1 (want 1)
+ok   moe scales E                   exit 1 (want 1)
+ok   moe scales rank                exit 1 (want 1)
+ok   moe F32 biases                 exit 1 (want 1)
+ok   ple                            exit 0 (want 0)
+ok   ple shard scales too wide      exit 1 (want 1)
+ok   ple uneven shards              exit 1 (want 1)
+ok   config                         exit 0 (want 0)
+ok   config kv heads 0              exit 1 (want 1)
+ok   config heads 3/2               exit 1 (want 1)
+ok   config layers 0                exit 1 (want 1)
+ok   config linear heads 0          exit 1 (want 1)
+ok   config head_dim string         exit 1 (want 1)
+ok   config vocab 2^31              exit 1 (want 1)
+ok   config eps 0                   exit 1 (want 1)
+ok   config layer_types short       exit 1 (want 1)
+weights_test loaders: 54/54 passed
+   ok
+== front end: test_structured
+test_deep_reply (__main__.Bounded.test_deep_reply) ... ok
+test_patterns_refused (__main__.Bounded.test_patterns_refused) ... ok
+test_review_case_is_linear (__main__.Bounded.test_review_case_is_linear) ... ok
+test_same_as_re_where_defined (__main__.Bounded.test_same_as_re_where_defined) ... ok
+test_schemas_accepted (__main__.Bounded.test_schemas_accepted) ... ok
+test_schemas_refused (__main__.Bounded.test_schemas_refused) ... ok
+test_unique_items_linear (__main__.Bounded.test_unique_items_linear) ... ok
+test_validation_is_bounded (__main__.Bounded.test_validation_is_bounded) ... ok
+test_bare (__main__.Extract.test_bare) ... ok
+test_failures (__main__.Extract.test_failures) ... ok
+test_fenced (__main__.Extract.test_fenced) ... ok
+test_first_valid_candidate_wins (__main__.Extract.test_first_valid_candidate_wins) ... ok
+test_prose_around (__main__.Extract.test_prose_around) ... ok
+test_instruction_on_last_user_turn (__main__.ParseFormat.test_instruction_on_last_user_turn) ... ok
+test_kinds (__main__.ParseFormat.test_kinds) ... ok
+test_bad_format_400 (__main__.StructuredChat.test_bad_format_400) ... ok
+test_constrained_routing (__main__.StructuredChat.test_constrained_routing) ... ok
+test_first_try (__main__.StructuredChat.test_first_try) ... ok
+test_gives_up_with_422 (__main__.StructuredChat.test_gives_up_with_422) ... ok
+test_reasoning_kept_content_cleaned (__main__.StructuredChat.test_reasoning_kept_content_cleaned) ... ok
+test_retries_knob (__main__.StructuredChat.test_retries_knob) ... ok
+test_retry_with_error_fed_back (__main__.StructuredChat.test_retry_with_error_fed_back) ... ok
+test_stream_buffers_then_sends (__main__.StructuredChat.test_stream_buffers_then_sends) ... ok
+test_text_passthrough (__main__.StructuredChat.test_text_passthrough) ... ok
+test_tool_call_passes_through (__main__.StructuredChat.test_tool_call_passes_through) ... ok
+test_arrays (__main__.Validate.test_arrays) ... ok
+test_combinators (__main__.Validate.test_combinators) ... ok
+test_enum_const (__main__.Validate.test_enum_const) ... ok
+test_nested_and_ref (__main__.Validate.test_nested_and_ref) ... ok
+test_person (__main__.Validate.test_person) ... ok
+test_types (__main__.Validate.test_types) ... ok
+
+----------------------------------------------------------------------
+Ran 31 tests in 0.973s
+
+OK
+   ok
+== front end: test_tools
+test_after_stop_nothing (__main__.StopStrings.test_after_stop_nothing) ... ok
+test_cut (__main__.StopStrings.test_cut) ... ok
+test_held_prefix_released (__main__.StopStrings.test_held_prefix_released) ... ok
+test_keep_and_multi (__main__.StopStrings.test_keep_and_multi) ... ok
+test_parse (__main__.StopStrings.test_parse) ... ok
+test_stop_inside_one_piece (__main__.StopStrings.test_stop_inside_one_piece) ... ok
+test_stop_straddles_pieces (__main__.StopStrings.test_stop_straddles_pieces) ... ok
+test_unicode (__main__.StopStrings.test_unicode) ... ok
+test_content_before_and_two_calls (__main__.ToolCalls.test_content_before_and_two_calls) ... ok
+test_history_arguments_decoded_for_template (__main__.ToolCalls.test_history_arguments_decoded_for_template) ... ok
+test_malformed_left_as_text (__main__.ToolCalls.test_malformed_left_as_text) ... ok
+test_multiline_value_and_unknown_tool (__main__.ToolCalls.test_multiline_value_and_unknown_tool) ... ok
+test_no_closing_tool_call_tag (__main__.ToolCalls.test_no_closing_tool_call_tag) ... ok
+test_plain_text_untouched (__main__.ToolCalls.test_plain_text_untouched) ... ok
+test_single_call (__main__.ToolCalls.test_single_call) ... ok
+test_string_param_stays_string (__main__.ToolCalls.test_string_param_stays_string) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.000s
+
+OK
+   ok
+== front end: test_stream
+test_holds_partial_utf8_until_complete (__main__.Detokenizer.test_holds_partial_utf8_until_complete) ... ok
+test_linear_time (__main__.Detokenizer.test_linear_time) ... ok
+test_matches_full_decode (__main__.Detokenizer.test_matches_full_decode) ... ok
+test_after_reasoning_nothing_held (__main__.Split.test_after_reasoning_nothing_held) ... ok
+test_partial_think_end_at_terminal (__main__.Split.test_partial_think_end_at_terminal) ... ok
+test_review_case_flushed (__main__.Split.test_review_case_flushed) ... ok
+test_streamed_equals_whole (__main__.Split.test_streamed_equals_whole) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.020s
+
+OK
+   ok
+== reference tokens
+   ok
+== logits, chunk 1
+loaded in 1.6 s
+wrote 4 x 248320 logits (chunk 1)
+   ok
+== compare, chunk 1
+seq 0: cos 0.99062  max|diff| 3.406  KL 0.00910  top1 ok (' jumps')  top5 overlap 4/5
+seq 1: cos 0.99979  max|diff| 0.219  KL 0.00001  top1 ok (')')  top5 overlap 5/5
+seq 2: cos 0.99974  max|diff| 0.318  KL 0.00050  top1 ok (' four')  top5 overlap 5/5
+seq 3: cos 0.99992  max|diff| 0.219  KL 0.00067  top1 ok (' plus')  top5 overlap 5/5
+   ok
+== logits, chunk 24
+loaded in 1.6 s
+wrote 4 x 248320 logits (chunk 24)
+   ok
+== compare, chunk 24
+seq 0: cos 0.99433  max|diff| 2.750  KL 0.00550  top1 ok (' jumps')  top5 overlap 4/5
+seq 1: cos 0.99978  max|diff| 0.219  KL 0.00001  top1 ok (')')  top5 overlap 5/5
+seq 2: cos 0.99977  max|diff| 0.344  KL 0.00038  top1 ok (' four')  top5 overlap 5/5
+seq 3: cos 0.99992  max|diff| 0.250  KL 0.00006  top1 ok (' plus')  top5 overlap 5/5
+   ok
+== bench
+loaded in 1.6 s
+step: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+   FAILED (see gate-20261103-2310.log)
