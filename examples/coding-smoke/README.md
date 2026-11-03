@@ -8,8 +8,8 @@ gets one feedback round. A test scores 1.0 on the first try and 0.5 after feedba
 which makes this a quick check that a server change has not broken generation quality under load.
 
 ```bash
-git clone https://github.com/Incept5-AI/languages-benchmark ~/dev/incept5-ai/languages-benchmark   # once
-LANGBENCH=~/dev/incept5-ai/languages-benchmark ./coding_smoke.sh medium 8    # effort (none|low|medium|xhigh), workers
+./coding_smoke.sh medium 8      # effort (none|low|medium|xhigh), workers; clones languages-benchmark on first use
+LANGBENCH=<your checkout> ./coding_smoke.sh medium 8   # or use an existing checkout
 ```
 
 `coding_smoke.sh` runs the benchmark unmodified (`bench.py run --suite v1 --langs python,typescript ...`), writes

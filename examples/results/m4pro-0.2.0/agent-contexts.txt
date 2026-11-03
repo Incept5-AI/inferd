@@ -1,0 +1,22 @@
+1. save a context (8k-token catalogue, effort none, persist memory)
+  catalogue-abe0edaf: 8370 tokens, computed in 66.037 s; pinned=True gpu=True ssd=False (265.1 MiB of KV)
+
+2. launch 4 agents from it at once, each with its own task
+  agent 0    TTFT  1.85 s  prompt   8398  cached   8352  | The on-call lead for service S-010 is Aiko Osei.
+  agent 1    TTFT  0.47 s  prompt   8398  cached   8352  | The on-call lead for service S-017 is Kwame Iyer.
+  agent 2    TTFT  1.85 s  prompt   8398  cached   8352  | The on-call lead for service S-024 is Mei Varga.
+  agent 3    TTFT  1.85 s  prompt   8398  cached   8352  | The on-call lead for service S-031 is Freya Rossi.
+  all 4 answered in 3.02 s
+
+3. two more turns for agent 0: a long answer, then a question about it (resumes after its own answer)
+  agent 0    TTFT  0.86 s  prompt   8446  cached   8352  | S-002 RB-2408 / S-010 RB-1976 / S-015 RB-8353 / S-030 RB-8053 / S-031 
+  agent 0    TTFT  1.27 s  prompt   8710  cached   8576  | The service with the highest number among those listed is S-187, which
+
+4-5. skipped: the server has no SSD tier (start it with SPILL_DIR=...)
+
+6. 20 one-off agents with "cache": "drop"
+  snapshots 25 -> 25, cached KV blocks 444 -> 444
+
+7. clean up
+  {'id': 'catalogue-abe0edaf', 'object': 'context', 'deleted': True}
+  cache now: 21 snapshots, 173 cached KV blocks, 0 contexts

@@ -1,0 +1,19 @@
+
+demo                 result     time  exit   checks
+quickstart           PASS      9.1 s     0        -
+agent-budgets        PASS    181.5 s     0        -
+tools-web-search     PASS     20.2 s     0        -
+tools-shell          PASS     22.3 s     0        -
+structured-output    PASS     35.3 s     0        -
+agent-contexts       PASS    150.4 s     0        -
+agent-handoff        PASS    282.2 s     0    19/19
+agent-team           PASS    709.0 s     0      8/8
+ocr-agents           PASS     27.9 s     0        -
+ocr-agents-compare   PASS    306.7 s     0        -
+coding-smoke-none    PASS    194.0 s     0        -
+coding-smoke-medium  PASS    450.6 s     0        -
+agent-swarm          PASS    158.5 s     0        -
+agent-followups      PASS    617.0 s     0        -
+users-at-once        PASS    415.0 s     0        -
+
+15/15 demos passed on m4pro (0.2.0); coding-smoke re-run with clients on a second Mac (node/tsx)

@@ -1,0 +1,16 @@
+# m4pro-rel020  2026-11-03 21:56  http://127.0.0.1:8300/v1
+quickstart	9.1 s	exit 0
+agent-budgets	181.5 s	exit 0
+tools-web-search	20.2 s	exit 0
+tools-shell	22.3 s	exit 0
+structured-output	35.3 s	exit 0
+agent-contexts	150.4 s	exit 0
+agent-handoff	282.2 s	exit 0
+agent-team	709.0 s	exit 0
+ocr-agents	27.9 s	exit 0
+ocr-agents-compare	306.7 s	exit 0
+coding-smoke-none	4.6 s	exit 1
+coding-smoke-medium	0.0 s	exit 1
+agent-swarm	158.5 s	exit 0
+agent-followups	617.0 s	exit 0
+users-at-once	415.0 s	exit 0

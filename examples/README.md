@@ -93,7 +93,7 @@ ONLY=agent-team,agent-handoff ./run_all.sh my-mac    # re-run some; the summary 
 Each demo's console output goes to `results/<name>/<demo>.txt` and its wall time to `timings.tsv`. At the end it prints
 (and saves as `summary.txt`) one line per demo: PASS when the demo exited 0 and printed no `FAIL` line, the time, the
 exit code, and how many of the demo's own checks passed; failed and skipped checks are listed under their demo. The
-script exits 1 if any demo failed. coding-smoke needs a checkout of languages-benchmark (`LANGBENCH=...`; see
+script exits 1 if any demo failed. coding-smoke clones languages-benchmark on first use (or set `LANGBENCH=...`; see
 [coding-smoke](coding-smoke/)). agent-team will usually print `SKIP` for its with/without comparison here, because
 the standard server has memory to spare; run it on its own against a small server to see the difference
 ([agent-team](agent-team/#give-it-a-server-that-is-short-of-memory)).

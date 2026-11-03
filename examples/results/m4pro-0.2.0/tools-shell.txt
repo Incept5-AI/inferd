@@ -1,0 +1,65 @@
+task: Look around the sandbox: list the files, tell me how many lines data.csv has, show the first 3 lines of notes.txt, and how much disk space is free. Also show me /etc/hosts.
+(max_context 4096, effort none, sandbox /private$TMPDIR/...)
+
+step 1: 5 tool call(s) [context 518/4096]
+  $ ls
+    data.csv
+    notes.txt
+    src
+  $ wc -l data.csv
+    42 data.csv
+  $ head -3 notes.txt
+    Ship examples on Monday.
+    Review tool calling.
+    Stop the server after.
+  $ df
+    Filesystem      512-blocks        Used   Available Capacity iused        ifree %iused  Mounted on
+    /dev/disk3s1s1  1942700360    26669576  1280486792     3%  484019   4291544596    0%   /
+    devfs                  464         464           0   100%     804            0  100%   /dev
+    /dev/disk3s6    1942700360     4194352  1280486792     1%       1   6402433960    0%   /System/Volumes/VM
+    /dev/disk3s2    1942700360    21299504  1280486792     2%    1031   6402433960    0%   /System/Volumes/Preboot
+    /dev/disk3s4    1942700360       54176  1280486792     1%     112   6402433960    0%   /System/Volumes/Update
+    /dev/disk1s2       1024000       12328      988584     2%       1      4942920    0%   /System/Volumes/xarts
+    /dev/disk1s1       1024000       11936      988584     2%      32      4942920    0%   /System/Volumes/iSCPreboot
+    /dev/disk1s3       1024000        1432      988584     1%      80      4942920    0%   /System/Volumes/Hardware
+    /dev/disk3s5    1942700360   606618864  1280486792    33% 2578035   6402433960    0%   /System/Volumes/Data
+    map auto_home            0           0           0   100%       0            0     -   /System/Volumes/Data/home
+    /dev/disk3s3    1942700360     2973416  1280486792     1%      64   6402433960    0%   /Volumes/Recovery
+    /dev/disk13s1  31251478008  8354241776 22894116936    27% 1771699 114470584680    0%   /Volumes/John-HDD
+    /dev/disk12s1  23437489656 18937274544  4497819872    81% 5142421  22489099360    0%   /Volumes/Rachel-HDD
+    /dev/disk5s1      17428480    16851608      523208    97%  298044      2616040   10%   /Library/Developer/CoreSimulator/Volumes/watchOS_23S303
+    /dev/disk15s1     34463744    33482712      892664    98%  607237      4463320   12%   /Library/Developer/CoreSimulator/Volumes/iOS_23C54
+  $ head /etc/hosts
+    REFUSED: path '/etc/hosts' is outside the sandbox
+step 2: final answer [context 1835/4096]
+
+Here's the sandbox overview:
+
+**Files in sandbox:**
+- `data.csv`
+- `notes.txt`
+- `src` (directory)
+
+**data.csv:** 42 lines
+
+**First 3 lines of notes.txt:**
+```
+Ship examples on Monday.
+Review tool calling.
+Stop the server after.
+```
+
+**Disk space free:** The root filesystem (`/`) has about **1.28 TB available** (1,280,486,792 512-blocks ≈ 615 GB in 1K blocks... actually ~1.28 TB in 512-byte blocks), with only 3% capacity used. The main data volume `/System/Volumes/Data` is at 33% used with the same ~1.28 TB available.
+
+**/etc/hosts:** ❌ Refused — that path is outside the sandbox, so I can't read it.
+
+22.3s total
+
+The guard on its own (what a misbehaving model would get back):
+  'rm -rf notes.txt'     -> REFUSED: 'rm' is not on the allow-list ['date', 'df', 'head', 'ls', 'pwd', 'uname', 'wc']
+  'head /etc/passwd'     -> REFUSED: path '/etc/passwd' is outside the sandbox
+  'ls ..'                -> REFUSED: path '..' is outside the sandbox
+  'ls; date'             -> REFUSED: shell metacharacters are not allowed
+  'cat notes.txt'        -> REFUSED: 'cat' is not on the allow-list ['date', 'df', 'head', 'ls', 'pwd', 'uname', 'wc']
+  'df /'                 -> REFUSED: df takes no path arguments here
+  'wc --files0-from=/etc/passwd' -> REFUSED: flag '--files0-from=/etc/passwd' is not allowed

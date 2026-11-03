@@ -3,11 +3,16 @@
 # tests) against an inferd server. The model writes a program, the harness builds and runs it and checks the output;
 # one feedback round on failure (1.0 first try, 0.5 after feedback).
 #
-#   LANGBENCH=~/dev/incept5-ai/languages-benchmark ./coding_smoke.sh [effort=medium] [workers=8]
+#   [LANGBENCH=<checkout>] ./coding_smoke.sh [effort=medium] [workers=8]
 #
-# Needs: python3, node + tsx for TypeScript (`brew install node && npm i -g tsx`). The benchmark repo is used as is.
+# Needs: python3, git, node + tsx for TypeScript (`brew install node && npm i -g tsx`). The benchmark repo
+# (github.com/Incept5-AI/languages-benchmark, public) is used as is; without LANGBENCH it is cloned once into
+# ~/.cache/inferd/languages-benchmark.
 set -e
-LANGBENCH=${LANGBENCH:-~/dev/incept5-ai/languages-benchmark}
+LANGBENCH=${LANGBENCH:-~/.cache/inferd/languages-benchmark}
+if [ ! -d $LANGBENCH ]; then
+  mkdir -p ${LANGBENCH:h} && git clone --depth 1 https://github.com/Incept5-AI/languages-benchmark $LANGBENCH
+fi
 URL=${INFERD_URL:-http://127.0.0.1:8300/v1}
 EFFORT=${1:-medium}
 WORKERS=${2:-8}

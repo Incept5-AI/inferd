@@ -1,0 +1,47 @@
+server cache at start: pinned 0 blocks, cached 173 blocks, snapshots 21, session snapshots 0, sessions 0, contexts 0
+
+1. the lead (effort medium, max_context 32k, priority 5) reads a ~8k-token catalogue
+  lead turn 1   TTFT  64.37 s  prompt   8163  cached      0 (  0%)  wall   70.5 s (reasoned 368 chars) | **S-081** — owned by **Platform**, on-call **Omar Nair**, st
+  PASS  lead turn 1 finished with an answer (finish stop)
+  PASS  lead found the incident: S-081, on-call Omar Nair
+  lead turn 2   TTFT   1.49 s  prompt   8271  cached   8128 ( 98%)  wall   16.9 s (reasoned 815 chars) | 1. Page Omar Nair, open the SEV-1 bridge, and begin **RB-768
+  PASS  lead turn 2 finished with a plan (finish stop)
+  PASS  lead turn 2 resumed from its own turn 1 (8128 of 8271 prompt tokens cached)
+
+2. save the lead's whole conversation (system, document, 2 turns) as a context: POST /v1/contexts
+  handoff-2d841ea2: 8402 tokens, saved in 1.33 s (engine prefill 1.331 s), 8224 tokens were already cached, pinned=True, 266.1 MiB of KV
+  PASS  the context is pinned
+  PASS  saving reused the lead's cached turns (8224 of 8402 tokens already cached)
+  cache: pinned 262 blocks, cached 435 blocks, snapshots 24, session snapshots 1, sessions 1, contexts 1
+
+3. hand it to three agents at once, each with its own settings
+  all three answered in 43.4 s (the lead took 64.4 s just to read the document)
+  writer        TTFT   0.47 s  prompt   8430  cached   8384 ( 99%)  wall    6.4 s | S-081 (Platform) is in a SEV-1 incident with a 40% and risin
+  critic        TTFT   1.78 s  prompt   8427  cached   8384 ( 99%)  wall   43.4 s (reasoned 3154 chars) | The plan is linear with no abort/escalate gate: if the RB-76
+  fact-checker  TTFT   1.57 s  prompt   8432  cached   8384 ( 99%)  wall    2.0 s | S-081
+  PASS  writer started from the lead's state: 8384 of 8430 tokens cached, TTFT 0.47 s vs 64.4 s to read
+  PASS  critic started from the lead's state: 8384 of 8427 tokens cached, TTFT 1.78 s vs 64.4 s to read
+  PASS  fact-checker started from the lead's state: 8384 of 8432 tokens cached, TTFT 1.57 s vs 64.4 s to read
+  PASS  fact-checker saw the lead's analysis (answered 'S-081', expected S-081)
+  PASS  writer finished inside its 16k max_context
+
+4. a reviewer at effort low (the effort is in the template's prefix: a variant of the context)
+  reviewer 1    TTFT  66.73 s  prompt   8453  cached   8416 (100%)  wall   76.9 s (reasoned 747 chars) | No — it omits stakeholder communication (status page, exec u
+  variants now: none (8402 tokens, prefill 1.331 s), medium (8402 tokens, prefill 1.331 s), low (8428 tokens, prefill 66.062 s)
+  low renders a different prefix: the first low agent paid for that variant once
+  reviewer 2    TTFT   0.52 s  prompt   8448  cached   8416 (100%)  wall    6.6 s (reasoned 419 chars) | Notify the Platform engineering manager that S-081 is in a S
+  PASS  second low agent reused the variant (8416 of 8448 cached, TTFT 0.52 s)
+
+5. DELETE the context and all sessions, then verify with GET /v1/cache
+  before: pinned 525 blocks, cached 698 blocks, snapshots 25, session snapshots 3, sessions 5, contexts 2
+  PASS  DELETE /v1/contexts/handoff-2d841ea2
+  PASS  DELETE /v1/sessions/... for 5 sessions
+  after:  pinned 0 blocks, cached 173 blocks, snapshots 21, session snapshots 0, sessions 0, contexts 0
+  PASS  pinned blocks released (525 -> 0, 0 at start)
+  PASS  sessions released (5 -> 0, session snapshots 3 -> 0)
+  PASS  the engine lists no variant of the context
+  PASS  GET /v1/contexts/{id} answers 404
+  fresh request TTFT  66.29 s  prompt   8420  cached      0 (  0%)  wall   66.5 s | ok
+  PASS  the same prefix sent fresh is no longer cached (0 of 8420 tokens cached; TTFT 66.3 s, the cost of re-reading)
+
+PASS: agent-handoff, 0 failed check(s)

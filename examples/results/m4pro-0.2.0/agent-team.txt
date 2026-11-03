@@ -1,0 +1,46 @@
+server: KV pool 892768 tokens (27899 blocks), 32 snapshot slots, 173 blocks cached at start
+team: planner ~2048 + 4 workers x ~1024 tokens; filler ~4096 tokens per round (less than the pool: the pressure comes mostly from snapshot slots, see README)
+
+=== run without (plain requests)
+  team's first turn: 5 agents, TTFT max 60.7 s
+  16 classifiers alone: cached KV 410 -> 530 blocks, snapshots 27 -> 24
+  round 1: filler 2 x ~2048 tokens + 16 classifiers in 75.4 s; cache now 797 blocks cached, 24 snapshots, 27102 free
+  round 1: team resumed; planner TTFT 62.12 s cached 0/2619, workers TTFT median 58.60 s, cached 0/5377
+  round 2: filler 2 x ~2048 tokens + 16 classifiers in 75.9 s; cache now 1074 blocks cached, 25 snapshots, 26825 free
+  round 2: team resumed; planner TTFT 3.59 s cached 2592/2682, workers TTFT median 3.59 s, cached 5248/5583
+
+=== run with the API (sessions, priorities, cache drop for one-offs)
+  team's first turn: 5 agents, TTFT max 60.9 s
+  16 classifiers alone: cached KV 1319 -> 1316 blocks, snapshots 28 -> 24
+  round 1: filler 2 x ~2048 tokens + 16 classifiers in 75.0 s; cache now 1468 blocks cached, 22 snapshots, 26431 free
+  round 1: team resumed; planner TTFT 3.56 s cached 2528/2614, workers TTFT median 3.56 s, cached 5056/5374
+  round 2: filler 2 x ~2048 tokens + 16 classifiers in 75.4 s; cache now 1633 blocks cached, 22 snapshots, 26266 free
+  round 2: team resumed; planner TTFT 3.31 s cached 2592/2680, workers TTFT median 3.31 s, cached 5312/5582
+
+=== side by side (TTFT in seconds; cached = share of prompt tokens served from the cache)
+                             |                       with the API |                            without
+planner TTFT med / max       |                        3.44 / 3.56 |                      32.85 / 62.12
+planner resumes cached       |             97%, stayed cached 2/2 |             49%, stayed cached 1/2
+workers TTFT med / max       |                        3.31 / 3.56 |                      21.24 / 62.68
+workers resumes cached       |             95%, stayed cached 8/8 |             48%, stayed cached 4/8
+classifiers TTFT med / max   |                      17.85 / 58.13 |                      21.69 / 41.68
+filler TTFT med / max        |                      54.03 / 66.16 |                      61.99 / 74.80
+errors (all roles)           |                                  0 |                                  0
+one-off burst: cached KV     |                1319 -> 1316 blocks |                  410 -> 530 blocks
+one-off burst: snapshots     |                           28 -> 24 |                           27 -> 24
+peak cached KV               |           1640 blocks (52k tokens) |           1083 blocks (34k tokens)
+SSD tier: spilled / restored |                        no SSD tier |                        no SSD tier
+wall                         |                              335 s |                              374 s
+
+=== checks
+  PASS  with the API: every request answered
+  PASS  with the API: classifiers labelled 48/48 tickets correctly
+  PASS  without: every request answered
+  PASS  without: classifiers labelled 48/48 tickets correctly
+  PASS  with the API: the planner stayed cached (2/2 resumes)
+  PASS  with the API: the workers stayed cached (8/8 resumes, 95% of prompt tokens)
+  PASS  with the API: one-offs left the cache flat (cached KV 1319 -> 1316 blocks, snapshots 28 -> 24)
+  PASS  workers resume better with the API: median TTFT 3.31 vs 21.24 s, cached 95% vs 48%
+  info  without the API the same one-off burst grew the cache 410 -> 530 blocks
+
+PASS: agent-team, 0 failed check(s)
