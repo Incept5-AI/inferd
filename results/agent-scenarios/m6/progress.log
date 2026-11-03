@@ -1,0 +1,29 @@
+16:55:49 after up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+17:20:43 after: 1492 s, exit 0; System-wide memory free percentage: 15%
+17:21:12 before up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+17:44:27 before: 1392 s, exit 0; System-wide memory free percentage: 15%
+17:44:56 before-nossd up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 
+17:51:48 before-nossd: 410 s, exit 0; System-wide memory free percentage: 15%
+17:52:40 after up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+18:16:01 after: 1399 s, exit 0; System-wide memory free percentage: 15%
+18:16:30 before up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+18:38:00 before: 1288 s, exit 0; System-wide memory free percentage: 15%
+18:38:12 ##### done
+18:38:36 before-nossd up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 
+18:48:42 before-nossd: 604 s, exit 0; System-wide memory free percentage: 15%
+18:48:53 ##### done
+18:49:10 after up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+18:55:21 after: 369 s, exit 0; System-wide memory free percentage: 15%
+18:55:33 ##### done
+M6 QUEUE DONE 18:55
+22:11:45 after up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 1.4 (auto) -> 22.5 allocated inferd: 8-bit KV, 1420 KV blocks (1 GiB, 0.0M tokens), 24 slots (3.4 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+22:36:40 after: 1492 s, exit 0; System-wide memory free percentage: 19%
+22:36:51 ##### done
+22:37:09 after up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 1.4 (auto) -> 22.5 allocated inferd: 8-bit KV, 1420 KV blocks (1 GiB, 0.0M tokens), 24 slots (3.4 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+23:00:27 after: 1396 s, exit 0; System-wide memory free percentage: 18%
+23:00:39 ##### done
+M6 FINAL QUEUE DONE 23:00
+23:01:21 after up: inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+23:24:51 after: 1407 s, exit 0; System-wide memory free percentage: 15%
+23:25:02 ##### done
+M6 FINAL QUEUE 2 DONE 23:25

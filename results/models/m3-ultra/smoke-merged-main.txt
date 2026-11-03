@@ -1,0 +1,60 @@
+#### merged (~/github/inferd-merge/engine)
+== check chunk 1
+seq 0: cos 0.99307  max|diff| 6.523  KL 0.00640  top1 ok (' jumps')  top5 overlap 5/5
+seq 1: cos 0.99987  max|diff| 0.326  KL 0.00002  top1 ok (')')  top5 overlap 4/5
+seq 2: cos 0.99965  max|diff| 0.469  KL 0.00002  top1 ok ('0')  top5 overlap 4/5
+seq 3: cos 0.99989  max|diff| 0.289  KL 0.00003  top1 ok (' de')  top5 overlap 5/5
+== check chunk 5
+seq 0: cos 0.99201  max|diff| 4.609  KL 0.00158  top1 ok (' jumps')  top5 overlap 5/5
+seq 1: cos 0.99983  max|diff| 0.238  KL 0.00001  top1 ok (')')  top5 overlap 4/5
+seq 2: cos 0.99957  max|diff| 0.500  KL 0.00002  top1 ok ('0')  top5 overlap 4/5
+seq 3: cos 0.99974  max|diff| 0.594  KL 0.00000  top1 ok (' de')  top5 overlap 5/5
+== check chunk 8
+seq 0: cos 0.98925  max|diff| 6.074  KL 0.01410  top1 ok (' jumps')  top5 overlap 4/5
+seq 1: cos 0.99993  max|diff| 0.188  KL 0.00002  top1 ok (')')  top5 overlap 5/5
+seq 2: cos 0.99951  max|diff| 0.562  KL 0.00003  top1 ok ('0')  top5 overlap 4/5
+seq 3: cos 0.99980  max|diff| 0.375  KL 0.00001  top1 ok (' de')  top5 overlap 5/5
+== check chunk 24
+seq 0: cos 0.99449  max|diff| 5.609  KL 0.00736  top1 ok (' jumps')  top5 overlap 4/5
+seq 1: cos 0.99985  max|diff| 0.270  KL 0.00001  top1 ok (')')  top5 overlap 5/5
+seq 2: cos 0.99964  max|diff| 0.496  KL 0.00001  top1 ok ('0')  top5 overlap 4/5
+seq 3: cos 0.99979  max|diff| 0.377  KL 0.00001  top1 ok (' de')  top5 overlap 5/5
+== bench 1,16,64 2048
+B=  1 L=  2048 R=1  step   27.08 ms (GPU   26.39)  =    36.9 rows/s total,   36.9/stream
+B= 16 L=  2048 R=1  step   68.64 ms (GPU   67.96)  =   233.1 rows/s total,   14.6/stream
+B= 64 L=  2048 R=1  step  201.86 ms (GPU  201.03)  =   317.1 rows/s total,    5.0/stream
+== bench 1,8,16 2048 R5
+B=  1 L=  2048 R=5  step   37.48 ms (GPU   36.75)  =   133.4 rows/s total,  133.4/stream
+B=  8 L=  2048 R=5  step  116.46 ms (GPU  115.72)  =   343.5 rows/s total,   42.9/stream
+B= 16 L=  2048 R=5  step  242.40 ms (GPU  241.65)  =   330.0 rows/s total,   20.6/stream
+== bench 1 8192 R8
+B=  1 L=  8192 R=8  step   57.60 ms (GPU   56.77)  =   138.9 rows/s total,  138.9/stream
+== bench 4,8 131072 R8
+B=  4 L=131072 R=8  step  216.57 ms (GPU  215.73)  =   147.8 rows/s total,   36.9/stream
+B=  8 L=131072 R=8  step  408.60 ms (GPU  407.59)  =   156.6 rows/s total,   19.6/stream
+== gemm
+M=   1 all linear layers: 22.2 ms per step (16.0 GB, 721 GB/s; bandwidth floor 14.0 ms)
+M=   2 all linear layers: 22.7 ms per step (16.0 GB, 706 GB/s; bandwidth floor 14.0 ms)
+M=   5 all linear layers: 32.4 ms per step (16.0 GB, 495 GB/s; bandwidth floor 14.0 ms)
+M=   8 all linear layers: 52.0 ms per step (16.0 GB, 308 GB/s; bandwidth floor 14.0 ms)
+M=  16 all linear layers: 54.3 ms per step (16.0 GB, 295 GB/s; bandwidth floor 14.0 ms)
+M=  32 all linear layers: 89.9 ms per step (16.0 GB, 178 GB/s; bandwidth floor 14.0 ms)
+M=  64 all linear layers: 158.0 ms per step (16.0 GB, 101 GB/s; bandwidth floor 14.0 ms)
+== prefill 8192
+loaded in 1.8 s
+prefill L=  8192 chunk  1024:   18.93 s  =     433 tok/s (GPU 18.90 s)
+prefill L=  8192 chunk  2048:   18.81 s  =     436 tok/s (GPU 18.79 s)
+== followup 16384
+loaded in 2.0 s
+followup L= 16384 B= 1 chunk   32:    111.6 ms per step (median of 5)
+followup L= 16384 B= 1 chunk  136:    432.1 ms per step (median of 5)
+followup L= 16384 B=16 chunk   32:   1322.8 ms per step (median of 5)
+followup L= 16384 B=16 chunk  136:   5549.7 ms per step (median of 5)
+== spec_test
+plain: 516 tokens in 4.39 s = 117.4 tok/s total over 4 seqs, 1.01 tokens per cycle, 33.6 ms GPU per cycle
+spec : host 116.0 ms per cycle, 113.6 ms of it in commit+wait, 0.3 ms submit->GPU start
+spec : 1053 kernel dispatches per cycle
+spec : 560 tokens in 2.09 s = 268.1 tok/s total over 4 seqs, 7.78 tokens per cycle, 113.1 ms GPU per cycle
+seq 0 diverges after 29 generated tokens (plain 271 vs spec 37550)
+lossless check: 3/4 sequences identical over 128 tokens
+#### merged done

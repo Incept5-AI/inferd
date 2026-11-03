@@ -1,0 +1,31 @@
+15:46:18 start
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    3.79     135.0    141.2  1.0     0.17     0.17      140.9  140.9   16352  []
+ 16k   4   4   0    5.67     361.2    400.7 0.92     0.56     0.56      101.5   99.4   16352  []
+ 16k   8   8   0    9.08     451.2    507.1 0.92      1.0      1.0       65.7   63.3   16352  []
+ 16k  16  16   0   15.92     514.5    585.6  0.9     1.93     1.93       37.5   36.1   16352  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 64k   1   1   0    4.42     115.9    125.6  1.0     0.34     0.34      125.3  125.3   65632  []
+ 64k   4   4   0    7.91     259.0    304.8 0.84     1.19     1.19       76.2   74.1   65632  []
+ 64k   8   8   0   14.19     288.6    352.1 0.88     2.56     2.56       44.6   41.7   65632  []
+ 64k  16  16   0   30.88     265.3    314.7 0.87     4.85     4.85       20.3   19.6   65632  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+128k   1   1   0    5.17      98.9    113.5  1.0     0.66     0.66      113.2  113.2  132064  []
+128k   4   4   0   12.62     162.3    203.4  0.8     2.55     2.55       53.6   50.8  132064  []
+128k   8   8   0   26.22     156.2    197.3 0.88     5.45     5.45       24.9   23.1  132064  []
+128k  16  16   0   51.37     159.5    203.3 0.87    11.07    11.07       12.8   11.5  132064  []
+{"label": "inferd3", "phase": "fanout", "shared": "32k", "n": 8, "ok": 8, "err": 0, "wall_s": 25.29, "ttft_med": 23.06, "ttft_max": 23.06, "gen_tps": 27.3, "prompt_tokens": 283067, "cached_tokens": 247296}
+{"label": "inferd3", "phase": "turns", "shared": "32k", "n": 8, "turns": 2, "ok": 16, "err": 0, "wall_s": 26.65, "turns_per_min": 36.02, "gen_tps": 141.3, "ttft_med": 2.44, "ttft_p95": 7.91, "decode_med": 28.4, "prompt_tokens": 588056, "cached_tokens": 572704}
+{"label": "inferd3", "phase": "fanout", "shared": "64k", "n": 16, "ok": 16, "err": 0, "wall_s": 60.59, "ttft_med": 56.55, "ttft_max": 56.55, "gen_tps": 21.8, "prompt_tokens": 1139728, "cached_tokens": 1067520}
+{"label": "inferd3", "phase": "turns", "shared": "64k", "n": 16, "turns": 2, "ok": 32, "err": 0, "wall_s": 72.59, "turns_per_min": 26.45, "gen_tps": 99.1, "ttft_med": 7.27, "ttft_p95": 22.12, "decode_med": 8.2, "prompt_tokens": 2323064, "cached_tokens": 2292224}
+17:23:27 done
+17:24:13 evening2 start
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k  32  32   0   32.36     506.3    582.4 0.86     3.71     4.23       18.2   17.2   16352  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 32k   1   1   0    3.77     136.0    145.4  1.0     0.24     0.24      145.1  145.1   32736  []
+ 32k   4   4   0    6.91     296.5    341.9 0.82     0.92     0.92       97.7   85.3   32736  []
+ 32k   8   8   0   11.74     348.8    410.5 0.92     1.77     1.77       51.3   48.8   32736  []
+ 32k  16  16   0   21.51     380.9    459.0  0.9     3.66     3.66       29.0   27.4   32736  []
+ 32k  32  32   0   42.29     387.5    474.0 0.84     6.25     7.72       14.7   13.3   32736  []
+17:52:40 evening2 done

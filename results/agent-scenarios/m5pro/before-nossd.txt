@@ -1,0 +1,8 @@
+agent scenarios c on http://127.0.0.1:8300/v1 (qwen3.8-27b), mode implicit, preset m5pro (no /v1/cache: memory from --pid only)
+
+[c] re-used agents
+  resume after: resident             n=8    err=0   TTFT med 0.263 p90 0.276 max 0.276 s, cached 99% wall_s=5.55 gen_tok_s=34.8 peak_rss_gib=15.69
+  (filler: 6 x ~20k prompts in 233.07 s, 0 errors)
+  resume after: filler               n=8    err=0   TTFT med 15.086 p90 15.121 max 15.149 s, cached 12% wall_s=109.28 gen_tok_s=1.8 peak_rss_gib=15.7
+  (586 s)
+

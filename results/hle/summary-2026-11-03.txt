@@ -1,0 +1,18 @@
+Qwen3.8-27B 4-bit + DFlash2: concurrency 32
+  score at 32k 31.2% -> after 128k rerun 32.4% (56/173); re-asked 12, 2 became right, still capped 0, looped 0, unparsed 2
+  tokens per question: median 4125, mean 8307, p90 22830, max 77123; total 1,437,060
+  wall: 32k phase 34.8 min + 128k rerun 12.4 min = 47.2 min
+  decode: aggregate 507 tok/s (all tokens / total wall); per question median 21.5 tok/s (tokens / its own wall time, 32 in flight)
+  per-question wall: median 194 s, max 1386 s
+Qwen3.8-27B 8-bit + DFlash2: concurrency 32
+  score at 32k 32.9% -> after 128k rerun 34.1% (59/173); re-asked 7, 2 became right, still capped 0, looped 0, unparsed 2
+  tokens per question: median 3513, mean 7374, p90 19381, max 69020; total 1,275,724
+  wall: 32k phase 34.5 min + 128k rerun 9.5 min = 44.0 min
+  decode: aggregate 483 tok/s (all tokens / total wall); per question median 20.3 tok/s (tokens / its own wall time, 32 in flight)
+  per-question wall: median 164 s, max 1593 s
+Qwen3.8-Flash-Next oQ4e + MTP: concurrency 16
+  score at 32k 38.7% -> after 128k rerun 41.6% (72/173); re-asked 14, 5 became right, still capped 0, looped 2, unparsed 3
+  tokens per question: median 3963, mean 9155, p90 24352, max 82922; total 1,583,820
+  wall: 32k phase 49.9 min + 128k rerun 24.0 min = 73.9 min
+  decode: aggregate 357 tok/s (all tokens / total wall); per question median 30.8 tok/s (tokens / its own wall time, 16 in flight)
+  per-question wall: median 115 s, max 1439 s

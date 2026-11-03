@@ -1,0 +1,5 @@
+users released together, 8k-token prompts each, 1024 tokens generated each, on http://127.0.0.1:8090/v1 (~/.cache/huggingface/hub/models--mlx-community--Qwen3.8-27B-4bit/snapshots/10c35caafbb80f7dc6a7a432cdd11af10a6d4818)
+
+users  prompt       gen  TTFT med last user 1st tok all generating end to end    wall
+    1  1 of 1 users failed: ['HTTP 404: {"error": "generation thread died"}']
+    4  4 of 4 users failed: ['HTTP 404: {"error": "generation thread died"}', 'HTTP 404: {"error": "generation thread died"}', 'HTTP 404: {"error": "generation thread died"}']

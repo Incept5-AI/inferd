@@ -1,0 +1,2 @@
+1. save a context (8k-token catalogue, effort none, persist memory)
+  failed: 404

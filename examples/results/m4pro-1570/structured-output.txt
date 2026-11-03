@@ -1,0 +1,42 @@
+server http://127.0.0.1:18320/v1, model qwen3.8-27b
+
+== 1. json_schema: invoice extraction
+{
+  "number": "INV-2291",
+  "vendor": "Acme Ltd",
+  "currency": "GBP",
+  "lines": [
+    {
+      "item": "widget",
+      "qty": 3,
+      "unit_price": 4.5
+    },
+    {
+      "item": "gadget",
+      "qty": 1,
+      "unit_price": 12.0
+    },
+    {
+      "item": "installation",
+      "qty": 2,
+      "unit_price": 40.0
+    }
+  ],
+  "vat_rate": 0.2
+}
+finish_reason=stop  attempts=1  completion_tokens=153  5.00s
+
+   -> net 105.50 GBP, gross 126.60 (computed by the client)
+
+== 2. json_object, effort low
+{"Apollo 11": 1969, "Apollo 12": 1969, "Apollo 14": 1971, "Apollo 15": 1971, "Apollo 16": 1972, "Apollo 17": 1972}
+finish_reason=stop  attempts=1  completion_tokens=264  6.42s
+
+== 3. json_schema, streamed
+{"label": "mixed", "aspects": ["battery", "customer support"]}
+finish_reason=stop  (1 content delta(s), 1.68s)
+
+== 4. a 500-501 character limit (json_retries 1)
+HTTP 422 json_validation_failed: no schema-valid JSON after 2 attempt(s): the JSON does not match the schema: $.history: string is 830 characters, maximum is 501
+last_output: '{\n  "history": "The Roman Empire, established in 27 BC under Augustus, evolved from the Republic into a vast autocratic state spanning the Mediterranean, North Africa, and parts of Europe. It reached '
+

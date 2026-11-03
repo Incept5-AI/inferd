@@ -1,0 +1,27 @@
+16:45:31 after up: inferd: drafter memory: 2.69 GiB own (context rings 1.26 for 32 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 51.8 GiB; model + state + scratch 19.4, drafter 3.1, KV 4.0 -> 26.5 allocated inferd: 8-bit KV, 4032 KV blocks (4 GiB, 0.1M tokens), 32 slots (4.6 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+17:11:39 after: 1568 s, exit 0; System-wide memory free percentage: 52%
+17:12:05 before up: inferd: drafter memory: 2.69 GiB own (context rings 1.26 for 32 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 51.8 GiB; model + state + scratch 19.4, drafter 3.1, KV 4.0 -> 26.5 allocated inferd: 8-bit KV, 4032 KV blocks (4 GiB, 0.1M tokens), 32 slots (4.6 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+17:36:11 before: 1445 s, exit 0; System-wide memory free percentage: 52%
+17:36:36 before-nossd up: inferd: drafter memory: 2.69 GiB own (context rings 1.26 for 32 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 51.8 GiB; model + state + scratch 19.4, drafter 3.1, KV 4.0 -> 26.5 allocated inferd: 8-bit KV, 4032 KV blocks (4 GiB, 0.1M tokens), 32 slots (4.6 GiB state), max ctx 32768 
+17:46:22 before-nossd: 586 s, exit 0; System-wide memory free percentage: 52%
+17:46:55 splash up
+18:06:08 splash: 1153 s, exit 0; System-wide memory free percentage: 15%
+18:06:31 omlx up
+18:49:18 omlx: 2567 s, exit 0; System-wide memory free percentage: 67%
+18:49:44 tf up
+19:45:56 tf: 3372 s, exit 0; System-wide memory free percentage: 32%
+19:46:07 ##### done
+contaminated TF scenarios: 
+19:46:41 after2 up: inferd: drafter memory: 2.69 GiB own (context rings 1.26 for 32 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 51.8 GiB; model + state + scratch 19.4, drafter 3.1, KV 4.0 -> 26.5 allocated inferd: 8-bit KV, 4032 KV blocks (4 GiB, 0.1M tokens), 32 slots (4.6 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+19:56:21 after2: 579 s, exit 0; System-wide memory free percentage: 52%
+19:56:32 ##### done
+19:56:46 tf-fcfs up
+NOTE: after2 (19:46:41-19:56:21) overlapped a foreign 27B load 19:50-19:54: contaminated, re-run as after2-rerun
+20:57:24 tf-fcfs: 3638 s, exit 0; System-wide memory free percentage: 33%
+20:57:35 ##### done
+M5PRO QUEUE DONE 20:57
+TF-FCFS DONE, waiting for GO_AFTER2 (prefill agent slot) 20:57
+21:08:10 after2 up: inferd: drafter memory: 2.69 GiB own (context rings 1.26 for 32 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows) inferd: memory: GPU budget 51.8 GiB; model + state + scratch 19.4, drafter 3.1, KV 4.0 -> 26.5 allocated inferd: 8-bit KV, 4032 KV blocks (4 GiB, 0.1M tokens), 32 slots (4.6 GiB state), max ctx 32768 inferd: SSD tier in ~/inference/spill-scen/inferd-spill (48 GiB, 1.0 MiB per block + 187 MiB state per context) 
+21:18:01 after2: 591 s, exit 0; System-wide memory free percentage: 52%
+21:18:13 ##### done
+M5PRO QUEUE DONE (after2 rerun) 21:18

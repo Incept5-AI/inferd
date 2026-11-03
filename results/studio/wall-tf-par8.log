@@ -1,0 +1,7 @@
+info: Flash Next: 8 session slots (32800,32800,32800,32800,32800,32800,32800,32800 tokens), session budget 38.4 GiB; prompt cache 16.0 GiB, shared target forwards, every stream's drafts in one command buffer; a lone request on the engine's own rounds
+[tensorfold] serving fn at http://127.0.0.1:8093/v1 (sampling: temperature 1.0, top_k 20, top_p 0.95; drafts: MTP + copies; context: 32768; loaded in 19.3s)
+  N trial  prompt   gen  TTFT med  TTFT max  window win tok/s   A_e2e  wall s err
+  2     0 14330.0 6400.0      27.6      52.0    29.9     293.0   148.1    86.4   0
+  4     0 14329.5 6400.0      76.6     130.5    11.8     350.1   142.6   179.5   0
+  8     0 14329.5 6400.0     232.9     331.8     0.0       0.0   124.3   412.1   0
+== done

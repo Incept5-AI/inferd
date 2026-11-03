@@ -1,0 +1,5 @@
+NOCACHE=0 round 1: start 11s; file-backed GiB before/after-load/after-run 2.9/3.6/3.0; free 90%/84%/14%; x4 71.5 tok/s ttftmax 1.95; x8 69.8 tok/s ttftmax 33.51; 
+NOCACHE=1 round 1: start 20s; file-backed GiB before/after-load/after-run 3.1/4.6/3.4; free 89%/85%/15%; x4 68.8 tok/s ttftmax 2.0; x8 67.2 tok/s ttftmax 33.93; 
+NOCACHE=0 round 2: start 12s; file-backed GiB before/after-load/after-run 3.6/3.9/3.1; free 90%/89%/16%; x4 67.5 tok/s ttftmax 1.41; x8 67.5 tok/s ttftmax 34.17; 
+NOCACHE=1 round 2: start 20s; file-backed GiB before/after-load/after-run 3.3/4.6/3.3; free 90%/88%/15%; x4 69.2 tok/s ttftmax 2.16; x8 64.6 tok/s ttftmax 36.58; 
+done

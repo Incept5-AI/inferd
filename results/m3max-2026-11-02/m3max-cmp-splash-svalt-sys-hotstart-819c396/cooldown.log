@@ -1,0 +1,5 @@
+cooldown     7 s: GPU 0.0 C (drift +0.00 over 0 s), pressure nominal; Fan 0 1933/5349 rpm auto, Fan 1 2072/5777 rpm auto
+cooldown    38 s: GPU 16.8 C (drift +0.00 over 31 s), pressure nominal; Fan 0 1822/5349 rpm auto, Fan 1 1986/5777 rpm auto
+cooldown    69 s: GPU 11.6 C (drift -0.45 over 63 s), pressure nominal; Fan 0 1634/5349 rpm auto, Fan 1 1771/5777 rpm auto
+cooldown   101 s: GPU 7.1 C (drift -5.00 over 94 s), pressure nominal; Fan 0 1326/5349 rpm auto, Fan 1 1460/5777 rpm auto
+cool: GPU 6.9 C, pressure nominal, after 121 s; Fan 0 1376/5349 rpm auto, Fan 1 1466/5777 rpm auto

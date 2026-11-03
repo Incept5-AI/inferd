@@ -1,0 +1,29 @@
+1. save a context (8k-token catalogue, effort none, persist ssd)
+  catalogue-caf6507c: 8372 tokens, computed in 32.129 s; pinned=True gpu=True ssd=True (265.1 MiB of KV)
+
+2. launch 4 agents from it at once, each with its own task
+  agent 0    TTFT  0.55 s  prompt   8400  cached   8352  | The on-call lead for service S-010 is Aiko Osei.
+  agent 1    TTFT  0.55 s  prompt   8400  cached   8384  | The on-call lead for service S-017 is Kwame Iyer.
+  agent 2    TTFT  0.55 s  prompt   8400  cached   8384  | The on-call lead for service S-024 is Mei Varga.
+  agent 3    TTFT  0.55 s  prompt   8400  cached   8384  | The on-call lead for service S-031 is Freya Rossi.
+  all 4 answered in 1.18 s
+
+3. two more turns for agent 0: a long answer, then a question about it (resumes after its own answer)
+  agent 0    TTFT  0.39 s  prompt   8448  cached   8384  | S-002 RB-2408 / S-010 RB-1976 / S-015 RB-8353 / S-030 RB-8053 / S-031 
+  agent 0    TTFT  0.29 s  prompt   8712  cached   8672  | The service with the highest number is S-187, which has runbook RB-232
+
+4. offload the context to SSD, then launch a new agent from it
+  after offload: pinned=False gpu=False ssd=True (265.1 MiB of KV)
+  new agent  TTFT  0.34 s  prompt   8396  cached   8352  | The Search team owns service S-005.
+  after the launch: pinned=False gpu=True ssd=True (265.1 MiB of KV)
+
+5. park agent 1 (its latest turn goes to SSD), then resume it
+  {'id': 'agent-caf6507c-1', 'object': 'session', 'offloaded': True}
+  agent 1    TTFT  0.39 s  prompt   8440  cached   8384  | Service S-017 is owned by the Messaging team.
+
+6. 20 one-off agents with "cache": "drop"
+  snapshots 23 -> 23, cached KV blocks 448 -> 448
+
+7. clean up
+  {'id': 'catalogue-caf6507c', 'object': 'context', 'deleted': True}
+  cache now: 16 snapshots, 176 cached KV blocks, 0 contexts

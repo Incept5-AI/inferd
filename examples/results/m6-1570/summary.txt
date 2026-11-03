@@ -1,0 +1,19 @@
+
+demo                 result     time  exit   checks
+quickstart           PASS      6.4 s     0        -
+agent-budgets        PASS     42.3 s     0        -
+tools-web-search     PASS     14.3 s     0        -
+tools-shell          PASS     15.3 s     0        -
+structured-output    PASS     24.8 s     0        -
+agent-contexts       PASS     78.2 s     0        -
+agent-handoff        PASS    165.3 s     0    19/19
+agent-team           PASS    298.2 s     0      7/7
+ocr-agents           PASS     21.3 s     0        -
+ocr-agents-compare   PASS    184.8 s     0        -
+coding-smoke-none    PASS    104.7 s     0        -
+coding-smoke-medium  PASS    294.9 s     0        -
+agent-swarm          PASS     78.2 s     0        -
+agent-followups      PASS    303.6 s     0        -
+users-at-once        PASS    230.2 s     0        -
+
+15/15 demos passed on m6-1570

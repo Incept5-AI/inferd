@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="531" viewBox="0 0 860 531" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Agent fleet, Mac mini M6 (32 GB), 8k contexts">
+<title>Agent fleet, Mac mini M6 (32 GB), 8k contexts</title>
+<rect x="0" y="0" width="860" height="531" fill="#ffffff"/>
+<text x="20.0" y="28.0" font-size="16" text-anchor="start" fill="#0b0b0b" font-weight="600" >Agent fleet, Mac mini M6 (32 GB), 8k contexts</text>
+<text x="20.0" y="47.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >Qwen3.8-27B 4-bit + DFlash2 on both engines. agents.py, 2 rounds of ~1.2k-token turns, all agents in flight. Higher is</text>
+<text x="20.0" y="63.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >better.</text>
+<rect x="20.0" y="77.0" width="12" height="12" rx="2" fill="#2a78d6"/>
+<text x="37.0" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >inferd (GPU)</text>
+<rect x="139.6" y="77.0" width="12" height="12" rx="2" fill="#1baf7a"/>
+<text x="156.6" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >inferd + Neural Engine split (24 units)</text>
+<rect x="440.7" y="77.0" width="12" height="12" rx="2" fill="#eb6834"/>
+<text x="457.7" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >Splash 1.5.0</text>
+<line x1="70" x2="840" y1="417.0" y2="417.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="421.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >0</text>
+<line x1="70" x2="840" y1="357.0" y2="357.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="361.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >2.5</text>
+<line x1="70" x2="840" y1="297.0" y2="297.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="301.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >5</text>
+<line x1="70" x2="840" y1="237.0" y2="237.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="241.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >7.5</text>
+<line x1="70" x2="840" y1="177.0" y2="177.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="181.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >10</text>
+<line x1="70" x2="840" y1="117.0" y2="117.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="121.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >12.5</text>
+<text x="16.0" y="267.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" transform="rotate(-90 16 267.0)">completed turns per minute</text>
+<line x1="70" x2="840" y1="417" y2="417" stroke="#52514e" stroke-width="1"/>
+<path d="M106.2,417 V188.9 Q106.2,184.9 110.2,184.9 H140.2 Q144.2,184.9 144.2,188.9 V417 Z" fill="#2a78d6"><title>inferd (GPU), 8 agents: 9.67</title></path>
+<text x="125.2" y="180.9" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >9.67</text>
+<path d="M146.2,417 V157.2 Q146.2,153.2 150.2,153.2 H180.2 Q184.2,153.2 184.2,157.2 V417 Z" fill="#1baf7a"><title>inferd + Neural Engine split (24 units), 8 agents: 11.0</title></path>
+<text x="165.2" y="149.2" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >11.0</text>
+<path d="M186.2,417 V211.5 Q186.2,207.5 190.2,207.5 H220.2 Q224.2,207.5 224.2,211.5 V417 Z" fill="#eb6834"><title>Splash 1.5.0, 8 agents: 8.73</title></path>
+<text x="205.2" y="203.5" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >8.73</text>
+<text x="166.2" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >8 agents</text>
+<path d="M298.8,417 V192.8 Q298.8,188.8 302.8,188.8 H332.8 Q336.8,188.8 336.8,192.8 V417 Z" fill="#2a78d6"><title>inferd (GPU), 16 agents: 9.51</title></path>
+<text x="317.8" y="184.8" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >9.51</text>
+<path d="M338.8,417 V158.4 Q338.8,154.4 342.8,154.4 H372.8 Q376.8,154.4 376.8,158.4 V417 Z" fill="#1baf7a"><title>inferd + Neural Engine split (24 units), 16 agents: 10.9</title></path>
+<text x="357.8" y="150.4" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >10.9</text>
+<path d="M378.8,417 V240.0 Q378.8,236.0 382.8,236.0 H412.8 Q416.8,236.0 416.8,240.0 V417 Z" fill="#eb6834"><title>Splash 1.5.0, 16 agents: 7.54</title></path>
+<text x="397.8" y="232.0" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >7.54</text>
+<text x="358.8" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >16 agents</text>
+<path d="M491.2,417 V191.1 Q491.2,187.1 495.2,187.1 H525.2 Q529.2,187.1 529.2,191.1 V417 Z" fill="#2a78d6"><title>inferd (GPU), 32 agents: 9.58</title></path>
+<text x="510.2" y="183.1" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >9.58</text>
+<path d="M531.2,417 V153.2 Q531.2,149.2 535.2,149.2 H565.2 Q569.2,149.2 569.2,153.2 V417 Z" fill="#1baf7a"><title>inferd + Neural Engine split (24 units), 32 agents: 11.2</title></path>
+<text x="550.2" y="145.2" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >11.2</text>
+<path d="M571.2,417 V208.6 Q571.2,204.6 575.2,204.6 H605.2 Q609.2,204.6 609.2,208.6 V417 Z" fill="#eb6834"><title>Splash 1.5.0, 32 agents: 8.85</title></path>
+<text x="590.2" y="200.6" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >8.85</text>
+<text x="551.2" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >32 agents</text>
+<path d="M683.8,417 V189.2 Q683.8,185.2 687.8,185.2 H717.8 Q721.8,185.2 721.8,189.2 V417 Z" fill="#2a78d6"><title>inferd (GPU), 64 agents: 9.66</title></path>
+<text x="702.8" y="181.2" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >9.66</text>
+<path d="M723.8,417 V150.5 Q723.8,146.5 727.8,146.5 H757.8 Q761.8,146.5 761.8,150.5 V417 Z" fill="#1baf7a"><title>inferd + Neural Engine split (24 units), 64 agents: 11.3</title></path>
+<text x="742.8" y="142.5" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >11.3</text>
+<path d="M763.8,417 V257.3 Q763.8,253.3 767.8,253.3 H797.8 Q801.8,253.3 801.8,257.3 V417 Z" fill="#eb6834"><title>Splash 1.5.0, 64 agents: 6.82</title></path>
+<text x="782.8" y="249.3" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >6.82</text>
+<text x="782.8" y="443.0" font-size="9" text-anchor="middle" fill="#77766f" font-weight="normal" >32 of 96 refused</text>
+<text x="743.8" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >64 agents</text>
+<text x="455.0" y="461.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >agents in the fleet</text>
+<text x="20.0" y="491.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Source: results/night/m6/a64-inferd-m6-8k.jsonl, results/night/m6/a64-inferdane24-m6-8k.jsonl, results/night/m6/a64-splash-m6-8k.jsonl</text>
+<text x="20.0" y="505.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Data: overnight 2026-10-31/11-01 (the study log, 'Overnight agent-fleet results'). Splash's refused turns are HTTP 503 and are not counted as</text>
+<text x="20.0" y="519.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >completed.</text>
+</svg>

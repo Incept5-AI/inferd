@@ -1,0 +1,160 @@
+01:16:31 ##### compare start: inferd splash kapitsa mlxserve
+01:16:31 === inferd (this engine): mlx-community 4bit + incoai DFlash2, W4A8, bf16 KV 140 GiB
+01:16:37 inferd: model id 'qwen3.8-27b', mem pid 48158
+01:16:40 inferd: sweep 8k,16k,32k,64k,128k,256k
+01:17:11 ##### compare start: splash kapitsa mlxserve
+01:17:11 === splash Splash 1.5.0: mlx-community 4bit + auto DFlash2
+01:18:01 splash: model id 'mlx-community/Qwen3.8-27B-4bit', mem pid 48680
+01:18:02 splash: sweep 8k,16k,32k,64k,128k,256k
+splash: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+   8k    8173    3.95      2070     219.1   512    0
+  16k   16372    8.14      2012     191.1   512    0
+  32k   32773   17.76      1845     190.2   512    0
+  64k   65651   41.44      1584     170.7   512    0
+ 128k  132102  108.55      1217     153.1   512    0
+ 256k  252870  298.41       847     124.5   512    0
+01:34:34 splash: agents 16k followup N=1,4,8,16
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    2.98     171.8    180.1  1.0     0.14     0.14      179.8  179.8   16352  []
+ 16k   4   4   0    5.79     353.5    389.6 0.79     0.54     0.54      100.0   97.2   16352  []
+ 16k   8   8   0   11.11     368.7    866.9  0.0      2.8     6.38      102.1   89.4   16352  []
+ 16k  16  16   0   22.18     369.4   1635.2  0.0     8.25    17.17       98.6   87.4   16352  []
+01:39:21 splash: agents 32k followup N=1,4,8,16
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 32k   1   1   0    3.47     147.5    157.4  1.0     0.22     0.22      157.1  157.1   32736  []
+ 32k   4   4   0    6.38     320.9    371.1 0.69     0.86     0.86      101.0   84.0   32736  []
+ 32k   8   8   0   10.49     390.5    970.8  0.0     3.06     6.27      112.8   87.7   32736  []
+ 32k  16  16   0   23.15     353.8   1636.2  0.0     8.29    18.14      103.6   74.6   32736  []
+01:48:51 splash: agents 64k followup N=1,4,8,16,32
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 64k   1   1   0    3.48     147.3    155.8  1.0     0.19     0.19      155.5  155.5   65632  []
+ 64k   4   4   0    7.02     291.9    344.4 0.66     0.69     1.07       86.5   80.8   65632  []
+ 64k   8   8   0   13.17     310.9    786.5  0.0     3.47     7.96       83.3   72.3   65632  []
+ 64k  16  16   0   27.29     300.1   1598.2  0.0     10.6    22.17       83.1   67.1   65632  []
+ 64k  32  32   0   52.74     310.6   4292.9  0.0    24.36    48.92       79.8   65.9   65632  []
+02:43:32 === kapitsa kapitsa 0.2.24 (b46d9e5): --model 27b (own 4-bit pack), DFlash2 default, 16 slots
+02:43:57 kapitsa: model id 'qwen3.8-27b', mem pid 28212
+02:43:57 kapitsa: sweep 8k,16k,32k,64k
+kapitsa: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+   8k    8170    5.10      1601     213.5   512    0
+  16k   16372    9.53      1718     199.5   512    0
+  32k   32772   20.83      1573     187.8   512    0
+  64k   65653   49.40      1329     154.3   512    0
+02:47:09 kapitsa: agents 16k followup N=1,4,8,16
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    2.99     171.5    179.2  1.0     0.13     0.13      178.8  178.8   16433  []
+ 16k   4   4   0   11.99     170.8    179.9 0.91     0.37      0.6       45.1   43.7   16436  []
+ 16k   8   8   0   22.94     178.6    188.8 0.94     0.69     1.24       23.0   22.6   16434  []
+ 16k  16  16   0  112.79      72.6    209.1  0.0    37.27    73.62        7.8    6.7   16364  []
+02:54:55 kapitsa: agents 64k followup N=1,4,8
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 64k   1   1   0    3.45     148.5    155.9  1.0     0.16     0.16      155.6  155.6   65716  []
+ 64k   4   4   0   19.02     107.7    112.5 0.89     0.51     0.81       28.7   27.4   65716  []
+ 64k   8   8   0  446.66       9.2     81.2  0.6    387.8   396.22        8.7    6.5       0  []
+03:14:03 === mlx-serve ds4 unknown: mlx-community 4bit + z-lab DFlash2
+03:14:13 mlxserve: model id '10c35caafbb80f7dc6a7a432cdd11af10a6d4818', mem pid 55785
+03:14:13 mlxserve: sweep 8k,16k,32k,64k,128k
+mlxserve: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+   8k    8170    4.17      1962     223.7   512    0
+  16k   16369    8.72      1878     208.6   512    0
+  32k   32772   18.93      1731     190.9   512    0
+  64k   65654   44.87      1463     161.1   512    0
+ 128k  132104  120.64      1095     123.7   512    0
+03:21:18 mlxserve: agents 16k followup N=1,4,8
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    2.55     200.5    210.8  1.0     0.12     0.12      210.4  210.4   16437  []
+ 16k   4   4   0   14.91     137.4    143.5 0.89     0.35     0.63       36.4   35.8   16434  []
+ 16k   8   8   0   58.13      70.5    273.2  0.0    27.02    43.14       22.1   15.4    8216  []
+03:24:31 mlxserve: agents 64k followup N=1,4,8
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 64k   1   1   0    3.91     130.9    142.0  1.0      0.3      0.3      141.7  141.7   65713  []
+ 64k   4   4   0  145.94      14.0    568.3  0.0    70.44   142.33       23.0   15.5       0  []
+ 64k   8   8   0  375.01      10.9   1261.1  0.0   208.59   371.76       29.9   29.8       0  []
+03:43:28 ##### compare done
+03:44:12 ##### compare start: inferd
+03:44:12 === inferd (this engine): mlx-community 4bit + incoai DFlash2, W4A8, bf16 KV 140 GiB
+03:44:17 inferd: model id 'qwen3.8-27b', mem pid 83228
+03:44:20 inferd: sweep 8k,16k,32k,64k,128k,256k
+inferd: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+   8k    8174    4.59      1782     121.6   512    0
+  16k   16371    9.47      1728     114.3   512    0
+  32k   32772   20.33      1612     105.5   512    0
+  64k   65654   46.44      1414      94.7   512    0
+ 128k  132105  115.52      1144      78.3   512    0
+ 256k  252870  299.56       844      66.5   512    0
+04:01:59 inferd: agents 16k followup N=1,4,8,16,32
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    4.65     110.1    114.1  1.0     0.16     0.16      113.8  113.8   16352  []
+ 16k   4   4   0    7.09     288.7    312.9 0.93     0.55     0.55       80.3   78.1   16352  []
+ 16k   8   8   0   11.02     371.7    409.3 0.91     1.01     1.01       53.3   51.1   16352  []
+ 16k  16  16   0   17.56     466.6    524.0 0.89     1.92     1.92       33.4   31.9   16352  []
+ 16k  32  32   0   31.44     521.1    599.7 0.84     3.68     4.12       18.8   17.7   16352  []
+04:13:20 inferd: agents 32k followup N=1,4,8,16,32
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 32k   1   1   0    5.07     101.0    106.3  1.0     0.25     0.25      106.0  106.0   32736  []
+ 32k   4   4   0    7.47     274.2    311.2 0.94     0.89     0.89       78.1   77.0   32736  []
+ 32k   8   8   0   12.28     333.5    389.6 0.93     1.77     1.77       49.3   47.0   32736  []
+ 32k  16  16   0   20.88     392.3    468.4 0.87     3.39     3.39       30.5   28.9   32736  []
+ 32k  32  32   0   37.84     433.0    532.3 0.83     6.13     7.06       16.8   14.8   32736  []
+04:36:06 inferd: agents 64k followup N=1,4,8,16,32
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 64k   1   1   0    5.66      90.4     96.1  1.0     0.33     0.33       95.9   95.9   65632  []
+ 64k   4   4   0    9.01     227.2    261.2 0.93     1.17     1.17       65.4   64.1   65632  []
+ 64k   8   8   0   15.84     258.6    302.8 0.91     2.31     2.31       38.2   36.4   65632  []
+ 64k  16  16   0   28.03     292.2    351.5 0.85     4.73     4.73       22.4   21.3   65632  []
+ 64k  32  32   0   50.63     323.6    401.3 0.82     8.75      9.8       12.6   11.6   65632  []
+05:26:38 ##### compare done
+06:24:43 ##### final inferd2 start
+inferd2: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+   8k    8171    4.59      1782     126.5   512    0
+  16k   16370    9.47      1728     121.3   512    0
+  32k   32770   20.32      1613     112.1   512    0
+  64k   65653   46.54      1411      97.9   512    0
+06:28:04 inferd2: agents 16k
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    4.67     109.7    113.6  1.0     0.16     0.16      113.4  113.4   16352  []
+ 16k   4   4   0    7.08     289.2    313.6  0.9     0.55     0.55       81.6   76.9   16352  []
+ 16k   8   8   0   10.11     405.0    450.8  0.9     1.03     1.03       58.9   56.2   16352  []
+ 16k  16  16   0   16.82     487.0    551.5 0.92     1.97     1.97       35.3   33.7   16352  []
+ 16k  32  32   0   30.56     536.2    617.4 0.89     3.61     4.02       19.4   18.5   16352  []
+06:39:21 inferd2: agents 32k
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 32k   1   1   0    5.51      93.0     97.4  1.0     0.25     0.25       97.2   97.2   32736  []
+ 32k   4   4   0    8.29     246.9    276.4 0.85     0.89     0.89       72.8   69.0   32736  []
+ 32k   8   8   0   11.82     346.4    406.1 0.93     1.74     1.74       51.5   48.7   32736  []
+ 32k  16  16   0   21.03     389.6    463.3 0.89     3.35     3.35       30.1   28.4   32736  []
+ 32k  32  32   0   39.27     417.2    507.5 0.83     6.06     6.99       16.0   14.7   32736  []
+07:02:04 ##### final inferd2 done
+07:42:03 default inferd service restored on :8300
+07:43:00 ##### compare start: inferd splash
+07:43:00 === inferd (this engine): mlx-community 4bit + incoai DFlash2, W4A8, bf16 KV 140 GiB
+07:43:05 inferd: model id 'qwen3.8-27b', mem pid 38838
+07:43:08 inferd: agents 128k followup N=1,4,8,16
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+128k   1   1   0    7.44      68.9     76.2  1.0     0.71     0.71       76.0   76.0  132064  []
+128k   4   4   0   13.16     155.6    193.6  0.9     2.58     2.58       49.0   46.7  132064  []
+128k   8   8   0   23.89     171.4    219.8 0.89     5.26     5.26       27.9   25.1  132064  []
+128k  16  16   0   46.14     177.5    234.4 0.86    11.19    11.19       14.7   13.5  132064  []
+08:40:59 inferd: agents 256k followup N=1,4,8
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+256k   1   1   0    8.78      58.3     67.4  1.0     1.19     1.19       67.3   67.3  252832  []
+256k   4   4   0    20.0     102.4    131.2 0.87     4.39     4.39       33.6   32.1  252832  []
+256k   8   8   0   40.06     102.3    135.3 0.86     9.77     9.77       17.1   15.5  252832  []
+09:48:14 === splash Splash 1.5.0: mlx-community 4bit + auto DFlash2
+09:48:27 splash: model id 'mlx-community/Qwen3.8-27B-4bit', mem pid 53504
+09:48:27 splash: agents 128k followup N=1,4,8,16
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+128k   1   1   0    3.44     149.0    161.8  1.0     0.27     0.27      161.4  161.4  132096  []
+128k   4   4   0    7.72     265.3    339.8 0.73     1.09     1.69       84.4   71.8  132080  []
+128k   8   8   0   15.26     268.4    659.6  0.0     4.34     9.05       74.7   69.7  132096  []
+128k  16  16   0   30.81     265.9   1409.0  0.0    12.37     25.0       70.8   67.3  132096  []
+10:42:36 splash: agents 256k followup N=1,4,8
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+256k   1   1   0    3.88     132.1    148.0  1.0     0.41     0.41      147.7  147.7  252864  []
+256k   4   4   0   10.94     187.2    261.8 0.72     2.49     3.12       63.0   51.2  252832  []
+11:21:11 256k splash run stopped by request

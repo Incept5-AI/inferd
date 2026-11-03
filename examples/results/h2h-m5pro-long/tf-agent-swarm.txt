@@ -1,0 +1,37 @@
+16 agents, one shared 16k-token catalogue, 3 turns each, max_tokens 512, ~250-word replies, on http://127.0.0.1:8091/v1 (q27)
+
+agent turn1 TTFT follow-up TTFT  prompt        cached  done at correct
+    0     39.4 s       107.95 s   17310   14337/34182   501.2s   3/3
+    1     75.1 s         9.03 s   17316   33643/34209   230.8s   3/3
+    2     38.1 s        14.63 s   17330   33657/34249   255.2s   3/3
+    3     69.7 s       128.67 s   17319   14337/34212   514.7s   3/3
+    4     65.1 s       138.36 s   17327   28674/34192   514.1s   3/3
+    5     68.2 s        89.14 s   17293   30722/34123   470.2s   3/3
+    6     68.9 s        12.53 s   17356   33683/34258   211.9s   3/3
+    7     63.6 s       150.84 s   17311   17253/34176   516.7s   3/3
+    8     70.6 s       141.62 s   17239   17181/34077   503.2s   3/3
+    9     38.5 s         7.80 s   17319   33646/34192   270.6s   3/3
+   10     39.8 s       128.35 s   17350   28674/34251   516.4s   3/3
+   11     37.8 s       113.02 s   17260   30210/34101   508.8s   3/3
+   12     66.5 s        98.08 s   17261   30722/34137   429.2s   3/3
+   13     40.2 s       134.30 s   17331   14337/34217   513.1s   3/3
+   14     40.7 s        87.39 s   17289   32258/34167   408.1s   3/3
+   15     38.9 s         7.04 s   17311   33638/34189   235.0s   3/3
+
+fan-out (16 first questions at once): last agent's first token 75.08 s, all answered 97.02 s, cached 93% of prompt tokens
+follow-ups: TTFT median 77.42 s, max 301.09 s, cached 78% of prompt tokens
+all 48 turns: 516.7 s wall, 48 ok, 0 errors, 48/48 answers contain the catalogue fact; 18157 tokens generated (35.1 tok/s over the whole run)
+
+agent 0's answers:
+  Q1: Which team owns S-034, and who is its on-call lead? One sentence.
+  A1: S-034 is owned by the Payments team, and its on-call lead is Priya Nair.
+
+To verify ownership and on-call details during an incident, I would first consult the internal service catalogue or the specific runbook (RB-9110) for S-034, as these are the authoritative sources for static metadata. I would 
+  Q2: How many times does S-145 retry a failed call, and where does it store state? One sentence.
+  A2: S-145 retries failed downstream calls 4 times and stores its state in S3 bucket s3-61.
+
+To verify these specific technical parameters during an incident, I would first consult the service catalogue entry for S-145 to confirm the documented retry count and storage location. I would then cross-referen
+  Q3: Which runbook covers S-016, and on which day does it deploy? One sentence.
+  A3: The runbook covering S-016 is RB-1457, and it deploys on Mondays.
+
+To verify the runbook and deployment schedule for S-016 during an incident, I would first consult the service catalogue to confirm the documented runbook ID (RB-1457) and deployment day (Mondays). I would then access the runbook dire

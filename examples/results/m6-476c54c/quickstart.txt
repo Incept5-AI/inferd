@@ -1,0 +1,12 @@
+server http://127.0.0.1:18300/v1, model qwen3.8-27b
+
+== 1. chat (non-streaming)
+Run `lsof -i :8300` to list the process ID and name bound to that port. If you need the full command line, follow up with `ps -p <PID> -o command`.
+finish_reason=stop  usage={"prompt_tokens": 404, "completion_tokens": 48, "total_tokens": 452, "prompt_tokens_details": {"cached_tokens": 0}}  5.72s
+
+== 2. follow-up turn, streamed
+Use `kill <PID>` to send a SIGTERM to the specific process ID you found. If it doesn't terminate, escalate with `kill -9 <PID>`.
+
+time to first token 0.44s, total 2.01s, 18 tok/s
+usage={"prompt_tokens": 478, "completion_tokens": 36, "total_tokens": 514, "prompt_tokens_details": {"cached_tokens": 384}}
+-> 384 of 478 prompt tokens came from the prefix cache (turn 1, in 32-token blocks)

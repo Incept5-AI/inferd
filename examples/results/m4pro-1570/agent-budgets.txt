@@ -1,0 +1,57 @@
+4 agents in parallel on http://127.0.0.1:18320/v1
+
+agent       max_context  effort prio prompt output  finish  secs
+summariser        16384    none    0   1074     60    stop  13.9
+coder             32768  medium    5     67   2155    stop  74.1
+searcher-1         8192    none   -5     32      3    stop   8.2
+searcher-2         8192     low   -5     56    162    stop  20.3
+wall time for all four: 74.1s
+
+--- summariser
+Apple Silicon Macs utilize a unified memory pool that allows a 4-bit quantized 27-billion-parameter model to coexist with a large key-value cache. Efficiently serving multiple agents simultaneously requires careful scheduling to maintain individual contexts and avoid redundant re-reading of data during follow-up turns.
+
+--- coder (reasoned 7173 chars first)
+```python
+from collections import OrderedDict
+from functools import wraps
+
+
+def lru_cache_stats(maxsize):
+    def decorator(func):
+        cache = OrderedDict()
+        hits = 0
+        misses = 0
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            nonlocal hits, misses
+            key = (args, tuple(sorted(kwargs.items())))
+            if key in cache:
+                hits += 1
+                cache.move_to_end(key)
+                return cache[key]
+            misses += 1
+            result = func(*args, **kwargs)
+            cache[key] = result
+            if len(cache) > maxsize:
+                cache.popitem(last=False)
+            return result
+
+        # Expose live counters as attributes on the wrapped function
+        class _Stats:
+            def __get__(self, obj, objtype=None):
+                return hits
+        class _Misses:
+            def __get__(self
+[...]
+
+--- searcher-1
+Canberra
+
+--- searcher-2 (reasoned 559 chars first)
+Jupiter has the shortest day of any planet in our solar system, with a rotational period of approximately 9 hours and 56 minutes.
+
+=== over budget
+searcher-1 (max_context 8192) sent a ~10k-token document -> HTTP 400: context_length_exceeded: prompt is 10470 tokens, max_context is 8192
+tiny (max_context 120) asked for 300 words -> HTTP 200, finish_reason 'length' after 82 tokens (prompt 38 + output 82 = 120 <= 120)
+   ...se. The wind outside was a living thing, screaming through the narrow slits of the tower, trying to claw its way in, but

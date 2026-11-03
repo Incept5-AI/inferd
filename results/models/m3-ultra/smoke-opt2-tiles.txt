@@ -1,0 +1,71 @@
+#### opt2 (~/github/inferd/engine)
+== check chunk 1
+seq 0: cos 0.99307  max|diff| 6.523  KL 0.00640  top1 ok (' jumps')  top5 overlap 5/5
+seq 1: cos 0.99987  max|diff| 0.326  KL 0.00002  top1 ok (')')  top5 overlap 4/5
+seq 2: cos 0.99965  max|diff| 0.469  KL 0.00002  top1 ok ('0')  top5 overlap 4/5
+seq 3: cos 0.99989  max|diff| 0.289  KL 0.00003  top1 ok (' de')  top5 overlap 5/5
+== check chunk 5
+seq 0: cos 0.99201  max|diff| 4.609  KL 0.00158  top1 ok (' jumps')  top5 overlap 5/5
+seq 1: cos 0.99983  max|diff| 0.238  KL 0.00001  top1 ok (')')  top5 overlap 4/5
+seq 2: cos 0.99957  max|diff| 0.500  KL 0.00002  top1 ok ('0')  top5 overlap 4/5
+seq 3: cos 0.99974  max|diff| 0.594  KL 0.00000  top1 ok (' de')  top5 overlap 5/5
+== check chunk 8
+seq 0: cos 0.98925  max|diff| 6.074  KL 0.01410  top1 ok (' jumps')  top5 overlap 4/5
+seq 1: cos 0.99993  max|diff| 0.188  KL 0.00002  top1 ok (')')  top5 overlap 5/5
+seq 2: cos 0.99951  max|diff| 0.562  KL 0.00003  top1 ok ('0')  top5 overlap 4/5
+seq 3: cos 0.99980  max|diff| 0.375  KL 0.00001  top1 ok (' de')  top5 overlap 5/5
+== check chunk 24
+seq 0: cos 0.99449  max|diff| 5.609  KL 0.00736  top1 ok (' jumps')  top5 overlap 4/5
+seq 1: cos 0.99985  max|diff| 0.270  KL 0.00001  top1 ok (')')  top5 overlap 5/5
+seq 2: cos 0.99964  max|diff| 0.496  KL 0.00001  top1 ok ('0')  top5 overlap 4/5
+seq 3: cos 0.99979  max|diff| 0.377  KL 0.00001  top1 ok (' de')  top5 overlap 5/5
+== bench 1,16,64 2048
+B=  1 L=  2048 R=1  step   26.75 ms (GPU   26.00)  =    37.4 rows/s total,   37.4/stream
+B= 16 L=  2048 R=1  step   69.02 ms (GPU   68.25)  =   231.8 rows/s total,   14.5/stream
+B= 64 L=  2048 R=1  step  201.99 ms (GPU  201.03)  =   316.8 rows/s total,    5.0/stream
+== bench 1,8,16 2048 R5
+B=  1 L=  2048 R=5  step   37.53 ms (GPU   36.82)  =   133.2 rows/s total,  133.2/stream
+B=  8 L=  2048 R=5  step  116.56 ms (GPU  115.84)  =   343.2 rows/s total,   42.9/stream
+B= 16 L=  2048 R=5  step  243.08 ms (GPU  242.36)  =   329.1 rows/s total,   20.6/stream
+== bench 1 8192 R8
+B=  1 L=  8192 R=8  step   57.52 ms (GPU   56.75)  =   139.1 rows/s total,  139.1/stream
+== bench 4,8 131072 R8
+B=  4 L=131072 R=8  step  217.09 ms (GPU  216.27)  =   147.4 rows/s total,   36.9/stream
+B=  8 L=131072 R=8  step  408.98 ms (GPU  408.04)  =   156.5 rows/s total,   19.6/stream
+== gemm
+M=   1 all linear layers: 22.2 ms per step (16.0 GB, 720 GB/s; bandwidth floor 14.0 ms)
+M=   2 all linear layers: 22.7 ms per step (16.0 GB, 705 GB/s; bandwidth floor 14.0 ms)
+M=   5 all linear layers: 32.3 ms per step (16.0 GB, 496 GB/s; bandwidth floor 14.0 ms)
+M=   8 all linear layers: 52.0 ms per step (16.0 GB, 308 GB/s; bandwidth floor 14.0 ms)
+M=  16 all linear layers: 54.3 ms per step (16.0 GB, 295 GB/s; bandwidth floor 14.0 ms)
+M=  32 all linear layers: 89.9 ms per step (16.0 GB, 178 GB/s; bandwidth floor 14.0 ms)
+M=  64 all linear layers: 158.0 ms per step (16.0 GB, 101 GB/s; bandwidth floor 14.0 ms)
+== prefill 8192
+loaded in 1.8 s
+prefill L=  8192 chunk  1024:   18.93 s  =     433 tok/s (GPU 18.90 s)
+prefill L=  8192 chunk  2048:   18.81 s  =     436 tok/s (GPU 18.79 s)
+== followup 16384
+loaded in 1.9 s
+followup L= 16384 B= 1 chunk   32:    112.1 ms per step (median of 5)
+followup L= 16384 B= 1 chunk  136:    433.0 ms per step (median of 5)
+followup L= 16384 B=16 chunk   32:   1322.6 ms per step (median of 5)
+followup L= 16384 B=16 chunk  136:   5548.6 ms per step (median of 5)
+== spec_test
+plain: 516 tokens in 4.40 s = 117.2 tok/s total over 4 seqs, 1.01 tokens per cycle, 33.6 ms GPU per cycle
+spec : host 114.2 ms per cycle, 113.8 ms of it in commit+wait, 0.3 ms submit->GPU start
+spec : 1053 kernel dispatches per cycle
+spec : 560 tokens in 2.06 s = 272.4 tok/s total over 4 seqs, 7.78 tokens per cycle, 113.3 ms GPU per cycle
+seq 0 diverges after 29 generated tokens (plain 271 vs spec 37550)
+lossless check: 3/4 sequences identical over 128 tokens
+#### opt2 done
+rep 1 done
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    7.07      72.5     76.8  1.0      0.4      0.4       76.7   76.7   16352  []
+ 16k   4   4   0   15.16     135.1    149.0 0.93     1.41     1.41       38.3   37.2   16352  []
+ 16k   8   8   0   26.19     156.4    175.6 0.94     2.85     2.85       22.3   21.9   16352  []
+rep 2 done
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    6.95      73.7     79.1  1.0     0.47     0.47       78.9   78.9   16320  []
+ 16k   4   4   0   15.54     131.8    145.8 0.95     1.49     1.49       36.9   35.9   16352  []
+ 16k   8   8   0   25.47     160.8    180.2 0.84     2.74     2.75       23.0   22.0   16352  []
+all done

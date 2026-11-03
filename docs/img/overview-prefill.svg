@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 176" role="img" aria-label="Prefill, Mac mini M5 Pro (Qwen3.8-27B 4-bit, 8k prompt)">
+<style>
+.bg{fill:#ffffff}.t{fill:#1d1d1b;font:600 15px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.tick{fill:#6b6a65;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.lab{fill:#1d1d1b;font:12px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.val{fill:#1d1d1b;font:600 11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.note{fill:#6b6a65;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.grid{stroke:#e6e3dc;stroke-width:1}polyline.ln{fill:none!important;stroke-width:2.3}
+.k-us{fill:#1f5fbf;stroke:#1f5fbf}.k-us2{fill:#7aa7e6;stroke:#7aa7e6}.k-o1{fill:#b0702e;stroke:#b0702e}
+.k-o2{fill:#7b8a3a;stroke:#7b8a3a}.k-o3{fill:#8d8b85;stroke:#8d8b85}.k-o4{fill:#9a5aa8;stroke:#9a5aa8}
+.ln.k-us{stroke-width:3.2}.ln.k-o2{stroke-dasharray:6 4}.ln.k-o3{stroke-dasharray:2 4}
+@media (prefers-color-scheme:dark){.bg{fill:#1b1b1a}.t,.lab,.val{fill:#ecebe6}.tick,.note{fill:#a3a19a}.grid{stroke:#34332f}
+.k-us{fill:#6aa3ff;stroke:#6aa3ff}.k-us2{fill:#9fc1f2;stroke:#9fc1f2}.k-o1{fill:#dba25f;stroke:#dba25f}
+.k-o2{fill:#aebc6a;stroke:#aebc6a}.k-o4{fill:#c58fd2;stroke:#c58fd2}}
+</style>
+<rect class="bg" width="720" height="176" rx="10"/>
+<text class="t" x="18" y="28">Prefill, Mac mini M5 Pro (Qwen3.8-27B 4-bit, 8k prompt)</text>
+<line class="grid" x1="250.0" y1="42" x2="250.0" y2="138"/><text class="tick" x="250.0" y="152" text-anchor="middle">0</text>
+<line class="grid" x1="350.0" y1="42" x2="350.0" y2="138"/><text class="tick" x="350.0" y="152" text-anchor="middle">206</text>
+<line class="grid" x1="450.0" y1="42" x2="450.0" y2="138"/><text class="tick" x="450.0" y="152" text-anchor="middle">413</text>
+<line class="grid" x1="550.0" y1="42" x2="550.0" y2="138"/><text class="tick" x="550.0" y="152" text-anchor="middle">619</text>
+<line class="grid" x1="650.0" y1="42" x2="650.0" y2="138"/><text class="tick" x="650.0" y="152" text-anchor="middle">826</text>
+<text class="lab" x="240" y="66.0" text-anchor="end">inferd + int8 prefill (PF8)</text><rect class="k-us2" x="250" y="52" width="344.8" height="20" rx="2"/><text class="val" x="600.8" y="66.0">712</text>
+<text class="lab" x="240" y="94.0" text-anchor="end">Splash 1.5</text><rect class="k-o1" x="250" y="80" width="299.3" height="20" rx="2"/><text class="val" x="555.3" y="94.0">618</text>
+<text class="lab" x="240" y="122.0" text-anchor="end">inferd without PF8</text><rect class="k-us" x="250" y="108" width="198.6" height="20" rx="2"/><text class="val" x="454.6" y="122.0">410</text>
+<text class="note" x="18" y="168">Prompt tok/s, one agent, server end to end. Higher is better.</text></svg>

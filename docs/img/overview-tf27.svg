@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 356" role="img" aria-label="N agents start at once: time until the last one finishes (Qwen3.8-27B)">
+<style>
+.bg{fill:#ffffff}.t{fill:#1d1d1b;font:600 15px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.tick{fill:#6b6a65;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.lab{fill:#1d1d1b;font:12px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.val{fill:#1d1d1b;font:600 11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.note{fill:#6b6a65;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.grid{stroke:#e6e3dc;stroke-width:1}polyline.ln{fill:none!important;stroke-width:2.3}
+.k-us{fill:#1f5fbf;stroke:#1f5fbf}.k-us2{fill:#7aa7e6;stroke:#7aa7e6}.k-o1{fill:#b0702e;stroke:#b0702e}
+.k-o2{fill:#7b8a3a;stroke:#7b8a3a}.k-o3{fill:#8d8b85;stroke:#8d8b85}.k-o4{fill:#9a5aa8;stroke:#9a5aa8}
+.ln.k-us{stroke-width:3.2}.ln.k-o2{stroke-dasharray:6 4}.ln.k-o3{stroke-dasharray:2 4}
+@media (prefers-color-scheme:dark){.bg{fill:#1b1b1a}.t,.lab,.val{fill:#ecebe6}.tick,.note{fill:#a3a19a}.grid{stroke:#34332f}
+.k-us{fill:#6aa3ff;stroke:#6aa3ff}.k-us2{fill:#9fc1f2;stroke:#9fc1f2}.k-o1{fill:#dba25f;stroke:#dba25f}
+.k-o2{fill:#aebc6a;stroke:#aebc6a}.k-o4{fill:#c58fd2;stroke:#c58fd2}}
+</style>
+<rect class="bg" width="720" height="356" rx="10"/>
+<text class="t" x="18" y="28">N agents start at once: time until the last one finishes (Qwen3.8-27B)</text>
+<line class="grid" x1="56" y1="298.0" x2="550" y2="298.0"/><text class="tick" x="49" y="302.0" text-anchor="end">0</text>
+<line class="grid" x1="56" y1="235.5" x2="550" y2="235.5"/><text class="tick" x="49" y="239.5" text-anchor="end">50</text>
+<line class="grid" x1="56" y1="173.0" x2="550" y2="173.0"/><text class="tick" x="49" y="177.0" text-anchor="end">100</text>
+<line class="grid" x1="56" y1="110.5" x2="550" y2="110.5"/><text class="tick" x="49" y="114.5" text-anchor="end">149</text>
+<line class="grid" x1="56" y1="48.0" x2="550" y2="48.0"/><text class="tick" x="49" y="52.0" text-anchor="end">199</text>
+<text class="tick" x="56.0" y="315" text-anchor="middle">1</text>
+<text class="tick" x="126.6" y="315" text-anchor="middle">2</text>
+<text class="tick" x="197.1" y="315" text-anchor="middle">3</text>
+<text class="tick" x="267.7" y="315" text-anchor="middle">4</text>
+<text class="tick" x="338.3" y="315" text-anchor="middle">5</text>
+<text class="tick" x="408.9" y="315" text-anchor="middle">6</text>
+<text class="tick" x="479.4" y="315" text-anchor="middle">7</text>
+<text class="tick" x="550.0" y="315" text-anchor="middle">8</text>
+<text class="tick" x="303.0" y="331" text-anchor="middle">agents</text>
+<polyline class="ln k-us" points="56.0,256.5 126.6,232.3 197.1,213.9 267.7,195.4 338.3,166.5 408.9,151.3 479.4,133.4 550.0,117.4"/>
+<circle class="k-us" cx="56.0" cy="256.5" r="3.3"/>
+<circle class="k-us" cx="126.6" cy="232.3" r="3.3"/>
+<circle class="k-us" cx="197.1" cy="213.9" r="3.3"/>
+<circle class="k-us" cx="267.7" cy="195.4" r="3.3"/>
+<circle class="k-us" cx="338.3" cy="166.5" r="3.3"/>
+<circle class="k-us" cx="408.9" cy="151.3" r="3.3"/>
+<circle class="k-us" cx="479.4" cy="133.4" r="3.3"/>
+<circle class="k-us" cx="550.0" cy="117.4" r="3.3"/>
+<polyline class="ln k-o1" points="56.0,259.5 126.6,233.1 197.1,207.5 267.7,183.3 338.3,156.1 408.9,128.5 479.4,99.3 550.0,74.8"/>
+<circle class="k-o1" cx="56.0" cy="259.5" r="3.3"/>
+<circle class="k-o1" cx="126.6" cy="233.1" r="3.3"/>
+<circle class="k-o1" cx="197.1" cy="207.5" r="3.3"/>
+<circle class="k-o1" cx="267.7" cy="183.3" r="3.3"/>
+<circle class="k-o1" cx="338.3" cy="156.1" r="3.3"/>
+<circle class="k-o1" cx="408.9" cy="128.5" r="3.3"/>
+<circle class="k-o1" cx="479.4" cy="99.3" r="3.3"/>
+<circle class="k-o1" cx="550.0" cy="74.8" r="3.3"/>
+<text class="lab k-o1" x="558.0" y="78.8" style="font-weight:600">TensorFold 1.2.1 178</text>
+<text class="lab k-us" x="558.0" y="121.4" style="font-weight:600">inferd 144</text>
+<text class="note" x="18" y="346">Seconds, mean of 3 trials; both engines use the same DFlash2 drafter weights. Lower is better.</text></svg>

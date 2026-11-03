@@ -1,0 +1,31 @@
+== reference
+prime  agent 0: prompt 5262, cached 0, TTFT 3.34 s
+prime  agent 1: prompt 5262, cached 0, TTFT 2.96 s
+prime  agent 2: prompt 5262, cached 0, TTFT 2.96 s
+follow 0 agent 0: prompt 5293, cached 5216, TTFT 0.09 s | 'window accept queue'
+follow 0 agent 1: prompt 5293, cached 5216, TTFT 0.09 s | 'block token accept'
+follow 0 agent 2: prompt 5356, cached 5216, TTFT 0.13 s | 'throughput token throughput'
+follow 1 agent 0: prompt 5326, cached 5248, TTFT 0.09 s | 'tensor accept layer'
+follow 1 agent 1: prompt 5326, cached 5248, TTFT 0.09 s | 'accept cache buffer'
+follow 1 agent 2: prompt 5390, cached 5312, TTFT 0.09 s | 'queue latency batch'
+inferd: SSD tier is persistent: 0 contexts recovered (0.0 GiB)
+inferd: SSD tier in /Volumes/SanDisk/spill-persist (64 GiB, 2.0 MiB per block + 187 MiB state per context)
+== prime (persistent tier)
+prime  agent 0: prompt 5262, cached 0, TTFT 3.33 s
+prime  agent 1: prompt 5262, cached 0, TTFT 2.96 s
+prime  agent 2: prompt 5262, cached 0, TTFT 2.96 s
+inferd: flushed 3 contexts to the SSD tier in 2.7 s (3 on disk, 1.5 GiB)
+inferd: SSD tier is persistent: 3 contexts recovered (1.5 GiB)
+inferd: SSD tier in /Volumes/SanDisk/spill-persist (64 GiB, 2.0 MiB per block + 187 MiB state per context)
+== follow after restart
+follow 0 agent 0: prompt 5293, cached 5216, TTFT 0.94 s | 'window accept queue'
+follow 0 agent 1: prompt 5293, cached 5216, TTFT 0.32 s | 'block token accept'
+follow 0 agent 2: prompt 5356, cached 5216, TTFT 0.37 s | 'throughput token throughput'
+follow 1 agent 0: prompt 5326, cached 5248, TTFT 0.08 s | 'tensor accept layer'
+follow 1 agent 1: prompt 5326, cached 5248, TTFT 0.08 s | 'accept cache buffer'
+follow 1 agent 2: prompt 5390, cached 5312, TTFT 0.09 s | 'queue latency batch'
+spill: restored 163 blocks (0 already in memory) for id1, 0.25 s total so far
+spill: restored 163 blocks (0 already in memory) for id2, 0.47 s total so far
+spill: restored 163 blocks (0 already in memory) for id3, 0.70 s total so far
+identical replies: 6 of 6
+done

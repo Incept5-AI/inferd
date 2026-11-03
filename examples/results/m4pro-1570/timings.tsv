@@ -1,0 +1,16 @@
+# m4pro-1570  2026-11-03 01:56  http://127.0.0.1:18320/v1
+quickstart	9.0 s	exit 0
+agent-budgets	80.0 s	exit 0
+tools-web-search	21.2 s	exit 0
+tools-shell	21.2 s	exit 0
+structured-output	33.3 s	exit 0
+agent-contexts	154.9 s	exit 0
+agent-handoff	279.4 s	exit 0
+agent-team	604.4 s	exit 0
+ocr-agents	31.2 s	exit 0
+ocr-agents-compare	319.3 s	exit 0
+coding-smoke-none	197.5 s	exit 0
+coding-smoke-medium	481.7 s	exit 0
+agent-swarm	160.8 s	exit 0
+agent-followups	621.0 s	exit 0
+users-at-once	418.8 s	exit 0

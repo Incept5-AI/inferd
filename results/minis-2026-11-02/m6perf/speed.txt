@@ -1,0 +1,12 @@
+{"label": "m6-engine-m2", "size": "0.5k", "rep": 0, "ts": "2026-11-02T19:10:25", "prompt_tokens": 564, "completion_tokens": 512, "ttft_s": 3.223, "prefill_tps": 175.0, "decode_tps": 34.38, "total_s": 18.084, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m6-engine-m2", "size": "0.5k", "rep": 1, "ts": "2026-11-02T19:10:43", "prompt_tokens": 562, "completion_tokens": 512, "ttft_s": 2.002, "prefill_tps": 280.7, "decode_tps": 33.62, "total_s": 17.204, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m6-engine-m2", "size": "4k", "rep": 0, "ts": "2026-11-02T19:11:00", "prompt_tokens": 4042, "completion_tokens": 512, "ttft_s": 14.943, "prefill_tps": 270.5, "decode_tps": 34.82, "total_s": 29.619, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m6-engine-m2", "size": "4k", "rep": 1, "ts": "2026-11-02T19:11:30", "prompt_tokens": 4040, "completion_tokens": 512, "ttft_s": 14.948, "prefill_tps": 270.3, "decode_tps": 33.42, "total_s": 30.239, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m6-engine-m2", "size": "16k", "rep": 0, "ts": "2026-11-02T19:12:00", "prompt_tokens": 16374, "completion_tokens": 512, "ttft_s": 64.773, "prefill_tps": 252.8, "decode_tps": 32.87, "total_s": 80.319, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m6-engine-m2", "size": "16k", "rep": 1, "ts": "2026-11-02T19:13:21", "prompt_tokens": 16369, "completion_tokens": 512, "ttft_s": 64.072, "prefill_tps": 255.5, "decode_tps": 34.85, "total_s": 78.735, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+
+m6-engine-m2: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+ 0.5k     563    2.61       228      34.0   512    0
+   4k    4041   14.95       270      34.1   512    0
+  16k   16372   64.42       254      33.9   512    0

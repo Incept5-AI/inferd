@@ -1,0 +1,5 @@
+loaded in 1.5 s
+B=  1 L=  4096 R=1  step   58.77 ms (GPU   58.29)  =    17.0 rows/s total,   17.0/stream
+B=  4 L=  4096 R=1  step   76.28 ms (GPU   75.74)  =    52.4 rows/s total,   13.1/stream
+B=  8 L=  4096 R=1  step   85.47 ms (GPU   84.94)  =    93.6 rows/s total,   11.7/stream
+B= 16 L=  4096 R=1  step  103.71 ms (GPU  103.17)  =   154.3 rows/s total,    9.6/stream

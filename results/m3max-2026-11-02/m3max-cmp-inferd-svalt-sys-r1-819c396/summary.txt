@@ -1,0 +1,7 @@
+phase                    min   GPU C mean/max   GPU MHz mean/min   GPU W   fans rpm  pressure
+sweep                   14.0     84.3 /  89.5      1372 /   1368    41.9       1832  nominal 100%
+  32k x1 prime           3.8     83.1 /  84.8      1372 /   1369    41.6       2686  nominal 100%
+conc_32k                66.3     82.8 /  84.8      1372 /   1369    41.3       2665  nominal 100%
+  32k x1 turns           0.2     82.3 /  83.4      1374 /   1373    41.1       2715  nominal 100%
+  32k x16 prime         60.1     83.1 /  84.7      1372 /   1369    41.5       2669  nominal 100%
+  32k x16 turns          2.2     74.5 /  82.7      1379 /   1371    33.0       2517  nominal 100%

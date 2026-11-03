@@ -1,0 +1,18 @@
+13:02:31 inferd up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 21.7, drafter 6.0, KV 22.7 (auto) -> 50.3 allocated inferd: 8-bit KV, 22876 KV blocks (23 GiB, 0.7M tokens), 48 slots (6.9 GiB state), max ctx 32768 
+13:06:07 inferd agent-swarm: 215 s, exit 0; System-wide memory free percentage: 14%
+13:15:23 inferd agent-followups: 556 s, exit 0; System-wide memory free percentage: 14%
+13:16:40 inferd users-at-once: 77 s, exit 0; System-wide memory free percentage: 14%
+13:17:14 splash up (mlx-community/Qwen3.8-27B-4bit)
+13:21:03 splash agent-swarm: 229 s, exit 0; System-wide memory free percentage: 51%
+13:27:51 splash agent-followups: 407 s, exit 0; System-wide memory free percentage: 34%
+13:29:09 splash users-at-once: 78 s, exit 0; System-wide memory free percentage: 31%
+13:29:35 tf up
+13:38:12 tf agent-swarm: 517 s, exit 0; System-wide memory free percentage: 28%
+13:50:20 tf agent-followups: 728 s, exit 0; System-wide memory free percentage: 34%
+13:51:41 tf users-at-once: 82 s, exit 0; System-wide memory free percentage: 28%
+13:51:52 ##### done
+13:52:41 inferd-s64 up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 26.3, drafter 7.2, KV 16.8 (auto) -> 50.3 allocated inferd: 8-bit KV, 16980 KV blocks (17 GiB, 0.5M tokens), 80 slots (11.5 GiB state), max ctx 32768 
+13:56:06 inferd-s64 agent-swarm: 204 s, exit 0; System-wide memory free percentage: 13%
+14:02:25 inferd-s64 agent-followups: 379 s, exit 0; System-wide memory free percentage: 13%
+14:03:41 inferd-s64 users-at-once: 77 s, exit 0; System-wide memory free percentage: 13%
+14:03:53 ##### done

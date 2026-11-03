@@ -1,0 +1,9 @@
+agent scenarios d on http://127.0.0.1:8300/v1 (qwen3.8-27b), mode api, preset m6
+
+[d] ephemeral vs long-lived
+  long-lived agents, first turn      n=3    err=0   TTFT med 41.578 p90 60.794 max 60.794 s, cached 0% 
+  long-lived agents, later turns     n=31   err=0   TTFT med 5.244 p90 5.678 max 8.264 s, cached 99% peak_kv_used=77632 peak_kv_cached=77632 peak_kv_pinned=0 peak_snapshots=21 peak_rss_gib=13.39 preempted=0 ssd_restored=0
+  one-offs (240, 6 at a time)        n=240  err=0   TTFT med 7.188 p90 7.599 max 61.334 s, cached 0% wall_s=367.46 gen_tok_s=1.5
+  one-offs: 0.65 requests/s; long-lived turns: 31; wall 368.5 s
+  (368 s)
+

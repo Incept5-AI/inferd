@@ -1,0 +1,14 @@
+# m5max-a4ee879  2026-11-02 23:54  http://127.0.0.1:8300/v1
+quickstart	17.2 s	exit 0
+agent-budgets	14.7 s	exit 0
+tools-web-search	5.5 s	exit 0
+tools-shell	5.1 s	exit 0
+structured-output	8.4 s	exit 0
+agent-contexts	30.0 s	exit 0
+ocr-agents	7.1 s	exit 0
+ocr-agents-compare	73.9 s	exit 0
+coding-smoke-none	51.2 s	exit 0
+coding-smoke-medium	140.1 s	exit 0
+agent-swarm	44.3 s	exit 0
+agent-followups	133.9 s	exit 0
+users-at-once	98.6 s	exit 0

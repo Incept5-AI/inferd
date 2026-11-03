@@ -1,0 +1,26 @@
+12:06:05 inferd up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 21.7, drafter 6.0, KV 22.7 (auto) -> 50.3 allocated inferd: 8-bit KV, 22876 KV blocks (23 GiB, 0.7M tokens), 48 slots (6.9 GiB state), max ctx 32768 
+12:06:53 inferd agent-swarm: 47 s, exit 0; System-wide memory free percentage: 14%
+12:09:59 inferd agent-followups: 186 s, exit 0; System-wide memory free percentage: 14%
+12:12:15 inferd users-at-once: 136 s, exit 0; System-wide memory free percentage: 14%
+12:12:49 splash up (mlx-community/Qwen3.8-27B-4bit)
+12:13:23 splash agent-swarm: 34 s, exit 0; System-wide memory free percentage: 59%
+12:15:32 splash agent-followups: 129 s, exit 0; System-wide memory free percentage: 48%
+12:17:52 splash users-at-once: 140 s, exit 0; System-wide memory free percentage: 44%
+12:18:15 omlx up
+12:24:01 omlx agent-swarm: 328 s, exit 0; System-wide memory free percentage: 21%
+12:27:18 omlx agent-followups: 198 s, exit 0; System-wide memory free percentage: 68%
+12:31:53 omlx users-at-once: 274 s, exit 0; System-wide memory free percentage: 68%
+12:32:16 mlx_lm up
+12:36:17 mlxlm agent-swarm: 240 s, exit 1; System-wide memory free percentage: 12%
+12:36:17 mlxlm agent-followups: 0 s, exit 0; System-wide memory free percentage: 12%
+12:36:18 mlxlm users-at-once: 1 s, exit 0; System-wide memory free percentage: 93%
+12:37:55 tf up
+12:39:53 tf agent-swarm: 118 s, exit 0; System-wide memory free percentage: 28%
+12:45:02 tf agent-followups: 309 s, exit 0; System-wide memory free percentage: 31%
+12:47:14 tf users-at-once: 133 s, exit 0; System-wide memory free percentage: 27%
+12:47:25 ##### done
+12:48:05 mlxlm-pc2 up
+12:52:54 mlxlm-pc2 agent-swarm: 289 s, exit 0; System-wide memory free percentage: 16%
+12:58:04 mlxlm-pc2 agent-followups: 309 s, exit 0; System-wide memory free percentage: 18%
+13:02:07 mlxlm-pc2 users-at-once: 244 s, exit 0; System-wide memory free percentage: 45%
+13:02:17 ##### done

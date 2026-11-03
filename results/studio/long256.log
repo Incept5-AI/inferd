@@ -1,0 +1,9 @@
+start Sat 31 Oct 2026 15:36:58 GMT
+inferd10: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+ 256k  252869  329.69       767     112.3   512    0
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+256k   1   1   0    5.37      95.3    102.5  1.0     0.38     0.38      102.3  102.3  252832  []
+256k   4   4   0   10.81     189.5    218.4 0.92     1.43     1.43       55.2   54.5  252832  []
+256k   8   8   0    21.9     187.0    218.1 0.82     3.13     3.13       29.0   26.1  252832  []
+done

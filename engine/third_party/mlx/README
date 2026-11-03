@@ -1,0 +1,16 @@
+Vendored from ml-explore/mlx v0.32.3 (64ea011), mlx/backend/metal/kernels: quantized_nax.h, steel/attn/kernels/steel_attention_nax.h and steel/gemm/kernels/steel_gemm_fused_nax.h and steel_gemm_splitk_nax.h (+ gemm_nax.h) with their include closures. MIT licence (LICENSE). Patched as listed below; everything else is unmodified.
+
+
+Local patch (2026-10-30): quantized_nax.h dequantize takes function constant 40 (mlx_q4_flipped): 4-bit nibbles
+(q ^ 8) and 8-bit bytes (q ^ 0x80) flipped in place by the engine's W4A8/W8A8 path are flipped back. Without the constant the code is unchanged.
+
+Local patch (2026-10-30): quantized_nax.h qmm_t_nax_tgp_impl takes activation / weight row lengths (ldx, ldw) from
+buffers 8 and 11 in the unbatched kernel (0 = K), so a K-slice view of a weight (the Neural Engine FFN split) can use it.
+
+Local patch (2026-11-01): steel/attn/params.h AttnParams gains `int window` (0 = none) and both kernels in
+steel_attention_nax.h start at the first key block the query block can see and mask keys with row - col >= window
+(sliding-window attention for Muse Glimmer and Gemma-4).
+
+Added (2026-11-01): quantized.h and quantized_utils.h from v0.32.3 (64ea011) for GPUs without neural accelerators
+(kernels/mlx_qmm_sg.metal: affine_qmm_t and affine_qmv_wide). quantized.h carries the same function constant 40
+flip-back patch in dequantize (4-bit and 8-bit); qdot and the other paths are unmodified.

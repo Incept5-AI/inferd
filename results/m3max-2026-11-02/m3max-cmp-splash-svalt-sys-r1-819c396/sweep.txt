@@ -1,0 +1,12 @@
+{"label": "m3max-cmp-splash-svalt-sys-r1-819c396", "size": "8k", "rep": 0, "ts": "2026-11-02T23:24:06", "prompt_tokens": 8173, "completion_tokens": 512, "ttft_s": 29.195, "prefill_tps": 279.9, "decode_tps": 67.79, "total_s": 36.732, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m3max-cmp-splash-svalt-sys-r1-819c396", "size": "8k", "rep": 1, "ts": "2026-11-02T23:24:43", "prompt_tokens": 8174, "completion_tokens": 512, "ttft_s": 29.196, "prefill_tps": 280.0, "decode_tps": 67.71, "total_s": 36.743, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m3max-cmp-splash-svalt-sys-r1-819c396", "size": "16k", "rep": 0, "ts": "2026-11-02T23:25:20", "prompt_tokens": 16375, "completion_tokens": 512, "ttft_s": 61.551, "prefill_tps": 266.0, "decode_tps": 60.72, "total_s": 69.967, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m3max-cmp-splash-svalt-sys-r1-819c396", "size": "16k", "rep": 1, "ts": "2026-11-02T23:26:30", "prompt_tokens": 16371, "completion_tokens": 512, "ttft_s": 61.495, "prefill_tps": 266.2, "decode_tps": 64.43, "total_s": 69.426, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m3max-cmp-splash-svalt-sys-r1-819c396", "size": "32k", "rep": 0, "ts": "2026-11-02T23:27:39", "prompt_tokens": 32773, "completion_tokens": 512, "ttft_s": 135.581, "prefill_tps": 241.7, "decode_tps": 57.7, "total_s": 144.437, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m3max-cmp-splash-svalt-sys-r1-819c396", "size": "32k", "rep": 1, "ts": "2026-11-02T23:30:03", "prompt_tokens": 32772, "completion_tokens": 512, "ttft_s": 135.549, "prefill_tps": 241.8, "decode_tps": 58.28, "total_s": 144.317, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+
+m3max-cmp-splash-svalt-sys-r1-819c396: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+   8k    8174   29.20       280      67.8   512    0
+  16k   16373   61.52       266      62.6   512    0
+  32k   32772  135.56       242      58.0   512    0

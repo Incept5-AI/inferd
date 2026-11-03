@@ -1,0 +1,358 @@
+[21:59:23] start
+up on :8300
+inferd: memory: GPU budget 224.0 GiB; model + state + scratch 39.0, drafter 8.8, KV 96.0 -> 143.8 allocated
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 31000
+  [  1/48] json_deep_merge        python     1.0  pass
+  [  2/48] log_parser             python     1.0  pass
+  [  3/48] csv_analysis           python     1.0  pass
+  [  4/48] csv_analysis           java       1.0  pass
+  [  5/48] json_deep_merge        typescript 1.0  pass
+  [  6/48] csv_analysis           swift      1.0  pass
+  [  7/48] http_client            python     1.0  pass
+  [  8/48] log_parser             java       1.0  pass
+  [  9/48] log_parser             typescript 1.0  pass
+  [ 10/48] csv_analysis           typescript 1.0  pass
+  [ 11/48] log_parser             swift      0.0  stream error: {"message": "error: context too long", "type":
+  [ 12/48] csv_analysis           rust       1.0  pass
+  [ 13/48] dijkstra_graph         python     1.0  pass
+  [ 14/48] http_client            swift      1.0  pass
+  [ 15/48] http_client            typescript 1.0  pass
+  [ 16/48] log_parser             rust       1.0  pass
+  [ 17/48] dijkstra_graph         typescript 1.0  pass
+  [ 18/48] http_client            java       1.0  pass
+  [ 19/48] dijkstra_graph         swift      1.0  pass
+  [ 20/48] log_parser             c          0.0  stream error: {"message": "error: context too long", "type":
+  [ 21/48] dijkstra_graph         java       1.0  pass
+  [ 22/48] system_info            python     1.0  pass
+  [ 23/48] http_client            c          1.0  pass
+  [ 24/48] json_deep_merge        rust       0.0  stream error: {"message": "error: context too long", "type":
+  [ 25/48] file_tree_analysis     python     1.0  pass
+  [ 26/48] file_tree_analysis     java       1.0  pass
+  [ 27/48] json_deep_merge        c          0.0  stream error: {"message": "error: context too long", "type":
+  [ 28/48] system_info            java       1.0  pass
+  [ 29/48] http_client            rust       1.0  pass
+  [ 30/48] system_info            typescript 1.0  pass
+  [ 31/48] system_info            swift      1.0  pass
+  [ 32/48] json_deep_merge        swift      0.0  stream error: {"message": "error: context too long", "type":
+  [ 33/48] json_deep_merge        java       1.0  pass
+  [ 34/48] dijkstra_graph         c          1.0  pass
+  [ 35/48] system_info            rust       1.0  pass
+  [ 36/48] system_info            c          1.0  pass
+  [ 37/48] file_tree_analysis     rust       1.0  pass
+  [ 38/48] csv_analysis           c          1.0  pass
+  [ 39/48] matrix_ops             java       1.0  pass
+  [ 40/48] matrix_ops             python     1.0  pass
+  [ 41/48] file_tree_analysis     c          1.0  pass
+  [ 42/48] matrix_ops             typescript 1.0  pass
+  [ 43/48] matrix_ops             c          1.0  pass
+  [ 44/48] dijkstra_graph         rust       1.0  pass
+  [ 45/48] matrix_ops             rust       0.5  pass
+  [ 46/48] file_tree_analysis     typescript 1.0  pass
+  [ 47/48] matrix_ops             swift      0.5  pass
+  [ 48/48] file_tree_analysis     swift      0.0  output
+
+v1-q27-8bit-fn5-medium-32k-w16-r1: 41.0/48  first-try 40  any 42  hit-cap 0  looped 0  errors 5  5 min
+  Python        8.0/8
+  Java          8.0/8
+  Swift         4.5/8
+  TypeScript    8.0/8
+  C             6.0/8
+  Rust          6.5/8
+→ ~/inference/languages-benchmark/results/v1-v1-q27-8bit-fn5-medium-32k-w16-r1.json
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 31000
+  [  1/48] csv_analysis           python     1.0  pass
+  [  2/48] json_deep_merge        python     1.0  pass
+  [  3/48] log_parser             python     1.0  pass
+  [  4/48] csv_analysis           java       1.0  pass
+  [  5/48] csv_analysis           swift      1.0  pass
+  [  6/48] csv_analysis           typescript 1.0  pass
+  [  7/48] log_parser             typescript 1.0  pass
+  [  8/48] http_client            python     1.0  pass
+  [  9/48] log_parser             java       1.0  pass
+  [ 10/48] json_deep_merge        typescript 1.0  pass
+  [ 11/48] csv_analysis           rust       1.0  pass
+  [ 12/48] log_parser             swift      1.0  pass
+  [ 13/48] csv_analysis           c          1.0  pass
+  [ 14/48] dijkstra_graph         python     1.0  pass
+  [ 15/48] http_client            swift      1.0  pass
+  [ 16/48] dijkstra_graph         swift      1.0  pass
+  [ 17/48] http_client            typescript 1.0  pass
+  [ 18/48] dijkstra_graph         typescript 1.0  pass
+  [ 19/48] log_parser             rust       1.0  pass
+  [ 20/48] http_client            java       1.0  pass
+  [ 21/48] log_parser             c          1.0  pass
+  [ 22/48] json_deep_merge        java       1.0  pass
+  [ 23/48] file_tree_analysis     python     1.0  pass
+  [ 24/48] json_deep_merge        c          1.0  pass
+  [ 25/48] system_info            python     1.0  pass
+  [ 26/48] file_tree_analysis     typescript 1.0  pass
+  [ 27/48] http_client            c          1.0  pass
+  [ 28/48] system_info            java       1.0  pass
+  [ 29/48] system_info            swift      1.0  pass
+  [ 30/48] dijkstra_graph         rust       0.0  stream error: {"message": "error: context too long", "type":
+  [ 31/48] system_info            c          1.0  pass
+  [ 32/48] system_info            rust       1.0  pass
+  [ 33/48] json_deep_merge        swift      0.0  output
+  [ 34/48] system_info            typescript 1.0  pass
+  [ 35/48] json_deep_merge        rust       1.0  pass
+  [ 36/48] matrix_ops             python     1.0  pass
+  [ 37/48] file_tree_analysis     swift      0.0  stream error: {"message": "error: context too long", "type":
+  [ 38/48] file_tree_analysis     java       1.0  pass
+  [ 39/48] http_client            rust       0.0  stream error: {"message": "error: context too long", "type":
+  [ 40/48] matrix_ops             java       1.0  pass
+  [ 41/48] dijkstra_graph         java       0.5  pass
+  [ 42/48] file_tree_analysis     rust       1.0  pass
+  [ 43/48] dijkstra_graph         c          1.0  pass
+  [ 44/48] matrix_ops             c          1.0  pass
+  [ 45/48] matrix_ops             typescript 1.0  pass
+  [ 46/48] matrix_ops             swift      0.5  pass
+  [ 47/48] file_tree_analysis     c          1.0  pass
+  [ 48/48] matrix_ops             rust       0.5  pass
+
+v1-q27-8bit-fn5-medium-32k-w16-r2: 42.5/48  first-try 41  any 44  hit-cap 0  looped 0  errors 3  4 min
+  Python        8.0/8
+  Java          7.5/8
+  Swift         5.5/8
+  TypeScript    8.0/8
+  C             8.0/8
+  Rust          5.5/8
+→ ~/inference/languages-benchmark/results/v1-v1-q27-8bit-fn5-medium-32k-w16-r2.json
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 31000
+  [  1/48] json_deep_merge        python     1.0  pass
+  [  2/48] csv_analysis           python     1.0  pass
+  [  3/48] log_parser             python     1.0  pass
+  [  4/48] log_parser             java       1.0  pass
+  [  5/48] csv_analysis           java       1.0  pass
+  [  6/48] log_parser             typescript 1.0  pass
+  [  7/48] json_deep_merge        typescript 1.0  pass
+  [  8/48] csv_analysis           rust       1.0  pass
+  [  9/48] csv_analysis           typescript 1.0  pass
+  [ 10/48] http_client            python     1.0  pass
+  [ 11/48] csv_analysis           swift      1.0  pass
+  [ 12/48] dijkstra_graph         python     1.0  pass
+  [ 13/48] http_client            swift      1.0  pass
+  [ 14/48] log_parser             rust       0.0  stream error: {"message": "error: context too long", "type":
+  [ 15/48] dijkstra_graph         swift      1.0  pass
+  [ 16/48] log_parser             swift      0.5  pass
+  [ 17/48] dijkstra_graph         typescript 1.0  pass
+  [ 18/48] http_client            java       1.0  pass
+  [ 19/48] json_deep_merge        java       1.0  pass
+  [ 20/48] csv_analysis           c          1.0  pass
+  [ 21/48] log_parser             c          1.0  pass
+  [ 22/48] json_deep_merge        swift      0.0  stream error: {"message": "error: context too long", "type":
+  [ 23/48] http_client            typescript 1.0  pass
+  [ 24/48] system_info            python     1.0  pass
+  [ 25/48] json_deep_merge        rust       0.0  stream error: {"message": "error: context too long", "type":
+  [ 26/48] system_info            java       1.0  pass
+  [ 27/48] json_deep_merge        c          0.0  stream error: {"message": "error: context too long", "type":
+  [ 28/48] file_tree_analysis     python     1.0  pass
+  [ 29/48] file_tree_analysis     java       1.0  pass
+  [ 30/48] system_info            swift      1.0  pass
+  [ 31/48] system_info            rust       1.0  pass
+  [ 32/48] dijkstra_graph         java       1.0  pass
+  [ 33/48] system_info            c          1.0  pass
+  [ 34/48] system_info            typescript 1.0  pass
+  [ 35/48] matrix_ops             python     1.0  pass
+  [ 36/48] file_tree_analysis     typescript 1.0  pass
+  [ 37/48] dijkstra_graph         c          1.0  pass
+  [ 38/48] file_tree_analysis     rust       1.0  pass
+  [ 39/48] file_tree_analysis     swift      1.0  pass
+  [ 40/48] dijkstra_graph         rust       1.0  pass
+  [ 41/48] matrix_ops             typescript 1.0  pass
+  [ 42/48] matrix_ops             swift      1.0  pass
+  [ 43/48] matrix_ops             java       1.0  pass
+  [ 44/48] matrix_ops             rust       1.0  pass
+  [ 45/48] matrix_ops             c          1.0  pass
+  [ 46/48] http_client            c          0.0  stream error: {"message": "error: context too long", "type":
+  [ 47/48] http_client            rust       1.0  pass
+  [ 48/48] file_tree_analysis     c          0.0  stream error: {"message": "error: context too long", "type":
+
+v1-q27-8bit-fn5-medium-32k-w16-r3: 41.5/48  first-try 41  any 42  hit-cap 0  looped 0  errors 6  4 min
+  Python        8.0/8
+  Java          8.0/8
+  Swift         6.5/8
+  TypeScript    8.0/8
+  C             5.0/8
+  Rust          6.0/8
+→ ~/inference/languages-benchmark/results/v1-v1-q27-8bit-fn5-medium-32k-w16-r3.json
+up on :8300
+inferd: memory: GPU budget 224.0 GiB; model + state + scratch 109.1, drafter 3.2, KV 96.0 -> 208.4 allocated
+[23:33:02] stopped before Flash-Next (QSA not implemented yet)
+[23:33:23] start
+up on :8300
+inferd: memory: GPU budget 222.7 GiB; model + state + scratch 39.1, drafter 8.8, KV 64.0 -> 111.9 allocated
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 32768
+  [  1/48] csv_analysis           python     1.0  pass
+  [  2/48] json_deep_merge        python     1.0  pass
+  [  3/48] log_parser             python     1.0  pass
+  [  4/48] csv_analysis           java       1.0  pass
+  [  5/48] log_parser             typescript 1.0  pass
+  [  6/48] csv_analysis           swift      1.0  pass
+  [  7/48] http_client            python     1.0  pass
+  [  8/48] log_parser             java       1.0  pass
+  [  9/48] csv_analysis           typescript 1.0  pass
+  [ 10/48] log_parser             swift      1.0  pass
+  [ 11/48] csv_analysis           rust       0.5  pass
+  [ 12/48] http_client            swift      1.0  pass
+  [ 13/48] log_parser             rust       1.0  pass
+  [ 14/48] json_deep_merge        typescript 1.0  pass
+  [ 15/48] http_client            typescript 1.0  pass
+  [ 16/48] dijkstra_graph         python     1.0  pass
+  [ 17/48] csv_analysis           c          1.0  pass
+  [ 18/48] dijkstra_graph         swift      1.0  pass
+  [ 19/48] dijkstra_graph         typescript 1.0  pass
+  [ 20/48] http_client            java       1.0  pass
+  [ 21/48] dijkstra_graph         java       1.0  pass
+  [ 22/48] json_deep_merge        swift      1.0  pass
+  [ 23/48] system_info            python     1.0  pass
+  [ 24/48] file_tree_analysis     python     1.0  pass
+  [ 25/48] system_info            java       1.0  pass
+  [ 26/48] json_deep_merge        java       1.0  pass
+  [ 27/48] system_info            swift      1.0  pass
+  [ 28/48] file_tree_analysis     swift      1.0  pass
+  [ 29/48] system_info            rust       1.0  pass
+  [ 30/48] file_tree_analysis     typescript 1.0  pass
+  [ 31/48] system_info            c          1.0  pass
+  [ 32/48] system_info            typescript 1.0  pass
+  [ 33/48] matrix_ops             python     1.0  pass
+  [ 34/48] file_tree_analysis     java       0.5  pass
+  [ 35/48] matrix_ops             java       1.0  pass
+  [ 36/48] json_deep_merge        rust       1.0  pass
+  [ 37/48] matrix_ops             typescript 1.0  pass
+  [ 38/48] file_tree_analysis     c          1.0  pass
+  [ 39/48] matrix_ops             c          1.0  pass
+  [ 40/48] http_client            c          1.0  pass
+  [ 41/48] matrix_ops             rust       1.0  pass
+  [ 42/48] http_client            rust       1.0  pass
+  [ 43/48] matrix_ops             swift      0.5  pass
+  [ 44/48] dijkstra_graph         rust       0.5  pass
+  [ 45/48] file_tree_analysis     rust       0.0  run
+  [ 46/48] json_deep_merge        c          1.0  pass
+  [ 47/48] dijkstra_graph         c          0.5  pass
+  [ 48/48] log_parser             c          0.0  build
+
+v1-q27-8bit-fn5-medium-32k-w64k-w16-r1: 43.5/48  first-try 41  any 46  hit-cap 0  looped 0  errors 0  7 min
+  Python        8.0/8
+  Java          7.5/8
+  Swift         7.5/8
+  TypeScript    8.0/8
+  C             6.5/8
+  Rust          6.0/8
+→ ~/inference/languages-benchmark/results/v1-v1-q27-8bit-fn5-medium-32k-w64k-w16-r1.json
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 32768
+  [  1/48] json_deep_merge        python     1.0  pass
+  [  2/48] log_parser             python     1.0  pass
+  [  3/48] csv_analysis           python     1.0  pass
+  [  4/48] csv_analysis           swift      1.0  pass
+  [  5/48] csv_analysis           java       1.0  pass
+  [  6/48] log_parser             typescript 1.0  pass
+  [  7/48] json_deep_merge        typescript 1.0  pass
+  [  8/48] csv_analysis           rust       1.0  pass
+  [  9/48] log_parser             java       1.0  pass
+  [ 10/48] http_client            python     1.0  pass
+  [ 11/48] log_parser             swift      0.5  pass
+  [ 12/48] csv_analysis           typescript 1.0  pass
+  [ 13/48] http_client            swift      1.0  pass
+  [ 14/48] dijkstra_graph         python     1.0  pass
+  [ 15/48] http_client            typescript 1.0  pass
+  [ 16/48] http_client            java       1.0  pass
+  [ 17/48] dijkstra_graph         swift      1.0  pass
+  [ 18/48] log_parser             rust       0.0  output
+  [ 19/48] dijkstra_graph         typescript 1.0  pass
+  [ 20/48] dijkstra_graph         java       1.0  pass
+  [ 21/48] json_deep_merge        swift      0.5  pass
+  [ 22/48] csv_analysis           c          1.0  pass
+  [ 23/48] system_info            python     1.0  pass
+  [ 24/48] json_deep_merge        rust       1.0  pass
+  [ 25/48] file_tree_analysis     python     1.0  pass
+  [ 26/48] system_info            java       1.0  pass
+  [ 27/48] json_deep_merge        java       1.0  pass
+  [ 28/48] system_info            swift      1.0  pass
+  [ 29/48] file_tree_analysis     java       1.0  pass
+  [ 30/48] system_info            c          1.0  pass
+  [ 31/48] system_info            rust       1.0  pass
+  [ 32/48] http_client            c          1.0  pass
+  [ 33/48] system_info            typescript 1.0  pass
+  [ 34/48] matrix_ops             python     1.0  pass
+  [ 35/48] file_tree_analysis     swift      1.0  pass
+  [ 36/48] file_tree_analysis     typescript 1.0  pass
+  [ 37/48] dijkstra_graph         c          1.0  pass
+  [ 38/48] log_parser             c          0.5  pass
+  [ 39/48] file_tree_analysis     rust       1.0  pass
+  [ 40/48] http_client            rust       1.0  pass
+  [ 41/48] matrix_ops             java       1.0  pass
+  [ 42/48] matrix_ops             c          1.0  pass
+  [ 43/48] matrix_ops             typescript 1.0  pass
+  [ 44/48] matrix_ops             swift      1.0  pass
+  [ 45/48] file_tree_analysis     c          1.0  pass
+  [ 46/48] matrix_ops             rust       1.0  pass
+  [ 47/48] dijkstra_graph         rust       0.0  build
+  [ 48/48] json_deep_merge        c          0.5  pass
+
+v1-q27-8bit-fn5-medium-32k-w64k-w16-r2: 44.0/48  first-try 42  any 46  hit-cap 0  looped 0  errors 0  5 min
+  Python        8.0/8
+  Java          8.0/8
+  Swift         7.0/8
+  TypeScript    8.0/8
+  C             7.0/8
+  Rust          6.0/8
+→ ~/inference/languages-benchmark/results/v1-v1-q27-8bit-fn5-medium-32k-w64k-w16-r2.json
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 32768
+  [  1/48] json_deep_merge        python     1.0  pass
+  [  2/48] csv_analysis           python     0.5  pass
+  [  3/48] log_parser             python     1.0  pass
+  [  4/48] log_parser             typescript 1.0  pass
+  [  5/48] csv_analysis           java       1.0  pass
+  [  6/48] log_parser             java       1.0  pass
+  [  7/48] json_deep_merge        typescript 1.0  pass
+  [  8/48] csv_analysis           typescript 1.0  pass
+  [  9/48] http_client            python     1.0  pass
+  [ 10/48] csv_analysis           rust       0.5  pass
+  [ 11/48] log_parser             swift      1.0  pass
+  [ 12/48] http_client            swift      1.0  pass
+  [ 13/48] dijkstra_graph         python     1.0  pass
+  [ 14/48] http_client            typescript 1.0  pass
+  [ 15/48] http_client            java       1.0  pass
+  [ 16/48] log_parser             rust       1.0  pass
+  [ 17/48] dijkstra_graph         typescript 1.0  pass
+  [ 18/48] dijkstra_graph         swift      1.0  pass
+  [ 19/48] csv_analysis           swift      1.0  pass
+  [ 20/48] json_deep_merge        swift      0.5  pass
+  [ 21/48] dijkstra_graph         java       1.0  pass
+  [ 22/48] file_tree_analysis     python     1.0  pass
+  [ 23/48] system_info            python     1.0  pass
+  [ 24/48] log_parser             c          1.0  pass
+  [ 25/48] json_deep_merge        java       1.0  pass
+  [ 26/48] system_info            java       1.0  pass
+  [ 27/48] system_info            swift      1.0  pass
+  [ 28/48] csv_analysis           c          1.0  pass
+  [ 29/48] system_info            typescript 1.0  pass
+  [ 30/48] system_info            c          1.0  pass
+  [ 31/48] system_info            rust       1.0  pass
+  [ 32/48] http_client            rust       1.0  pass
+  [ 33/48] file_tree_analysis     java       1.0  pass
+  [ 34/48] matrix_ops             python     1.0  pass
+  [ 35/48] file_tree_analysis     typescript 1.0  pass
+  [ 36/48] matrix_ops             java       1.0  pass
+  [ 37/48] file_tree_analysis     rust       0.5  pass
+  [ 38/48] file_tree_analysis     swift      0.5  pass
+  [ 39/48] matrix_ops             typescript 1.0  pass
+  [ 40/48] matrix_ops             rust       1.0  pass
+  [ 41/48] matrix_ops             c          1.0  pass
+  [ 42/48] http_client            c          1.0  pass
+  [ 43/48] file_tree_analysis     c          1.0  pass
+  [ 44/48] matrix_ops             swift      0.5  pass
+  [ 45/48] json_deep_merge        rust       1.0  pass
+  [ 46/48] dijkstra_graph         rust       0.5  pass
+  [ 47/48] json_deep_merge        c          0.5  pass
+  [ 48/48] dijkstra_graph         c          0.0  build
+
+v1-q27-8bit-fn5-medium-32k-w64k-w16-r3: 43.0/48  first-try 39  any 47  hit-cap 0  looped 0  errors 0  7 min
+  Python        7.5/8
+  Java          8.0/8
+  Swift         6.5/8
+  TypeScript    8.0/8
+  C             6.5/8
+  Rust          6.5/8
+→ ~/inference/languages-benchmark/results/v1-v1-q27-8bit-fn5-medium-32k-w64k-w16-r3.json
+[23:52:22] done

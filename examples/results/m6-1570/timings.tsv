@@ -1,0 +1,16 @@
+# m6-1570  2026-11-03 01:39  http://127.0.0.1:18321/v1
+quickstart	6.4 s	exit 0
+agent-budgets	42.3 s	exit 0
+tools-web-search	14.3 s	exit 0
+tools-shell	15.3 s	exit 0
+structured-output	24.8 s	exit 0
+agent-contexts	78.2 s	exit 0
+agent-handoff	165.3 s	exit 0
+agent-team	298.2 s	exit 0
+ocr-agents	21.3 s	exit 0
+ocr-agents-compare	184.8 s	exit 0
+coding-smoke-none	104.7 s	exit 0
+coding-smoke-medium	294.9 s	exit 0
+agent-swarm	78.2 s	exit 0
+agent-followups	303.6 s	exit 0
+users-at-once	230.2 s	exit 0

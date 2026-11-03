@@ -1,0 +1,10 @@
+up on 127.0.0.1:8300 (inferd pid 64914, front end pid 65208, socket /var/folders/80/f_tyrk39493dqbmm3ppbz1z00000gn/T/inferd-501/inferd-8300.sock)
+inferd: DFlash2 drafter loaded (block 16)
+inferd: drafter memory: 3.27 GiB own (context rings 1.81 for 46 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows)
+inferd: memory: GPU budget 77.8 GiB; model + state + scratch 21.9, drafter 3.7, PF8 0.0, KV 24.0 -> 49.5 allocated
+inferd: 8-bit KV, 24197 KV blocks (24 GiB, 0.8M tokens), 46 slots (6.6 GiB state), max ctx 147456
+inferd: PF8: off (auto: no neural accelerators; KV room after copies -0.7 GiB, need 73.1 for 16 x 147456 tokens), copies 22.71 GiB (not made), KV 24.0 GiB
+inferd: SSD tier in /Volumes/MODELS/spill/inferd-spill (96 GiB, 1.0 MiB per block + 187 MiB state per context)
+inferd: warm-up: 637 + 24-token prompts, 8 tokens each (12 steps; PF8 off, DFlash2 verify), 50 pipelines created (10 ms), 5.54 s (WARMUP=0 disables)
+inferd: listening on /var/folders/80/f_tyrk39493dqbmm3ppbz1z00000gn/T/inferd-501/inferd-8300.sock
+inferd: vocabulary for structured output: 248077 tokens

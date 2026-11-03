@@ -1,0 +1,2 @@
+inferd: memory: GPU budget 25.0 GiB; model + state + scratch 17.1, drafter 4.3, KV 2.1 (auto) -> 23.5 allocated
+inferd: 8-bit KV, 2104 KV blocks (2 GiB, 0.1M tokens), 16 slots (2.3 GiB state), max ctx 32768

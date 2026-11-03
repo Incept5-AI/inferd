@@ -1,0 +1,31 @@
+server http://127.0.0.1:18302/v1, model qwen3.8-27b
+
+== 1. json_schema: invoice extraction
+Here is the extracted invoice details from the email:
+
+**Invoice Number:** INV-2291  
+**Supplier:** Acme Ltd  
+**Sender:** Sam  
+
+**Line Items:**
+1. **Widget**  
+   - Quantity: 3  
+   - Unit Price: £4.50  
+   - Subtotal: £13.50  
+
+2. **Gadget**  
+   - Quantity: 1  
+   - Unit Price: £12.00  
+   - Subtotal: £12.00  
+
+3. **Installation**  
+   - Quantity: 2 hours  
+   - Rate: £40.00/hour  
+   - Subtotal: £80.00  
+
+**Subtotal (before VAT):** £105.50  
+**VAT (20%):** £21.10  
+**Total (including VAT):** £126.60
+finish_reason=stop  attempts=None  completion_tokens=196  6.34s
+
+This server ignored response_format: it needs inferd's structured-output front end (engine/frontend/serve.py from 2 Nov 2026 or later).

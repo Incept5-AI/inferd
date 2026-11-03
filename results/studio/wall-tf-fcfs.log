@@ -1,0 +1,17 @@
+== fcfs, TENSORFOLD_PREFILL_TOKENS=2048 14:02
+  N trial  prompt   gen  TTFT med  TTFT max  window win tok/s   A_e2e  wall s err
+  2     0 14330.0 6400.0       7.0       9.8    84.9     148.2   134.3    95.3   0
+  4     0 14329.0 6400.0      22.3      37.8    97.9     220.7   159.9   160.1   0
+  8     0  errors 7: [None, None, None]
+== restart (lock) 14:11
+== fcfs, TENSORFOLD_PREFILL_TOKENS=2048 16:36
+  N trial  prompt   gen  TTFT med  TTFT max  window win tok/s   A_e2e  wall s err
+  2     0 14329.0 6400.0       5.2       7.2    43.2     284.5   248.4    51.5   0
+  4     0 14329.5 6400.0       9.2      15.2    62.5     348.9   281.0    91.1   0
+  8     0 14328.0 6400.0      17.2      31.6   103.5     357.5   296.6   172.6   0
+== fcfs, TENSORFOLD_PREFILL_TOKENS=8192 16:46
+  N trial  prompt   gen  TTFT med  TTFT max  window win tok/s   A_e2e  wall s err
+  2     0 14329.0 6400.0       4.9       6.5    42.3     288.7   255.8    50.0   0
+  4     0 14329.0 6400.0       8.1      13.1    65.2     354.1   305.2    83.9   0
+  8     0 14330.0 6400.0      14.7      26.4    85.7     357.3   299.9   170.7   0
+== done

@@ -1,0 +1,14 @@
+# m6-476c54c  2026-11-02 20:59  http://127.0.0.1:18300/v1
+quickstart	7.8 s	exit 0
+agent-budgets	45.2 s	exit 0
+tools-web-search	13.6 s	exit 0
+tools-shell	15.4 s	exit 0
+structured-output	25.0 s	exit 0
+agent-contexts	77.0 s	exit 0  (re-run on 4feb7f5, which has the API)
+ocr-agents	31.4 s	exit 0
+ocr-agents-compare	305.1 s	exit 0
+coding-smoke-none	122.1 s	exit 0
+coding-smoke-medium	268.6 s	exit 0
+agent-swarm	79.0 s	exit 0
+agent-followups	303.1 s	exit 0
+users-at-once	225.8 s	exit 0

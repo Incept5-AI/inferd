@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="501" viewBox="0 0 860 501" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Other models on inferd: single-user decode at 4k, by machine">
+<title>Other models on inferd: single-user decode at 4k, by machine</title>
+<rect x="0" y="0" width="860" height="501" fill="#ffffff"/>
+<text x="20.0" y="28.0" font-size="16" text-anchor="start" fill="#0b0b0b" font-weight="600" >Other models on inferd: single-user decode at 4k, by machine</text>
+<text x="20.0" y="47.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >speed.py, cold 4k-token prompt, greedy, 512 tokens out, no drafter. Minis: one run per cell.</text>
+<rect x="20.0" y="61.0" width="12" height="12" rx="2" fill="#2a78d6"/>
+<text x="37.0" y="72.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >Mac Studio M5 Ultra</text>
+<rect x="186.7" y="61.0" width="12" height="12" rx="2" fill="#eb6834"/>
+<text x="203.7" y="72.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >Mac mini M5 Pro</text>
+<rect x="326.5" y="61.0" width="12" height="12" rx="2" fill="#1baf7a"/>
+<text x="343.5" y="72.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >Mac mini M6</text>
+<line x1="70" x2="840" y1="401.0" y2="401.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="405.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >0</text>
+<line x1="70" x2="840" y1="326.0" y2="326.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="330.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >50</text>
+<line x1="70" x2="840" y1="251.0" y2="251.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="255.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >100</text>
+<line x1="70" x2="840" y1="176.0" y2="176.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="180.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >150</text>
+<line x1="70" x2="840" y1="101.0" y2="101.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="105.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >200</text>
+<text x="16.0" y="251.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" transform="rotate(-90 16 251.0)">decode tokens per second</text>
+<line x1="70" x2="840" y1="401" y2="401" stroke="#52514e" stroke-width="1"/>
+<path d="M106.2,401 V201.9 Q106.2,197.9 110.2,197.9 H140.2 Q144.2,197.9 144.2,201.9 V401 Z" fill="#2a78d6"><title>Mac Studio M5 Ultra, Qwen3.5-9B: 135</title></path>
+<text x="125.2" y="193.9" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >135</text>
+<path d="M146.2,401 V326.3 Q146.2,322.3 150.2,322.3 H180.2 Q184.2,322.3 184.2,326.3 V401 Z" fill="#eb6834"><title>Mac mini M5 Pro, Qwen3.5-9B: 52.5</title></path>
+<text x="165.2" y="318.3" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >52.5</text>
+<path d="M186.2,401 V359.1 Q186.2,355.1 190.2,355.1 H220.2 Q224.2,355.1 224.2,359.1 V401 Z" fill="#1baf7a"><title>Mac mini M6, Qwen3.5-9B: 30.6</title></path>
+<text x="205.2" y="351.1" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >30.6</text>
+<text x="166.2" y="416.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >Qwen3.5-9B</text>
+<path d="M298.8,401 V175.2 Q298.8,171.2 302.8,171.2 H332.8 Q336.8,171.2 336.8,175.2 V401 Z" fill="#2a78d6"><title>Mac Studio M5 Ultra, Qwen3.6-35B-A3B: 153</title></path>
+<text x="317.8" y="167.2" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >153</text>
+<path d="M338.8,401 V238.6 Q338.8,234.6 342.8,234.6 H372.8 Q376.8,234.6 376.8,238.6 V401 Z" fill="#eb6834"><title>Mac mini M5 Pro, Qwen3.6-35B-A3B: 111</title></path>
+<text x="357.8" y="230.6" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >111</text>
+<path d="M378.8,401 V281.3 Q378.8,277.3 382.8,277.3 H412.8 Q416.8,277.3 416.8,281.3 V401 Z" fill="#1baf7a"><title>Mac mini M6, Qwen3.6-35B-A3B: 82.5</title></path>
+<text x="397.8" y="273.3" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >82.5</text>
+<text x="358.8" y="416.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >Qwen3.6-35B-A3B</text>
+<path d="M491.2,401 V339.2 Q491.2,335.2 495.2,335.2 H525.2 Q529.2,335.2 529.2,339.2 V401 Z" fill="#2a78d6"><title>Mac Studio M5 Ultra, Muse Glimmer 30B: 43.9</title></path>
+<text x="510.2" y="331.2" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >43.9</text>
+<path d="M531.2,401 V380.9 Q531.2,376.9 535.2,376.9 H565.2 Q569.2,376.9 569.2,380.9 V401 Z" fill="#eb6834"><title>Mac mini M5 Pro, Muse Glimmer 30B: 16.0</title></path>
+<text x="550.2" y="372.9" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >16.0</text>
+<path d="M571.2,401 V391.4 Q571.2,387.4 575.2,387.4 H605.2 Q609.2,387.4 609.2,391.4 V401 Z" fill="#1baf7a"><title>Mac mini M6, Muse Glimmer 30B: 9.09</title></path>
+<text x="590.2" y="383.4" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >9.09</text>
+<text x="551.2" y="416.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >Muse Glimmer 30B</text>
+<path d="M683.8,401 V363.4 Q683.8,359.4 687.8,359.4 H717.8 Q721.8,359.4 721.8,363.4 V401 Z" fill="#2a78d6"><title>Mac Studio M5 Ultra, Gemma-4-31B: 27.7</title></path>
+<text x="702.8" y="355.4" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >27.7</text>
+<path d="M723.8,401 V391.4 Q723.8,387.4 727.8,387.4 H757.8 Q761.8,387.4 761.8,391.4 V401 Z" fill="#eb6834"><title>Mac mini M5 Pro, Gemma-4-31B: 9.05</title></path>
+<text x="742.8" y="383.4" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >9.05</text>
+<text x="785.8" y="395.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" transform="rotate(-90 785.8 395)">pending</text>
+<text x="743.8" y="416.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >Gemma-4-31B</text>
+<text x="455.0" y="445.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >model</text>
+<text x="20.0" y="475.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Source: results/models/{studio,m5-pro,m6}/speed-*.jsonl</text>
+<text x="20.0" y="489.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Data: 2026-11-01. 'pending' = no result file yet.</text>
+</svg>

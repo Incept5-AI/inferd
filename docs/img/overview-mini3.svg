@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 356" role="img" aria-label="Three Mac minis, agents on 16k contexts (inferd)">
+<style>
+.bg{fill:#ffffff}.t{fill:#1d1d1b;font:600 15px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.tick{fill:#6b6a65;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.lab{fill:#1d1d1b;font:12px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.val{fill:#1d1d1b;font:600 11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.note{fill:#6b6a65;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.grid{stroke:#e6e3dc;stroke-width:1}polyline.ln{fill:none!important;stroke-width:2.3}
+.k-us{fill:#1f5fbf;stroke:#1f5fbf}.k-us2{fill:#7aa7e6;stroke:#7aa7e6}.k-o1{fill:#b0702e;stroke:#b0702e}
+.k-o2{fill:#7b8a3a;stroke:#7b8a3a}.k-o3{fill:#8d8b85;stroke:#8d8b85}.k-o4{fill:#9a5aa8;stroke:#9a5aa8}
+.ln.k-us{stroke-width:3.2}.ln.k-o2{stroke-dasharray:6 4}.ln.k-o3{stroke-dasharray:2 4}
+@media (prefers-color-scheme:dark){.bg{fill:#1b1b1a}.t,.lab,.val{fill:#ecebe6}.tick,.note{fill:#a3a19a}.grid{stroke:#34332f}
+.k-us{fill:#6aa3ff;stroke:#6aa3ff}.k-us2{fill:#9fc1f2;stroke:#9fc1f2}.k-o1{fill:#dba25f;stroke:#dba25f}
+.k-o2{fill:#aebc6a;stroke:#aebc6a}.k-o4{fill:#c58fd2;stroke:#c58fd2}}
+</style>
+<rect class="bg" width="720" height="356" rx="10"/>
+<text class="t" x="18" y="28">Three Mac minis, agents on 16k contexts (inferd)</text>
+<line class="grid" x1="56" y1="298.0" x2="550" y2="298.0"/><text class="tick" x="49" y="302.0" text-anchor="end">0</text>
+<line class="grid" x1="56" y1="235.5" x2="550" y2="235.5"/><text class="tick" x="49" y="239.5" text-anchor="end">47</text>
+<line class="grid" x1="56" y1="173.0" x2="550" y2="173.0"/><text class="tick" x="49" y="177.0" text-anchor="end">94</text>
+<line class="grid" x1="56" y1="110.5" x2="550" y2="110.5"/><text class="tick" x="49" y="114.5" text-anchor="end">141</text>
+<line class="grid" x1="56" y1="48.0" x2="550" y2="48.0"/><text class="tick" x="49" y="52.0" text-anchor="end">188</text>
+<text class="tick" x="56.0" y="315" text-anchor="middle">1</text>
+<text class="tick" x="220.7" y="315" text-anchor="middle">4</text>
+<text class="tick" x="385.3" y="315" text-anchor="middle">8</text>
+<text class="tick" x="550.0" y="315" text-anchor="middle">16</text>
+<text class="tick" x="303.0" y="331" text-anchor="middle">agents</text>
+<polyline class="ln k-us" points="56.0,235.1 220.7,147.6 385.3,101.6 550.0,74.8"/>
+<circle class="k-us" cx="56.0" cy="235.1" r="3.3"/>
+<circle class="k-us" cx="220.7" cy="147.6" r="3.3"/>
+<circle class="k-us" cx="385.3" cy="101.6" r="3.3"/>
+<circle class="k-us" cx="550.0" cy="74.8" r="3.3"/>
+<polyline class="ln k-o4" points="56.0,260.3 220.7,211.3 385.3,209.7 550.0,208.0"/>
+<circle class="k-o4" cx="56.0" cy="260.3" r="3.3"/>
+<circle class="k-o4" cx="220.7" cy="211.3" r="3.3"/>
+<circle class="k-o4" cx="385.3" cy="209.7" r="3.3"/>
+<circle class="k-o4" cx="550.0" cy="208.0" r="3.3"/>
+<polyline class="ln k-o2" points="56.0,266.7 220.7,231.3 385.3,223.6 550.0,218.6"/>
+<circle class="k-o2" cx="56.0" cy="266.7" r="3.3"/>
+<circle class="k-o2" cx="220.7" cy="231.3" r="3.3"/>
+<circle class="k-o2" cx="385.3" cy="223.6" r="3.3"/>
+<circle class="k-o2" cx="550.0" cy="218.6" r="3.3"/>
+<text class="lab k-us" x="558.0" y="78.8" style="font-weight:600">M5 Pro 64 GB 168</text>
+<text class="lab k-o4" x="558.0" y="212.0" style="font-weight:600">M6 32 GB 68</text>
+<text class="lab k-o2" x="558.0" y="227.0" style="font-weight:600">M4 Pro 64 GB 60</text>
+<text class="note" x="18" y="346">Total tok/s. The M6&#x27;s 2.4 GiB KV pool holds about four 16k contexts; the M4 Pro has no GPU neural accelerators.</text></svg>

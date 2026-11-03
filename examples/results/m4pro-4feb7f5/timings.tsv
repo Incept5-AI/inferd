@@ -1,0 +1,14 @@
+# m4pro-4feb7f5  2026-11-02 21:40  http://127.0.0.1:18301/v1
+quickstart	9.1 s	exit 0
+agent-budgets	62.7 s	exit 0
+tools-web-search	22.4 s	exit 0
+tools-shell	25.6 s	exit 0
+structured-output	35.9 s	exit 0
+agent-contexts	158.0 s	exit 0
+ocr-agents	32.8 s	exit 0
+ocr-agents-compare	327.0 s	exit 0  (re-run after the vision-margin fix; the first run hit a GPU out-of-memory step)
+coding-smoke-none	196.7 s	exit 0
+coding-smoke-medium	475.8 s	exit 0
+agent-swarm	161.1 s	exit 0
+agent-followups	620.9 s	exit 0
+users-at-once	417.4 s	exit 0

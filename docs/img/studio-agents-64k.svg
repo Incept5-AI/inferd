@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="531" viewBox="0 0 900 531" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Qwen3.8-27B agents at 64k: total tok/s, Mac Studio M5 Ultra">
+<title>Qwen3.8-27B agents at 64k: total tok/s, Mac Studio M5 Ultra</title>
+<rect x="0" y="0" width="900" height="531" fill="#ffffff"/>
+<text x="20.0" y="28.0" font-size="16" text-anchor="start" fill="#0b0b0b" font-weight="600" >Qwen3.8-27B agents at 64k: total tok/s, Mac Studio M5 Ultra</text>
+<text x="20.0" y="47.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >conc.py --mode followup: each agent's context primed, then all N send a follow-up at once, 512 tokens each. End-to-end tok/s</text>
+<text x="20.0" y="63.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >(prefill included). Higher is better.</text>
+<rect x="20.0" y="77.0" width="12" height="12" rx="2" fill="#2a78d6"/>
+<text x="37.0" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >inferd, 1 Nov build</text>
+<rect x="186.7" y="77.0" width="12" height="12" rx="2" fill="#eb6834"/>
+<text x="203.7" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >Splash 1.5.0</text>
+<rect x="306.3" y="77.0" width="12" height="12" rx="2" fill="#eda100"/>
+<text x="323.3" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >Kapitsa 0.2.24</text>
+<rect x="439.4" y="77.0" width="12" height="12" rx="2" fill="#e87ba4"/>
+<text x="456.4" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >mlx-serve 26.10.2</text>
+<line x1="70" x2="880" y1="417.0" y2="417.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="421.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >0</text>
+<line x1="70" x2="880" y1="357.0" y2="357.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="361.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >100</text>
+<line x1="70" x2="880" y1="297.0" y2="297.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="301.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >200</text>
+<line x1="70" x2="880" y1="237.0" y2="237.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="241.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >300</text>
+<line x1="70" x2="880" y1="177.0" y2="177.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="181.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >400</text>
+<line x1="70" x2="880" y1="117.0" y2="117.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="121.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >500</text>
+<text x="16.0" y="267.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" transform="rotate(-90 16 267.0)">total tokens per second</text>
+<line x1="70" x2="880" y1="417" y2="417" stroke="#52514e" stroke-width="1"/>
+<path d="M78.0,417 V348.5 Q78.0,344.5 82.0,344.5 H108.5 Q112.5,344.5 112.5,348.5 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=1: 121</title></path>
+<path d="M114.5,417 V332.6 Q114.5,328.6 118.5,328.6 H145.0 Q149.0,328.6 149.0,332.6 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=1: 147</title></path>
+<path d="M151.0,417 V331.9 Q151.0,327.9 155.0,327.9 H181.5 Q185.5,327.9 185.5,331.9 V417 Z" fill="#eda100"><title>Kapitsa 0.2.24, N=1: 148</title></path>
+<path d="M187.5,417 V342.5 Q187.5,338.5 191.5,338.5 H218.0 Q222.0,338.5 222.0,342.5 V417 Z" fill="#e87ba4"><title>mlx-serve 26.10.2, N=1: 131</title></path>
+<text x="151.0" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=1</text>
+<path d="M240.0,417 V229.1 Q240.0,225.1 244.0,225.1 H270.5 Q274.5,225.1 274.5,229.1 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=4: 320</title></path>
+<path d="M276.5,417 V245.9 Q276.5,241.9 280.5,241.9 H307.0 Q311.0,241.9 311.0,245.9 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=4: 292</title></path>
+<path d="M313.0,417 V356.4 Q313.0,352.4 317.0,352.4 H343.5 Q347.5,352.4 347.5,356.4 V417 Z" fill="#eda100"><title>Kapitsa 0.2.24, N=4: 108</title></path>
+<path d="M349.5,417 V412.6 Q349.5,408.6 353.5,408.6 H380.0 Q384.0,408.6 384.0,412.6 V417 Z" fill="#e87ba4"><title>mlx-serve 26.10.2, N=4: 14.0</title></path>
+<text x="313.0" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=4</text>
+<path d="M402.0,417 V199.8 Q402.0,195.8 406.0,195.8 H432.5 Q436.5,195.8 436.5,199.8 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=8: 369</title></path>
+<path d="M438.5,417 V234.5 Q438.5,230.5 442.5,230.5 H469.0 Q473.0,230.5 473.0,234.5 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=8: 311</title></path>
+<path d="M475.0,417 V415.5 Q475.0,411.5 479.0,411.5 H505.5 Q509.5,411.5 509.5,415.5 V417 Z" fill="#eda100"><title>Kapitsa 0.2.24, N=8: 9.2</title></path>
+<path d="M511.5,417 V414.5 Q511.5,410.5 515.5,410.5 H542.0 Q546.0,410.5 546.0,414.5 V417 Z" fill="#e87ba4"><title>mlx-serve 26.10.2, N=8: 10.9</title></path>
+<text x="475.0" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=8</text>
+<path d="M564.0,417 V190.8 Q564.0,186.8 568.0,186.8 H594.5 Q598.5,186.8 598.5,190.8 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=16: 384</title></path>
+<path d="M600.5,417 V240.9 Q600.5,236.9 604.5,236.9 H631.0 Q635.0,236.9 635.0,240.9 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=16: 300</title></path>
+<text x="637.0" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=16</text>
+<path d="M726.0,417 V166.7 Q726.0,162.7 730.0,162.7 H756.5 Q760.5,162.7 760.5,166.7 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=32: 424</title></path>
+<path d="M762.5,417 V234.6 Q762.5,230.6 766.5,230.6 H793.0 Q797.0,230.6 797.0,234.6 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=32: 311</title></path>
+<text x="799.0" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=32</text>
+<text x="475.0" y="461.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >concurrent agents</text>
+<text x="20.0" y="491.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Source: results/cmp/inferd14-agents.jsonl, results/cmp/kapitsa-agents.jsonl, results/cmp/mlxserve-agents.jsonl, results/cmp/splash-agents.jsonl</text>
+<text x="20.0" y="505.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Data: Splash, Kapitsa and mlx-serve 2026-10-30; inferd 2026-11-01 (one sweep, single runs, see RESULTS.md for the long-uptime caveat). A missing bar was</text>
+<text x="20.0" y="519.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >not run.</text>
+</svg>

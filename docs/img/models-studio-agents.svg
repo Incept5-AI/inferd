@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="531" viewBox="0 0 860 531" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Other models on inferd, Mac Studio M5 Ultra: 16 agents">
+<title>Other models on inferd, Mac Studio M5 Ultra: 16 agents</title>
+<rect x="0" y="0" width="860" height="531" fill="#ffffff"/>
+<text x="20.0" y="28.0" font-size="16" text-anchor="start" fill="#0b0b0b" font-weight="600" >Other models on inferd, Mac Studio M5 Ultra: 16 agents</text>
+<text x="20.0" y="47.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >conc.py --mode followup, 16 agents at 32k each (Gemma-4-31B at 8k: its bf16 KV fits ~5 agents at 32k), 512 tokens each.</text>
+<text x="20.0" y="63.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >End-to-end tok/s.</text>
+<rect x="20.0" y="77.0" width="12" height="12" rx="2" fill="#2a78d6"/>
+<text x="37.0" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >16 agents, total tok/s</text>
+<line x1="70" x2="840" y1="417.0" y2="417.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="421.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >0</text>
+<line x1="70" x2="840" y1="342.0" y2="342.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="346.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >200</text>
+<line x1="70" x2="840" y1="267.0" y2="267.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="271.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >400</text>
+<line x1="70" x2="840" y1="192.0" y2="192.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="196.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >600</text>
+<line x1="70" x2="840" y1="117.0" y2="117.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="121.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >800</text>
+<text x="16.0" y="267.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" transform="rotate(-90 16 267.0)">total tokens per second</text>
+<line x1="70" x2="840" y1="417" y2="417" stroke="#52514e" stroke-width="1"/>
+<path d="M146.2,417 V174.9 Q146.2,170.9 150.2,170.9 H180.2 Q184.2,170.9 184.2,174.9 V417 Z" fill="#2a78d6"><title>16 agents, total tok/s, Qwen3.5-9B: 656</title></path>
+<text x="165.2" y="166.9" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >656</text>
+<text x="166.2" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >Qwen3.5-9B</text>
+<path d="M338.8,417 V216.0 Q338.8,212.0 342.8,212.0 H372.8 Q376.8,212.0 376.8,216.0 V417 Z" fill="#2a78d6"><title>16 agents, total tok/s, Qwen3.6-35B-A3B: 547</title></path>
+<text x="357.8" y="208.0" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >547</text>
+<text x="358.8" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >Qwen3.6-35B-A3B</text>
+<path d="M531.2,417 V335.1 Q531.2,331.1 535.2,331.1 H565.2 Q569.2,331.1 569.2,335.1 V417 Z" fill="#2a78d6"><title>16 agents, total tok/s, Muse Glimmer 30B: 229</title></path>
+<text x="550.2" y="327.1" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >229</text>
+<text x="551.2" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >Muse Glimmer 30B</text>
+<path d="M723.8,417 V374.5 Q723.8,370.5 727.8,370.5 H757.8 Q761.8,370.5 761.8,374.5 V417 Z" fill="#2a78d6"><title>16 agents, total tok/s, Gemma-4-31B: 124</title></path>
+<text x="742.8" y="366.5" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >124</text>
+<text x="742.8" y="443.0" font-size="9" text-anchor="middle" fill="#77766f" font-weight="normal" >8k contexts</text>
+<text x="743.8" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >Gemma-4-31B</text>
+<text x="455.0" y="461.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >model</text>
+<text x="20.0" y="491.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Source: results/models/studio/conc-q9.jsonl, results/models/studio/conc-q35moe.jsonl, results/models/studio/conc-glimmer.jsonl,</text>
+<text x="20.0" y="505.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >results/models/studio/conc-gemma31.jsonl</text>
+<text x="20.0" y="519.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Data: 2026-11-01. Single runs.</text>
+</svg>

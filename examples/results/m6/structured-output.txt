@@ -1,0 +1,49 @@
+server http://127.0.0.1:18300/v1, model qwen3.8-27b
+
+== 1. json_schema: invoice extraction
+Here is the extracted invoice details from the email:
+
+**Invoice Number:** INV-2291  
+**Supplier:** Acme Ltd  
+**Sender:** Sam  
+
+**Line Items:**
+1. **Widget**  
+   - Quantity: 3  
+   - Unit Price: £4.50  
+   - Subtotal: £13.50  
+
+2. **Gadget**  
+   - Quantity: 1  
+   - Unit Price: £12.00  
+   - Subtotal: £12.00  
+
+3. **Installation**  
+   - Quantity: 2 hours  
+   - Rate: £40.00/hour  
+   - Subtotal: £80.00  
+
+**Subtotal (before VAT):** £105.50  
+**VAT (20%):** £21.10  
+**Total (including VAT):** £126.60
+finish_reason=stop  attempts=None  completion_tokens=196  4.92s
+
+Traceback (most recent call last):
+  File "~/dev/inference/publish/inferd/examples/structured-output/structured_output.py", line 60, in <module>
+    inv = show("1. json_schema: invoice extraction", *post({
+        "model": model, "temperature": 0, "max_tokens": 1024, "chat_template_kwargs": NONE,
+        "messages": [{"role": "user", "content": "Extract the invoice from this email:\n\n" + EMAIL}],
+        "response_format": {"type": "json_schema", "json_schema": {"name": "invoice", "schema": INVOICE,
+                                                                   "strict": STRICT}}}), t)
+  File "~/dev/inference/publish/inferd/examples/structured-output/structured_output.py", line 55, in show
+    return json.loads(c)
+           ~~~~~~~~~~^^^
+  File "~/miniconda3/lib/python3.13/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "~/miniconda3/lib/python3.13/json/decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "~/miniconda3/lib/python3.13/json/decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)

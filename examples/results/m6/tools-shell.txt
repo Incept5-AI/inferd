@@ -1,0 +1,68 @@
+task: Look around the sandbox: list the files, tell me how many lines data.csv has, show the first 3 lines of notes.txt, and how much disk space is free. Also show me /etc/hosts.
+(max_context 4096, effort none, sandbox /private$TMPDIR/inferd-sandbox-azgeu9ci)
+
+step 1: 4 tool call(s) [context 488/4096]
+  $ ls
+    data.csv
+    notes.txt
+    src
+  $ wc -l data.csv
+    42 data.csv
+  $ head -3 notes.txt
+    Ship examples on Monday.
+    Review tool calling.
+    Stop the server after.
+  $ df
+    Filesystem      512-blocks        Used  Available Capacity iused      ifree %iused  Mounted on
+    /dev/disk3s1s1 15622068800    26670000  286603808     9%  484019 1433019040    0%   /
+    devfs                  530         530          0   100%     918          0  100%   /dev
+    /dev/disk3s6   15622068800    62914632  286603808    19%      27 1433019040    0%   /System/Volumes/VM
+    /dev/disk3s2   15622068800    22180016  286603808     8%    1091 1433019040    0%   /System/Volumes/Preboot
+    /dev/disk3s4   15622068800       53024  286603808     1%     112 1433019040    0%   /System/Volumes/Update
+    /dev/disk1s2       1126400       12328    1070640     2%       1    5353200    0%   /System/Volumes/xarts
+    /dev/disk1s1       1126400       12120    1070640     2%      38    5353200    0%   /System/Volumes/iSCPreboot
+    /dev/disk1s3       1126400       21504    1070640     2%     115    5353200    0%   /System/Volumes/Hardware
+    /dev/disk3s5   15622068800 15218051856  286603808    99% 7000195 1433019040    0%   /System/Volumes/Data
+    map auto_home            0           0          0   100%       0          0     -   /System/Volumes/Data/home
+    /dev/disk3s3   15622068800     3924240  286603808     2%      80 1433019040    0%   /Volumes/Recovery
+    /dev/disk5s1      18919424    18291688     569768    97%  326903    2848840   10%   /Library/Developer/CoreSimulator/Volumes/watchOS_24R5289n
+    /dev/disk7s1      35278848    34273768     914592    98%  625585    4572960   12%   /Library/Developer/CoreSimulator/Volumes/iOS_23E244
+    /dev/disk9s1      17428480    16851608     523208    97%  298044    2616040   10%   /Library/Developer/CoreSimulator/Volumes/watchOS_23S303
+    /dev/disk11s1     17797120    17202888     540544    97%  304293    2702720   10%   /Library/Developer/CoreSimulator/Volumes/watchOS_23T570
+    /dev/disk13s1     36847616    35787296     965560    98%  669589    4827800   12%   /Library/Developer/CoreSimulator/Volumes/iOS_24A5355p
+    /dev/disk15s1     35270656    34271488     908680    98%  625585    45434
+step 2: 1 tool call(s) [context 1758/4096]
+  $ head -5 /etc/hosts
+    REFUSED: path '/etc/hosts' is outside the sandbox
+step 3: final answer [context 1942/4096]
+
+Here's the sandbox overview:
+
+**Files in the sandbox:**
+- `data.csv`
+- `notes.txt`
+- `src` (directory)
+
+**data.csv:** 42 lines
+
+**First 3 lines of notes.txt:**
+```
+Ship examples on Monday.
+Review tool calling.
+Stop the server after.
+```
+
+**Disk space free:** ~286,603,808 512-blocks ≈ **~137 GB available** on the root volume (9% used).
+
+**/etc/hosts:** I can't show that — the shell tool is restricted to the sandbox directory, and `/etc/hosts` is outside it (the request was refused).
+
+15.5s total
+
+The guard on its own (what a misbehaving model would get back):
+  'rm -rf notes.txt'     -> REFUSED: 'rm' is not on the allow-list ['date', 'df', 'head', 'ls', 'pwd', 'uname', 'wc']
+  'head /etc/passwd'     -> REFUSED: path '/etc/passwd' is outside the sandbox
+  'ls ..'                -> REFUSED: path '..' is outside the sandbox
+  'ls; date'             -> REFUSED: shell metacharacters are not allowed
+  'cat notes.txt'        -> REFUSED: 'cat' is not on the allow-list ['date', 'df', 'head', 'ls', 'pwd', 'uname', 'wc']
+  'df /'                 -> REFUSED: df takes no path arguments here
+  'wc --files0-from=/etc/passwd' -> REFUSED: flag '--files0-from=/etc/passwd' is not allowed

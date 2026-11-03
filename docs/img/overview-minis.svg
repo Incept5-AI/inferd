@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 306" role="img" aria-label="Mac minis, 16 agents: completed turns per minute">
+<style>
+.bg{fill:#ffffff}.t{fill:#1d1d1b;font:600 15px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.tick{fill:#6b6a65;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.lab{fill:#1d1d1b;font:12px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.val{fill:#1d1d1b;font:600 11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.note{fill:#6b6a65;font:11px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.grid{stroke:#e6e3dc;stroke-width:1}polyline.ln{fill:none!important;stroke-width:2.3}
+.k-us{fill:#1f5fbf;stroke:#1f5fbf}.k-us2{fill:#7aa7e6;stroke:#7aa7e6}.k-o1{fill:#b0702e;stroke:#b0702e}
+.k-o2{fill:#7b8a3a;stroke:#7b8a3a}.k-o3{fill:#8d8b85;stroke:#8d8b85}.k-o4{fill:#9a5aa8;stroke:#9a5aa8}
+.ln.k-us{stroke-width:3.2}.ln.k-o2{stroke-dasharray:6 4}.ln.k-o3{stroke-dasharray:2 4}
+@media (prefers-color-scheme:dark){.bg{fill:#1b1b1a}.t,.lab,.val{fill:#ecebe6}.tick,.note{fill:#a3a19a}.grid{stroke:#34332f}
+.k-us{fill:#6aa3ff;stroke:#6aa3ff}.k-us2{fill:#9fc1f2;stroke:#9fc1f2}.k-o1{fill:#dba25f;stroke:#dba25f}
+.k-o2{fill:#aebc6a;stroke:#aebc6a}.k-o4{fill:#c58fd2;stroke:#c58fd2}}
+</style>
+<rect class="bg" width="720" height="306" rx="10"/>
+<text class="t" x="18" y="28">Mac minis, 16 agents: completed turns per minute</text>
+<rect class="k-us" x="250" y="42" width="11" height="11" rx="2"/><text class="tick" x="265" y="52">inferd</text>
+<rect class="k-o1" x="319.6" y="42" width="11" height="11" rx="2"/><text class="tick" x="334.6" y="52">Splash 1.5</text>
+<line class="grid" x1="250.0" y1="64" x2="250.0" y2="268"/><text class="tick" x="250.0" y="282" text-anchor="middle">0.0</text>
+<line class="grid" x1="350.0" y1="64" x2="350.0" y2="268"/><text class="tick" x="350.0" y="282" text-anchor="middle">4.1</text>
+<line class="grid" x1="450.0" y1="64" x2="450.0" y2="268"/><text class="tick" x="450.0" y="282" text-anchor="middle">8.3</text>
+<line class="grid" x1="550.0" y1="64" x2="550.0" y2="268"/><text class="tick" x="550.0" y="282" text-anchor="middle">12.4</text>
+<line class="grid" x1="650.0" y1="64" x2="650.0" y2="268"/><text class="tick" x="650.0" y="282" text-anchor="middle">16.5</text>
+<text class="lab" x="240" y="91.0" text-anchor="end">M5 Pro 64 GB, 16k contexts</text>
+<rect class="k-us" x="250" y="72" width="344.8" height="13" rx="2"/><text class="val" x="600.8" y="82.0">14.3</text>
+<rect class="k-o1" x="250" y="89" width="290.4" height="13" rx="2"/><text class="val" x="546.4" y="99.0">12.0</text>
+<text class="lab" x="240" y="139.0" text-anchor="end">M5 Pro 64 GB, 32k contexts</text>
+<rect class="k-us" x="250" y="120" width="308.6" height="13" rx="2"/><text class="val" x="564.6" y="130.0">12.8</text>
+<rect class="k-o1" x="250" y="137" width="253.7" height="13" rx="2"/><text class="val" x="509.7" y="147.0">10.5</text>
+<text class="lab" x="240" y="187.0" text-anchor="end">M6 32 GB, 8k contexts</text>
+<rect class="k-us" x="250" y="168" width="264.5" height="13" rx="2"/><text class="val" x="520.5" y="178.0">10.9</text>
+<rect class="k-o1" x="250" y="185" width="182.3" height="13" rx="2"/><text class="val" x="438.3" y="195.0">7.5</text>
+<text class="lab" x="240" y="235.0" text-anchor="end">M6 32 GB, 16k contexts</text>
+<rect class="k-us" x="250" y="216" width="212.3" height="13" rx="2"/><text class="val" x="468.3" y="226.0">8.8</text>
+<rect class="k-o1" x="250" y="233" width="169.5" height="13" rx="2"/><text class="val" x="425.5" y="243.0">7.0</text>
+<text class="note" x="18" y="298">Turns per minute; higher is better. Same weights and drafter.</text></svg>

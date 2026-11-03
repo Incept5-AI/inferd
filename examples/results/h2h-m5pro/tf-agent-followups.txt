@@ -1,0 +1,23 @@
+8 agents, each with its own 8k-token catalogue, 3 turns each (follow-ups add ~512 tokens of tool output), max_tokens 128, on http://127.0.0.1:8091/v1 (q27)
+
+agent turn1 TTFT follow-up TTFT  prompt        cached  done at correct
+    0    155.9 s        69.16 s    9511    8919/18404   302.4s   3/3
+    1    137.2 s        56.42 s    9469    8888/18320   278.9s   3/3
+    2    157.7 s        23.46 s    9491   17182/18359   216.4s   3/3
+    3    153.6 s        72.98 s    9528    8923/18419   308.6s   3/3
+    4    121.4 s        42.49 s    9481    8875/18324   253.0s   3/3
+    5     77.2 s        72.04 s    9496    8891/18360   306.5s   3/3
+    6    150.2 s        63.78 s    9474    8883/18327   295.8s   3/3
+    7    159.6 s        21.99 s    9525   17223/18420   212.1s   3/3
+
+first questions (8 documents at once): last agent's first token 159.59 s, all answered 160.06 s
+follow-ups: TTFT median 21.99 s, max 144.12 s, 148.55 s for all of them, cached 60% of prompt tokens
+all 24 turns: 308.6 s wall, 24 ok, 0 errors, 24/24 answers contain the catalogue fact
+
+agent 0's answers:
+  Q1: Which team owns S-017, and who is its on-call lead? One sentence.
+  A1: Service S-017 is owned by the Billing team, and its on-call lead is Mateo Brennan.
+  Q2: How many times does S-072 retry a failed call, and where does it store state? One sentence.
+  A2: Service S-072 retries failed downstream calls 5 times and stores its state in Redis shard rd-10.
+  Q3: Which runbook covers S-008, and on which day does it deploy? One sentence.
+  A3: Service S-008 is covered by runbook RB-4246 and deploys on Mondays.

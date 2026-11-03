@@ -1,0 +1,12 @@
+inferd
+Copyright 2026 Incept5
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes software from MLX (https://github.com/ml-explore/mlx), Copyright © 2023 Apple Inc., licensed under the
+MIT License. The vendored sources are in engine/third_party/mlx (licence: engine/third_party/mlx/LICENSE; version,
+file list and the local patches: engine/third_party/mlx/README). Kernels instantiating them are
+engine/kernels/mlx_*.metal and engine/kernels/qmm_splitk.metal.
+
+Benchmark results in docs/, results/ and reports/ include third-party measurements and published figures; each is
+attributed where it appears. Model weights are not distributed with this repository and carry their own licences.

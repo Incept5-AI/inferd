@@ -1,0 +1,3 @@
+inferd: KV sizing leaves 1.0 GiB for the front end's vision tower (VISION_MARGIN_GIB)
+inferd: memory: GPU budget 51.8 GiB; model + state + scratch 26.4, drafter 5.5, KV 17.5 (auto) -> 49.3 allocated
+inferd: 8-bit KV, 17647 KV blocks (18 GiB, 0.6M tokens), 80 slots (11.5 GiB state), max ctx 40960

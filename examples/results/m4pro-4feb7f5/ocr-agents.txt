@@ -1,0 +1,12 @@
+4 OCR agents in parallel, effort none; max_context = image tokens + 110 + 150
+
+letter          max_context   960  used 767+58  4/4 fields  31.6s  finish=stop
+   {"signed_by": "Dr. Helen Marsh", "recipient_name": "Mr. Tomas Ruiz", "date": "2026-11-03", "subject": "Renewal of laboratory lease"}
+receipt         max_context   876  used 685+71  5/5 fields  31.8s  finish=stop
+   {"store": "GREENLEAF MARKET", "date": "2026-10-28", "time": "18:42", "total": "23.47", "card_brand": "VISA"}
+shipping_label  max_context   764  used 578+93  6/6 fields  32.0s  finish=stop
+   {"recipient": "Maria Okafor", "street": "88 Kingsland Road", "city": "London", "postcode": "E2 8DP", "tracking_number": "1Z 999 AA1 01 2345 6784", "weight_kg": "2.4"}
+invoice         max_context   932  used 744+94  6/6 fields  32.4s  finish=stop
+   {"vendor": "NORTHWIND COMPONENTS LTD", "invoice_number": "INV-2026-04817", "date": "2026-10-14", "customer": "Incept5 Labs", "total": "1,284.60", "currency": "EUR"}
+
+21/21 fields correct, 32.5s wall for all four

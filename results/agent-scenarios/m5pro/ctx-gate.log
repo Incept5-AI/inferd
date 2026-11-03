@@ -1,0 +1,41 @@
+== gate 21:06
+loaded in 1.3 s
+wrote 4 x 248320 logits (chunk 1)
+loaded in 1.0 s
+wrote 4 x 248320 logits (chunk 24)
+loaded in 1.1 s
+wrote 4 x 248320 logits (chunk 1)
+loaded in 1.0 s
+wrote 4 x 248320 logits (chunk 24)
+chunk 1: byte-identical
+chunk 24: byte-identical
+1. save a context (8k-token catalogue, effort none, persist ssd)
+  catalogue-417bcb8b: 8373 tokens, computed in 21.329 s; pinned=True gpu=True ssd=True (265.1 MiB of KV)
+
+2. launch 4 agents from it at once, each with its own task
+  agent 0    TTFT  0.63 s  prompt   8401  cached   8384  | The on-call lead for service S-010 is Aiko Osei.
+  agent 1    TTFT  0.63 s  prompt   8401  cached   8384  | The on-call lead for service S-017 is Kwame Iyer.
+  agent 2    TTFT  0.63 s  prompt   8401  cached   8384  | The on-call lead for service S-024 is Mei Varga.
+  agent 3    TTFT  0.63 s  prompt   8401  cached   8352  | The on-call lead for service S-031 is Freya Rossi.
+  all 4 answered in 1.13 s
+
+3. two more turns for agent 0: a long answer, then a question about it (resumes after its own answer)
+  agent 0    TTFT  0.27 s  prompt   8449  cached   8384  | S-002 RB-2408 / S-010 RB-1976 / S-015 RB-8353 / S-030 RB-8053 / S-031 
+  agent 0    TTFT  0.72 s  prompt   8713  cached   8480  | The service with the highest number is S-187, which has runbook RB-232
+
+4. offload the context to SSD, then launch a new agent from it
+  after offload: pinned=False gpu=False ssd=True (265.1 MiB of KV)
+  new agent  TTFT  0.20 s  prompt   8397  cached   8352  | The Search team owns service S-005.
+  after the launch: pinned=False gpu=True ssd=True (265.1 MiB of KV)
+
+5. park agent 1 (its latest turn goes to SSD), then resume it
+  {'id': 'agent-417bcb8b-1', 'object': 'session', 'offloaded': True}
+  agent 1    TTFT  0.21 s  prompt   8441  cached   8384  | The Messaging team owns service S-017.
+
+6. 20 one-off agents with "cache": "drop"
+  snapshots 6 -> 6, cached KV blocks 272 -> 272
+
+7. clean up
+  {'id': 'catalogue-417bcb8b', 'object': 'context', 'deleted': True}
+  cache now: 0 snapshots, 0 cached KV blocks, 0 contexts
+== gate done 21:07

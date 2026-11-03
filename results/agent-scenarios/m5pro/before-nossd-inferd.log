@@ -1,0 +1,6 @@
+inferd: DFlash2 drafter loaded (block 16)
+inferd: drafter memory: 2.69 GiB own (context rings 1.26 for 32 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows)
+inferd: memory: GPU budget 51.8 GiB; model + state + scratch 19.4, drafter 3.1, KV 4.0 -> 26.5 allocated
+inferd: 8-bit KV, 4032 KV blocks (4 GiB, 0.1M tokens), 32 slots (4.6 GiB state), max ctx 32768
+inferd: listening on /tmp/inferd-8300.sock
+inferd: vocabulary for structured output: 248077 tokens

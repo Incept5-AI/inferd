@@ -1,0 +1,20 @@
+
+demo                 result     time  exit   checks
+quickstart           PASS      9.0 s     0        -
+agent-budgets        PASS     80.0 s     0        -
+tools-web-search     PASS     21.2 s     0        -
+tools-shell          PASS     21.2 s     0        -
+structured-output    PASS     33.3 s     0        -
+agent-contexts       PASS    154.9 s     0        -
+agent-handoff        PASS    279.4 s     0    19/19
+agent-team           PASS    604.4 s     0      7/7
+    SKIP  no pressure reached the team: without the API the workers stayed cached too (94%), so there is nothing to compare (use a server with fewer snapshot slots or a smaller KV pool, see README)
+ocr-agents           PASS     31.2 s     0        -
+ocr-agents-compare   PASS    319.3 s     0        -
+coding-smoke-none    PASS    197.5 s     0        -
+coding-smoke-medium  PASS    481.7 s     0        -
+agent-swarm          PASS    160.8 s     0        -
+agent-followups      PASS    621.0 s     0        -
+users-at-once        PASS    418.8 s     0        -
+
+15/15 demos passed on m4pro-1570

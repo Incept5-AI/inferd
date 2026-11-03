@@ -1,0 +1,37 @@
+16 agents, each with its own 4k-token catalogue, 3 turns each (follow-ups add ~512 tokens of tool output), max_tokens 512, ~250-word replies, on http://127.0.0.1:8300/v1 (qwen3.8-27b)
+
+agent turn1 TTFT follow-up TTFT  prompt        cached  done at correct
+    0    161.3 s        37.16 s    6150    4096/11247   552.9s   3/3
+    1    124.7 s        26.99 s    6074    4064/11194   476.6s   3/3
+    2    146.7 s        16.37 s    6232    4064/11396   542.4s   3/3
+    3    156.5 s        46.49 s    6231    4064/11406   550.1s   3/3
+    4     35.3 s        84.54 s    6149       0/11264   549.7s   3/3
+    5     13.9 s        74.72 s    6174       0/11334   550.0s   3/3
+    6     64.1 s        87.48 s    6103       0/11190   549.4s   3/3
+    7     25.8 s         6.80 s    6248    8128/11427   541.0s   3/3
+    8    134.4 s        82.73 s    6080    4064/11200   542.6s   3/3
+    9     93.0 s        27.30 s    6128    8064/11225   543.6s   3/3
+   10    105.2 s        84.86 s    6245       0/11405   555.6s   3/3
+   11     73.7 s        22.47 s    6094    4064/11194   541.5s   3/3
+   12     83.4 s        58.95 s    6187       0/11305   553.2s   3/3
+   13     54.5 s        25.86 s    6073    8064/11160   528.2s   3/3
+   14    114.9 s        58.68 s    6097    4064/11197   545.3s   3/3
+   15     45.0 s        37.78 s    6169    4032/11301   549.4s   3/3
+
+first questions (16 documents at once): last agent's first token 161.29 s, all answered 192.64 s
+follow-ups: TTFT median 38.8 s, max 152.45 s, 363.0 s for all of them, cached 31% of prompt tokens
+all 48 turns: 555.6 s wall, 48 ok, 0 errors, 48/48 answers contain the catalogue fact; 19078 tokens generated (34.3 tok/s over the whole run)
+
+agent 0's answers:
+  Q1: Which team owns S-008, and who is its on-call lead? One sentence.
+  A1: S-008 is owned by the Identity team, and its on-call lead is Theo Brennan.
+
+To verify ownership and on-call details during an incident, I would first consult the internal service catalogue or the specific runbook RB-4246, which is the authoritative source for S-008’s operational metadata. I would cr
+  Q2: How many times does S-036 retry a failed call, and where does it store state? One sentence.
+  A2: S-036 retries failed downstream calls 8 times and stores its state in S3 bucket s3-50.
+
+To verify these specific operational parameters during an incident, I would first consult the service catalogue entry for S-036 (profile-audit) to confirm the baseline configuration. Since the log shows a recent 
+  Q3: Which runbook covers S-004, and on which day does it deploy? One sentence.
+  A3: The runbook covering S-004 is RB-2660, and it deploys on Mondays.
+
+To verify the runbook and deployment schedule for S-004 during an incident, I would first consult the service catalogue to confirm that RB-2660 is the designated runbook and that the standard deployment day is Monday. I would then cr

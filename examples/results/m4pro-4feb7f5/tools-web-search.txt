@@ -1,0 +1,13 @@
+Q: How tall is the Burj Khalifa, and which building held the title of world's tallest before it?
+   (max_context 8192, effort low)
+
+step 1: model calls 2 tool(s) [context 458/8192, cached 0]  finish_reason=tool_calls
+  -> web_search({"query": "Burj Khalifa height world's tallest building"})
+  <- History of the world's tallest buildings, Burj Khalifa, List of tallest buildings in Dubai
+  -> web_search({"query": "building tallest before Burj Khalifa"})
+  <- Burj Khalifa, History of the world's tallest buildings, List of tallest residential buildings
+step 2: final answer [context 1456/8192, cached 320]  finish_reason=stop
+
+The Burj Khalifa in Dubai stands 828 meters (2,717 ft) to its roof (829.8 m total height). Before it, **Taipei 101** held the title of world's tallest building, having claimed the record in 2004. (Source: Wikipedia, "Burj Khalifa" and "History of the world's tallest buildings")
+
+22.3s total

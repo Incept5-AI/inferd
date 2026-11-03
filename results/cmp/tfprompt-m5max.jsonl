@@ -1,0 +1,3 @@
+{"prompt": 1066, "gen": 512, "ttft_s": 1.116, "prefill_tps": 955.3, "decode128_tps": 62.3, "decode_tps": 93.5, "done": "length", "label": "inferd-m5max"}
+{"prompt": 1066, "gen": 512, "ttft_s": 1.115, "prefill_tps": 956.4, "decode128_tps": 48.7, "decode_tps": 85.9, "done": "length", "label": "inferd-m5max"}
+{"prompt": 1066, "gen": 512, "ttft_s": 1.383, "prefill_tps": 770.7, "decode128_tps": 51.6, "decode_tps": 84.2, "done": "length", "label": "inferd-m5max"}

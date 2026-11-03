@@ -1,0 +1,36 @@
+agent scenarios a,b,c,d,e on http://127.0.0.1:8091/v1 (q27), mode plain, preset m5pro (no /v1/cache: memory from --pid only)
+
+[a] many small agents
+  turn 1 (all agents at once)        n=48   err=0   TTFT med 79.217 p90 132.357 max 146.875 s, cached 43% 
+  follow-up turns                    n=96   err=0   TTFT med 141.405 p90 145.678 max 528.607 s, cached 47% 
+  all 144 turns                      n=144  err=0   TTFT med 138.78 p90 144.66 max 528.607 s, cached 46% setup_s=0.0 wall_s=819.37 gen_tok_s=3.0 peak_rss_gib=17.21
+  (819 s)
+
+[b] forked agents
+  cold: 16 agents, full prompts      n=16   err=0   TTFT med 487.495 p90 490.18 max 490.717 s, cached 50% wall_s=492.58 gen_tok_s=1.3 peak_rss_gib=17.24
+  saved once (60.5 s), 16 agents     n=16   err=0   TTFT med 490.161 p90 492.698 max 493.24 s, cached 50% setup_s=60.52 wall_s=495.51 gen_tok_s=1.3 peak_rss_gib=17.26
+  (filler: 6 x ~20k prompts in 237.9 s, 0 errors)
+  relaunch after unrelated load      n=16   err=0   TTFT med 124.773 p90 128.895 max 129.42 s, cached 87% wall_s=131.31 gen_tok_s=4.9 peak_rss_gib=17.28
+  (1418 s)
+
+[c] re-used agents
+  resume after: resident             n=8    err=0   TTFT med 15.411 p90 15.417 max 15.429 s, cached 0% wall_s=126.24 gen_tok_s=1.5 peak_rss_gib=17.25
+  (filler: 6 x ~20k prompts in 238.35 s, 0 errors)
+  resume after: filler               n=8    err=0   TTFT med 15.424 p90 15.434 max 15.468 s, cached 0% wall_s=126.45 gen_tok_s=1.5 peak_rss_gib=17.25
+  (741 s)
+
+[d] ephemeral vs long-lived
+  long-lived agents, first turn      n=4    err=0   TTFT med 140.061 p90 226.167 max 226.167 s, cached 0% 
+  long-lived agents, later turns     n=18   err=0   TTFT med 4.497 p90 110.701 max 169.031 s, cached 88% peak_rss_gib=17.49
+  one-offs (400, 8 at a time)        n=400  err=0   TTFT med 4.583 p90 5.712 max 56.196 s, cached 0% wall_s=356.59 gen_tok_s=2.6
+  one-offs: 1.12 requests/s; long-lived turns: 18; wall 382.0 s
+  (382 s)
+
+[e] mixed fleet
+  researchers (effort low, priority 5) n=6    err=0   TTFT med 110.674 p90 122.848 max 135.8 s, cached 0% wall_s=277.17 gen_tok_s=8.3
+    researcher turn median 138.58 s, decode 16.5 tok/s per stream
+  helpers (effort none, priority -1) n=32   err=0   TTFT med 125.436 p90 140.949 max 144.696 s, cached 39% wall_s=277.17 gen_tok_s=2.9
+    helper request p90 145.07 s
+  whole fleet                        n=38   err=0   TTFT med 123.182 p90 139.703 max 144.696 s, cached 13% wall_s=277.17 gen_tok_s=11.2 peak_rss_gib=17.65
+  (277 s)
+

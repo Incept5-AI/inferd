@@ -1,0 +1,349 @@
+[08:42:06] start
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 32768
+  [  1/48] log_parser             python     1.0  pass
+  [  2/48] json_deep_merge        python     1.0  pass
+  [  3/48] log_parser             java       1.0  pass
+  [  4/48] csv_analysis           python     1.0  pass
+  [  5/48] json_deep_merge        typescript 1.0  pass
+  [  6/48] log_parser             typescript 1.0  pass
+  [  7/48] log_parser             swift      1.0  pass
+  [  8/48] csv_analysis           java       1.0  pass
+  [  9/48] csv_analysis           swift      1.0  pass
+  [ 10/48] http_client            python     1.0  pass
+  [ 11/48] log_parser             rust       1.0  pass
+  [ 12/48] csv_analysis           rust       1.0  pass
+  [ 13/48] dijkstra_graph         python     1.0  pass
+  [ 14/48] csv_analysis           typescript 1.0  pass
+  [ 15/48] json_deep_merge        java       1.0  pass
+  [ 16/48] json_deep_merge        rust       1.0  pass
+  [ 17/48] http_client            swift      1.0  pass
+  [ 18/48] csv_analysis           c          1.0  pass
+  [ 19/48] dijkstra_graph         typescript 1.0  pass
+  [ 20/48] http_client            typescript 1.0  pass
+  [ 21/48] dijkstra_graph         swift      1.0  pass
+  [ 22/48] system_info            python     1.0  pass
+  [ 23/48] json_deep_merge        swift      0.0  output
+  [ 24/48] http_client            java       1.0  pass
+  [ 25/48] http_client            c          1.0  pass
+  [ 26/48] file_tree_analysis     python     1.0  pass
+  [ 27/48] dijkstra_graph         rust       1.0  pass
+  [ 28/48] dijkstra_graph         java       0.5  pass
+  [ 29/48] system_info            java       1.0  pass
+  [ 30/48] file_tree_analysis     java       1.0  pass
+  [ 31/48] http_client            rust       1.0  pass
+  [ 32/48] system_info            typescript 1.0  pass
+  [ 33/48] log_parser             c          1.0  pass
+  [ 34/48] file_tree_analysis     typescript 1.0  pass
+  [ 35/48] json_deep_merge        c          1.0  pass
+  [ 36/48] system_info            rust       1.0  pass
+  [ 37/48] file_tree_analysis     swift      1.0  pass
+  [ 38/48] system_info            c          1.0  pass
+  [ 39/48] dijkstra_graph         c          1.0  pass
+  [ 40/48] system_info            swift      1.0  pass
+  [ 41/48] matrix_ops             python     1.0  pass
+  [ 42/48] matrix_ops             java       1.0  pass
+  [ 43/48] file_tree_analysis     c          1.0  pass
+  [ 44/48] matrix_ops             c          1.0  pass
+  [ 45/48] matrix_ops             rust       1.0  pass
+  [ 46/48] matrix_ops             typescript 1.0  pass
+  [ 47/48] file_tree_analysis     rust       1.0  pass
+  [ 48/48] matrix_ops             swift      0.0  output
+
+v1-fn-oq4e-final-medium-32k-w16: 45.5/48  first-try 45  any 46  hit-cap 0  looped 0  errors 0  3 min
+  Python        8.0/8
+  Java          7.5/8
+  Swift         6.0/8
+  TypeScript    8.0/8
+  C             8.0/8
+  Rust          8.0/8
+→ ~/inference/languages-benchmark/results/v1-v1-fn-oq4e-final-medium-32k-w16.json
+[08:46:30] done
+[08:56:57] start
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 32768
+  [  1/48] log_parser             swift      1.0  pass
+  [  2/48] log_parser             python     1.0  pass
+  [  3/48] json_deep_merge        python     1.0  pass
+  [  4/48] csv_analysis           swift      1.0  pass
+  [  5/48] log_parser             java       1.0  pass
+  [  6/48] csv_analysis           java       1.0  pass
+  [  7/48] csv_analysis           python     1.0  pass
+  [  8/48] json_deep_merge        typescript 1.0  pass
+  [  9/48] http_client            python     1.0  pass
+  [ 10/48] csv_analysis           typescript 1.0  pass
+  [ 11/48] log_parser             typescript 1.0  pass
+  [ 12/48] http_client            swift      1.0  pass
+  [ 13/48] dijkstra_graph         python     1.0  pass
+  [ 14/48] csv_analysis           c          1.0  pass
+  [ 15/48] json_deep_merge        rust       1.0  pass
+  [ 16/48] dijkstra_graph         typescript 1.0  pass
+  [ 17/48] http_client            java       1.0  pass
+  [ 18/48] log_parser             rust       0.5  pass
+  [ 19/48] log_parser             c          1.0  pass
+  [ 20/48] json_deep_merge        swift      0.5  pass
+  [ 21/48] dijkstra_graph         swift      1.0  pass
+  [ 22/48] http_client            typescript 1.0  pass
+  [ 23/48] csv_analysis           rust       0.5  pass
+  [ 24/48] system_info            python     1.0  pass
+  [ 25/48] system_info            typescript 1.0  pass
+  [ 26/48] system_info            java       1.0  pass
+  [ 27/48] system_info            swift      1.0  pass
+  [ 28/48] file_tree_analysis     python     1.0  pass
+  [ 29/48] json_deep_merge        c          1.0  pass
+  [ 30/48] dijkstra_graph         java       1.0  pass
+  [ 31/48] dijkstra_graph         rust       1.0  pass
+  [ 32/48] http_client            c          1.0  pass
+  [ 33/48] system_info            rust       1.0  pass
+  [ 34/48] file_tree_analysis     rust       1.0  pass
+  [ 35/48] dijkstra_graph         c          1.0  pass
+  [ 36/48] json_deep_merge        java       1.0  pass
+  [ 37/48] system_info            c          1.0  pass
+  [ 38/48] file_tree_analysis     typescript 1.0  pass
+  [ 39/48] file_tree_analysis     java       1.0  pass
+  [ 40/48] matrix_ops             python     1.0  pass
+  [ 41/48] file_tree_analysis     swift      0.5  pass
+  [ 42/48] matrix_ops             rust       1.0  pass
+  [ 43/48] matrix_ops             c          1.0  pass
+  [ 44/48] file_tree_analysis     c          1.0  pass
+  [ 45/48] matrix_ops             java       1.0  pass
+  [ 46/48] matrix_ops             typescript 1.0  pass
+  [ 47/48] matrix_ops             swift      0.5  pass
+  [ 48/48] http_client            rust       1.0  pass
+
+v1-fn-oq4e-final-medium-32k-w16-b-r1: 45.5/48  first-try 43  any 48  hit-cap 0  looped 0  errors 0  4 min
+  Python        8.0/8
+  Java          8.0/8
+  Swift         6.5/8
+  TypeScript    8.0/8
+  C             8.0/8
+  Rust          7.0/8
+→ ~/inference/languages-benchmark/results/v1-v1-fn-oq4e-final-medium-32k-w16-b-r1.json
+v1: 48 of 48 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 32768
+  [  1/48] log_parser             python     1.0  pass
+  [  2/48] json_deep_merge        python     1.0  pass
+  [  3/48] csv_analysis           typescript 1.0  pass
+  [  4/48] csv_analysis           python     1.0  pass
+  [  5/48] csv_analysis           java       1.0  pass
+  [  6/48] json_deep_merge        typescript 1.0  pass
+  [  7/48] csv_analysis           swift      1.0  pass
+  [  8/48] http_client            python     1.0  pass
+  [  9/48] log_parser             java       1.0  pass
+  [ 10/48] log_parser             typescript 1.0  pass
+  [ 11/48] csv_analysis           rust       1.0  pass
+  [ 12/48] csv_analysis           c          1.0  pass
+  [ 13/48] dijkstra_graph         python     1.0  pass
+  [ 14/48] log_parser             swift      1.0  pass
+  [ 15/48] dijkstra_graph         typescript 1.0  pass
+  [ 16/48] log_parser             rust       1.0  pass
+  [ 17/48] http_client            swift      1.0  pass
+  [ 18/48] log_parser             c          1.0  pass
+  [ 19/48] http_client            java       1.0  pass
+  [ 20/48] dijkstra_graph         swift      0.5  pass
+  [ 21/48] http_client            typescript 1.0  pass
+  [ 22/48] system_info            python     1.0  pass
+  [ 23/48] dijkstra_graph         java       1.0  pass
+  [ 24/48] json_deep_merge        swift      0.0  run
+  [ 25/48] system_info            typescript 1.0  pass
+  [ 26/48] file_tree_analysis     python     1.0  pass
+  [ 27/48] json_deep_merge        c          1.0  pass
+  [ 28/48] system_info            java       1.0  pass
+  [ 29/48] json_deep_merge        java       0.5  pass
+  [ 30/48] file_tree_analysis     java       1.0  pass
+  [ 31/48] http_client            c          1.0  pass
+  [ 32/48] dijkstra_graph         c          1.0  pass
+  [ 33/48] system_info            swift      1.0  pass
+  [ 34/48] json_deep_merge        rust       0.5  pass
+  [ 35/48] file_tree_analysis     rust       1.0  pass
+  [ 36/48] system_info            rust       1.0  pass
+  [ 37/48] system_info            c          1.0  pass
+  [ 38/48] matrix_ops             python     1.0  pass
+  [ 39/48] dijkstra_graph         rust       1.0  pass
+  [ 40/48] file_tree_analysis     c          1.0  pass
+  [ 41/48] file_tree_analysis     swift      0.5  pass
+  [ 42/48] matrix_ops             java       1.0  pass
+  [ 43/48] file_tree_analysis     typescript 1.0  pass
+  [ 44/48] matrix_ops             c          1.0  pass
+  [ 45/48] matrix_ops             rust       1.0  pass
+  [ 46/48] matrix_ops             swift      1.0  pass
+  [ 47/48] matrix_ops             typescript 1.0  pass
+  [ 48/48] http_client            rust       0.5  pass
+
+v1-fn-oq4e-final-medium-32k-w16-b-r2: 44.5/48  first-try 42  any 47  hit-cap 0  looped 0  errors 0  4 min
+  Python        8.0/8
+  Java          7.5/8
+  Swift         6.0/8
+  TypeScript    8.0/8
+  C             8.0/8
+  Rust          7.0/8
+→ ~/inference/languages-benchmark/results/v1-v1-fn-oq4e-final-medium-32k-w16-b-r2.json
+[09:05:23] done
+[09:12:27] start
+v2: 120 of 120 tests to run · 16 workers · qwen · thinking · effort medium · max_tokens 32768
+  [  1/120] bmp_regions            python     1.0  pass
+  [  2/120] bmp_regions            rust       1.0  pass
+  [  3/120] bmp_regions            typescript 1.0  pass
+  [  4/120] bmp_regions            swift      1.0  pass
+  [  5/120] decimal_ledger         java       1.0  pass
+  [  6/120] dns_resolver           java       1.0  pass
+  [  7/120] bmp_regions            c          1.0  pass
+  [  8/120] dns_resolver           python     0.5  pass
+  [  9/120] dns_resolver           typescript 1.0  pass
+  [ 10/120] decimal_ledger         python     1.0  pass
+  [ 11/120] bmp_regions            java       0.5  pass
+  [ 12/120] jwt_verify             python     1.0  pass
+  [ 13/120] dns_resolver           swift      0.5  pass
+  [ 14/120] decimal_ledger         typescript 1.0  pass
+  [ 15/120] dns_resolver           c          1.0  pass
+  [ 16/120] json_schema            python     1.0  pass
+  [ 17/120] json_schema            java       1.0  pass
+  [ 18/120] json_schema            typescript 1.0  pass
+  [ 19/120] jwt_verify             typescript 1.0  pass
+  [ 20/120] jwt_verify             swift      0.5  pass
+  [ 21/120] jwt_verify             java       1.0  pass
+  [ 22/120] mcp_server             python     1.0  pass
+  [ 23/120] json_schema            rust       0.5  pass
+  [ 24/120] decimal_ledger         swift      0.0  build
+  [ 25/120] json_schema            c          1.0  pass
+  [ 26/120] jwt_verify             c          0.0  output
+  [ 27/120] jwt_verify             rust       1.0  pass
+  [ 28/120] decimal_ledger         c          0.0  output
+  [ 29/120] mcp_server             rust       1.0  pass
+  [ 30/120] mcp_server             typescript 1.0  pass
+  [ 31/120] mcp_server             c          0.0  output
+  [ 32/120] mcp_server             java       0.5  pass
+  [ 33/120] dns_resolver           rust       0.5  pass
+  [ 34/120] mcp_server             swift      0.5  pass
+  [ 35/120] decimal_ledger         rust       0.0  build
+  [ 36/120] json_schema            swift      0.0  build
+  [ 37/120] mini_interpreter       java       0.0  run
+  [ 38/120] mini_interpreter       typescript 1.0  pass
+  [ 39/120] patch_apply            python     1.0  pass
+  [ 40/120] patch_apply            java       1.0  pass
+  [ 41/120] mini_interpreter       swift      0.5  pass
+  [ 42/120] mini_interpreter       c          0.5  pass
+  [ 43/120] patch_apply            typescript 1.0  pass
+  [ 44/120] patch_apply            swift      1.0  pass
+  [ 45/120] mime_parse             java       0.0  output
+  [ 46/120] patch_apply            c          1.0  pass
+  [ 47/120] mime_parse             python     0.0  hit cap
+  [ 48/120] patch_apply            rust       1.0  pass
+  [ 49/120] mime_parse             swift      0.0  hit cap
+  [ 50/120] mime_parse             c          0.0  nocode
+  [ 51/120] mini_interpreter       python     0.0  output
+  [ 52/120] mime_parse             typescript 0.0  output
+  [ 53/120] png_render             java       1.0  pass
+  [ 54/120] mime_parse             rust       0.0  hit cap
+  [ 55/120] png_render             python     1.0  pass
+  [ 56/120] png_render             typescript 1.0  pass
+  [ 57/120] mini_interpreter       rust       0.0  build
+  [ 58/120] png_render             swift      0.5  pass
+  [ 59/120] png_decode             python     0.5  pass
+  [ 60/120] png_render             c          1.0  pass
+  [ 61/120] png_decode             swift      1.0  pass
+  [ 62/120] png_decode             java       0.0  run
+  [ 63/120] png_decode             rust       0.0  run
+  [ 64/120] png_render             rust       0.5  pass
+  [ 65/120] png_decode             typescript 0.0  hit cap
+  [ 66/120] rest_client            python     1.0  pass
+  [ 67/120] png_decode             c          0.0  output
+  [ 68/120] rest_client            java       0.5  pass
+  [ 69/120] rest_client            swift      1.0  pass
+  [ 70/120] rest_client            typescript 1.0  pass
+  [ 71/120] protobuf_decode        python     0.0  output
+  [ 72/120] protobuf_decode        java       0.0  hit cap
+  [ 73/120] protobuf_decode        typescript 0.0  run
+  [ 74/120] protobuf_decode        swift      0.0  build
+  [ 75/120] protobuf_decode        rust       0.0  build
+  [ 76/120] rest_client            rust       1.0  pass
+  [ 77/120] protobuf_decode        c          0.0  hit cap
+  [ 78/120] regex_engine           c          0.0  nocode
+  [ 79/120] stream_anthropic       python     1.0  pass
+  [ 80/120] regex_engine           python     0.0  hit cap
+  [ 81/120] regex_engine           swift      0.0  hit cap
+  [ 82/120] regex_engine           java       0.0  hit cap
+  [ 83/120] regex_engine           rust       0.0  hit cap
+  [ 84/120] regex_engine           typescript 0.0  hit cap
+  [ 85/120] stream_anthropic       typescript 1.0  pass
+  [ 86/120] stream_anthropic       java       0.5  pass
+  [ 87/120] rest_client            c          0.0  run
+  [ 88/120] sqlite_dump            swift      0.0  run
+  [ 89/120] tool_agent_openai      typescript 1.0  pass
+  [ 90/120] tool_agent_openai      python     1.0  pass
+  [ 91/120] stream_anthropic       rust       0.5  pass
+  [ 92/120] tool_agent_openai      java       0.0  build
+  [ 93/120] sqlite_dump            java       0.0  run
+  [ 94/120] sqlite_dump            python     0.0  run
+  [ 95/120] tool_agent_openai      c          0.0  output
+  [ 96/120] stream_anthropic       c          0.0  run
+  [ 97/120] wav_dtmf               python     1.0  pass
+  [ 98/120] wav_dtmf               java       1.0  pass
+  [ 99/120] wav_dtmf               typescript 1.0  pass
+  [100/120] sqlite_dump            typescript 0.0  run
+  [101/120] wav_dtmf               swift      1.0  pass
+  [102/120] wav_dtmf               c          1.0  pass
+  [103/120] wav_dtmf               rust       1.0  pass
+  [104/120] sqlite_dump            c          0.0  hit cap
+  [105/120] sqlite_dump            rust       0.0  hit cap
+  [106/120] stream_anthropic       swift      0.5  pass
+  [107/120] websocket_client       python     1.0  pass
+  [108/120] tzif_localtime         typescript 0.5  pass
+  [109/120] websocket_client       java       1.0  pass
+  [110/120] websocket_client       swift      0.5  pass
+  [111/120] tool_agent_openai      swift      0.0  output
+  [112/120] websocket_client       rust       1.0  pass
+  [113/120] websocket_client       typescript 1.0  pass
+  [114/120] tool_agent_openai      rust       0.5  pass
+  [115/120] websocket_client       c          0.0  output
+  [116/120] tzif_localtime         java       0.0  hit cap
+  [117/120] tzif_localtime         swift      0.0  hit cap
+  [118/120] tzif_localtime         python     0.0  hit cap
+  [119/120] tzif_localtime         c          0.0  nocode
+  [120/120] tzif_localtime         rust       0.0  hit cap
+
+v2-fn-oq4e-final-medium-32k-w16: 62.0/120  first-try 52  any 72  hit-cap 48  looped 0  errors 0  130 min
+  Python       13.0/20
+  Java         10.0/20
+  Swift         8.5/20
+  TypeScript   14.5/20
+  C             6.5/20
+  Rust          9.5/20
+→ ~/inference/languages-benchmark/results/v2-v2-fn-oq4e-final-medium-32k-w16.json
+[11:23:28] done
+[11:27:04] rerun capped from ~/inference/languages-benchmark/results/v2-v2-fn-oq4e-final-medium-32k-w16.json
+~/inference/languages-benchmark/results/v2-v2-fn-oq4e-final-medium-32k-w16.json: 35 of 120 tests hit the 32768 cap; re-running at 65536
+  png_decode             c          0.0 -> 1.0  stop 22966
+  png_decode             typescript 0.0 -> 1.0  stop 23769
+  tool_agent_openai      rust       0.5 -> 1.0  stop 26126
+  tool_agent_openai      swift      0.0 -> 0.5  stop 12551
+  mini_interpreter       swift      0.5 -> 0.5  stop 11437
+  protobuf_decode        java       0.0 -> 0.0  stop 10148
+  mini_interpreter       rust       0.0 -> 0.5  stop 17164
+  tzif_localtime         java       0.0 -> 0.5  stop 5557
+  protobuf_decode        swift      0.0 -> 0.0  stop 11693
+  sqlite_dump            java       0.0 -> 0.0  stop 6799
+  protobuf_decode        typescript 0.0 -> 0.0  stop 16550
+  protobuf_decode        python     0.0 -> 0.0  stop 13132
+  tzif_localtime         swift      0.0 -> 0.5  stop 9203
+  decimal_ledger         rust       0.0 -> 0.0  stop 9871
+  mime_parse             python     0.0 -> 0.0  stop 17778
+  protobuf_decode        rust       0.0 -> 0.5  stop 13888
+  mini_interpreter       python     0.0 -> 0.0  stop 30081
+  mime_parse             swift      0.0 -> 0.0  stop 8576
+  protobuf_decode        c          0.0 -> 0.0  stop 12696
+  sqlite_dump            rust       0.0 -> 0.0  stop 28311
+  sqlite_dump            typescript 0.0 -> 0.5  stop 27859
+  sqlite_dump            c          0.0 -> 0.0  stop 16872
+  tzif_localtime         python     0.0 -> 1.0  stop 46655
+  mime_parse             rust       0.0 -> 0.0  stop 27251
+  sqlite_dump            python     0.0 -> 0.0  stop 38915
+  tzif_localtime         c          0.0 -> 0.5  stop 17117
+  tzif_localtime         rust       0.0 -> 0.5  stop 6923
+  mime_parse             typescript 0.0 -> 0.0  stop 39303
+  mime_parse             c          0.0 -> 0.0  stop 39884
+  regex_engine           c          0.0 -> 0.0  loop 37993
+  regex_engine           swift      0.0 -> 0.0  length 65536
+  regex_engine           java       0.0 -> 0.0  length 65536
+  regex_engine           typescript 0.0 -> 0.0  length 65536
+  regex_engine           rust       0.0 -> 0.0  length 65536
+  regex_engine           python     0.0 -> 0.0  length 65536
+v2-v2-fn-oq4e-final-medium-32k-w16-rerun64k: 62.0 at the cap -> 69.5/120 (still capped: 9; 97 min)
+[13:04:51] rerun done

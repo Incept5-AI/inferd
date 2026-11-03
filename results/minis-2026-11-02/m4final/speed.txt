@@ -1,0 +1,12 @@
+{"label": "m4-476c54c", "size": "0.5k", "rep": 0, "ts": "2026-11-02T21:00:22", "prompt_tokens": 561, "completion_tokens": 512, "ttft_s": 6.101, "prefill_tps": 92.0, "decode_tps": 34.83, "total_s": 20.772, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m4-476c54c", "size": "0.5k", "rep": 1, "ts": "2026-11-02T21:00:43", "prompt_tokens": 562, "completion_tokens": 512, "ttft_s": 4.443, "prefill_tps": 126.5, "decode_tps": 37.43, "total_s": 18.095, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m4-476c54c", "size": "4k", "rep": 0, "ts": "2026-11-02T21:01:01", "prompt_tokens": 4039, "completion_tokens": 512, "ttft_s": 33.6, "prefill_tps": 120.2, "decode_tps": 31.96, "total_s": 49.589, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m4-476c54c", "size": "4k", "rep": 1, "ts": "2026-11-02T21:01:51", "prompt_tokens": 4042, "completion_tokens": 512, "ttft_s": 33.763, "prefill_tps": 119.7, "decode_tps": 31.7, "total_s": 49.881, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m4-476c54c", "size": "16k", "rep": 0, "ts": "2026-11-02T21:02:40", "prompt_tokens": 16372, "completion_tokens": 512, "ttft_s": 139.437, "prefill_tps": 117.4, "decode_tps": 28.82, "total_s": 157.166, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+{"label": "m4-476c54c", "size": "16k", "rep": 1, "ts": "2026-11-02T21:05:18", "prompt_tokens": 16374, "completion_tokens": 512, "ttft_s": 134.892, "prefill_tps": 121.4, "decode_tps": 29.77, "total_s": 152.056, "chunks": 512, "head": "```python\n\"\"\"\nBatch reconciliation module for the ledger service.\n\nImplements re"}
+
+m4-476c54c: median over 2 cold reps
+ size  prompt  TTFT s  PP tok/s  TG tok/s   gen  err
+ 0.5k     562    5.27       109      36.1   512    0
+   4k    4040   33.68       120      31.8   512    0
+  16k   16373  137.16       119      29.3   512    0

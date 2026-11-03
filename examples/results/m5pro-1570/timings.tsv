@@ -1,0 +1,18 @@
+# m5pro-1570  2026-11-03 01:39  http://127.0.0.1:18322/v1
+quickstart	3.9 s	exit 0
+agent-budgets	18.7 s	exit 0
+tools-web-search	8.6 s	exit 0
+tools-shell	8.2 s	exit 0
+structured-output	11.0 s	exit 0
+agent-contexts	50.1 s	exit 0
+agent-handoff	93.0 s	exit 0
+agent-team	517.4 s	exit 0
+ocr-agents	10.0 s	exit 0
+ocr-agents-compare	111.1 s	exit 0
+coding-smoke-none	62.1 s	exit 0
+coding-smoke-medium	170.6 s	exit 0
+agent-swarm	48.7 s	exit 0
+agent-followups	184.8 s	exit 0
+users-at-once	134.7 s	exit 0
+# re-run agent-team  2026-11-03 02:03  http://127.0.0.1:18322/v1
+agent-team	193.3 s	exit 0

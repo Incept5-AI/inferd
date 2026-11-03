@@ -1,0 +1,22 @@
+agent scenarios b,c,d on http://127.0.0.1:8300/v1 (qwen3.8-27b), mode implicit, preset m6 (no /v1/cache: memory from --pid only)
+
+[b] forked agents
+  cold: 8 agents, full prompts       n=8    err=0   TTFT med 77.039 p90 77.039 max 77.04 s, cached 87% wall_s=79.87 gen_tok_s=3.9 peak_rss_gib=6.58
+  saved once (76.3 s), 8 agents      n=8    err=0   TTFT med 2.704 p90 2.704 max 2.704 s, cached 100% setup_s=76.31 wall_s=6.0 gen_tok_s=52.7 peak_rss_gib=10.84
+  (filler: 6 x ~14k prompts in 258.45 s, 0 errors)
+  relaunch after unrelated load      n=8    err=0   TTFT med 2.058 p90 2.058 max 2.059 s, cached 100% wall_s=5.37 gen_tok_s=58.9 peak_rss_gib=13.06
+  (426 s)
+
+[c] re-used agents
+  resume after: resident             n=6    err=0   TTFT med 0.417 p90 0.431 max 0.441 s, cached 98% wall_s=6.88 gen_tok_s=19.5 peak_rss_gib=13.07
+  (filler: 6 x ~14k prompts in 258.38 s, 0 errors)
+  resume after: filler               n=6    err=0   TTFT med 0.667 p90 0.838 max 0.893 s, cached 98% wall_s=8.42 gen_tok_s=16.4 peak_rss_gib=12.47
+  (496 s)
+
+[d] ephemeral vs long-lived
+  long-lived agents, first turn      n=3    err=0   TTFT med 41.742 p90 60.916 max 60.916 s, cached 0% 
+  long-lived agents, later turns     n=31   err=0   TTFT med 5.069 p90 5.63 max 11.999 s, cached 99% peak_rss_gib=12.91
+  one-offs (240, 6 at a time)        n=240  err=0   TTFT med 7.041 p90 7.561 max 61.383 s, cached 0% wall_s=365.07 gen_tok_s=1.5
+  one-offs: 0.66 requests/s; long-lived turns: 31; wall 366.1 s
+  (366 s)
+

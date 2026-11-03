@@ -1,0 +1,56 @@
+4 agents in parallel on http://127.0.0.1:18300/v1
+
+agent       max_context  effort prio prompt output  finish  secs
+summariser        16384    none    0   1074     63    stop   8.1
+coder             32768  medium    5     67   1273    stop  34.8
+searcher-1         8192    none   -5     32      3    stop   4.7
+searcher-2         8192     low   -5     56     76    stop   7.8
+wall time for all four: 34.8s
+
+--- summariser
+Apple Silicon Macs utilize a unified memory pool that allows a 27-billion-parameter model quantized to 4 bits to coexist with a large key-value cache. Efficiently serving multiple agents simultaneously requires careful scheduling to maintain individual contexts, batch decoding steps, and avoid redundant re-reading of existing data.
+
+--- coder (reasoned 3634 chars first)
+```python
+from collections import OrderedDict
+import functools
+
+
+def lru_cache_stats(maxsize=128):
+    def decorator(func):
+        class _CachedFunc:
+            def __init__(self):
+                self._cache = OrderedDict()
+                self._hits = 0
+                self._misses = 0
+                functools.update_wrapper(self, func)
+
+            @property
+            def hits(self):
+                return self._hits
+
+            @property
+            def misses(self):
+                return self._misses
+
+            def __call__(self, *args, **kwargs):
+                key = (args, tuple(sorted(kwargs.items())))
+                if key in self._cache:
+                    self._hits += 1
+                    self._cache.move_to_end(key)
+                    return self._cache[key]
+                self._misses += 1
+                result = func(*args, **kwargs)
+                self._c
+[...]
+
+--- searcher-1
+Canberra
+
+--- searcher-2 (reasoned 212 chars first)
+Jupiter has the shortest day of any planet in our solar system, at approximately 9 hours and 56 minutes.
+
+=== over budget
+searcher-1 (max_context 8192) sent a ~10k-token document -> HTTP 400: context_length_exceeded: prompt is 10470 tokens, max_context is 8192
+tiny (max_context 120) asked for 300 words -> HTTP 200, finish_reason 'length' after 82 tokens (prompt 38 + output 82 = 120 <= 120)
+   ...se. The wind outside was a living thing, screaming through the narrow slits of the tower, trying to claw its way in, but

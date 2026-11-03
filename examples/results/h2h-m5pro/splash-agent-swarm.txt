@@ -1,0 +1,23 @@
+8 agents, one shared 16k-token catalogue, 3 turns each, max_tokens 128, on http://127.0.0.1:8100/v1 (mlx-community/Qwen3.8-27B-4bit)
+
+agent turn1 TTFT follow-up TTFT  prompt        cached  done at correct
+    0     25.3 s         2.45 s   16538   32832/33016    33.4s   3/3
+    1     25.3 s         2.19 s   16537   32832/33016    32.9s   3/3
+    2     26.1 s         0.59 s   16537   32832/33016    29.3s   3/3
+    3     26.1 s         2.72 s   16540   32832/33021    33.5s   3/3
+    4     26.4 s         2.11 s   16537   32832/33016    32.3s   3/3
+    5     25.3 s         1.76 s   16537   32832/33015    31.7s   3/3
+    6     25.3 s         1.55 s   16535   32832/33012    31.2s   3/3
+    7     26.1 s         2.49 s   16537   32896/33016    33.4s   3/3
+
+fan-out (8 first questions at once): last agent's first token 26.39 s, all answered 26.73 s, cached 87% of prompt tokens
+follow-ups: TTFT median 2.05 s, max 3.37 s, cached 99% of prompt tokens
+all 24 turns: 33.5 s wall, 24 ok, 0 errors, 24/24 answers contain the catalogue fact
+
+agent 0's answers:
+  Q1: Which team owns S-034, and who is its on-call lead? One sentence.
+  A1: S-034 is owned by the Payments team, and its on-call lead is Priya Nair.
+  Q2: How many times does S-145 retry a failed call, and where does it store state? One sentence.
+  A2: S-145 retries failed downstream calls 4 times and stores state in S3 bucket s3-61.
+  Q3: Which runbook covers S-016, and on which day does it deploy? One sentence.
+  A3: S-016 is covered by runbook RB-1457 and deploys on Mondays.

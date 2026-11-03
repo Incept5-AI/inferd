@@ -1,0 +1,6 @@
+engine/build/
+__pycache__/
+*.air
+.DS_Store
+release/
+publish/

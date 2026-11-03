@@ -1,0 +1,9 @@
+# m5max  2026-11-02 11:54  http://127.0.0.1:8300/v1
+quickstart	2.8 s	exit 0
+agent-budgets	10.7 s	exit 0
+tools-web-search	5.4 s	exit 0
+tools-shell	4.6 s	exit 0
+ocr-agents	6.4 s	exit 0
+ocr-agents-compare	65.0 s	exit 0
+coding-smoke-none	37.3 s	exit 0
+coding-smoke-medium	136.0 s	exit 0

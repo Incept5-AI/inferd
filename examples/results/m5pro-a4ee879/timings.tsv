@@ -1,0 +1,14 @@
+# m5pro-a4ee879  2026-11-03 00:29  http://127.0.0.1:18303/v1
+quickstart	3.6 s	exit 0
+agent-budgets	20.9 s	exit 0
+tools-web-search	8.2 s	exit 0
+tools-shell	8.4 s	exit 0
+structured-output	11.1 s	exit 0
+agent-contexts	50.4 s	exit 0
+ocr-agents	10.4 s	exit 0
+ocr-agents-compare	111.4 s	exit 0
+coding-smoke-none	58.7 s	exit 0
+coding-smoke-medium	161.9 s	exit 0
+agent-swarm	48.1 s	exit 0
+agent-followups	186.1 s	exit 0
+users-at-once	135.6 s	exit 0

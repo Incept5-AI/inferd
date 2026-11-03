@@ -1,0 +1,10 @@
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0   20.89      24.5     26.3  1.0     1.45     1.45       26.3   26.3   16320  []
+ 16k   4   4   0   41.87      48.9     54.9 0.94     4.58     4.58       13.8   13.4   16352  []
+== engine-m2 round 1
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0   21.74      23.5     24.9  1.0     1.19     1.19       24.9   24.9   16352  []
+ 16k   4   4   0   40.89      50.1     54.4 0.95     3.23     3.23       13.7   13.4   16400  []
+== engine-merge round 1
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    19.5      26.3     28.0  1.0     1.19     1.19       27.9   27.9   16352  []

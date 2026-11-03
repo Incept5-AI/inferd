@@ -1,0 +1,42 @@
+v1: Python ok  Java ok  Swift ok  TypeScript ok  C ok  Rust ok
+v1: 16 of 16 tests to run · 8 workers · qwen3.8-27b · no-thinking · max_tokens 30000
+  [  1/16] http_client            python     1.0  pass
+  [  2/16] http_client            typescript 1.0  pass
+  [  3/16] json_deep_merge        python     1.0  pass
+  [  4/16] csv_analysis           python     1.0  pass
+  [  5/16] log_parser             python     1.0  pass
+  [  6/16] system_info            python     1.0  pass
+  [  7/16] dijkstra_graph         python     1.0  pass
+  [  8/16] json_deep_merge        typescript 1.0  pass
+  [  9/16] system_info            typescript 1.0  pass
+  [ 10/16] dijkstra_graph         typescript 1.0  pass
+  [ 11/16] log_parser             typescript 1.0  pass
+  [ 12/16] matrix_ops             python     1.0  pass
+  [ 13/16] file_tree_analysis     python     1.0  pass
+  [ 14/16] csv_analysis           typescript 1.0  pass
+  [ 15/16] matrix_ops             typescript 1.0  pass
+  [ 16/16] file_tree_analysis     typescript 1.0  pass
+
+qwen3.8-27b-nothink-29k: 16.0/16  first-try 16  any 16  hit-cap 0  looped 0  errors 0  2 min
+  Python        8.0/8
+  TypeScript    8.0/8
+→ $TMPDIR/tmp.9cxyw1aLmu/smoke-none.json
+wall time: 99s
+
+v1 · 48 tests
+
+model                    runs    score    %  1st try   any  capped  looped  errors    cap  effort  min/run  tok/s  Python  TypeScript
+qwen3.8-27b-nothink-29k     1  16.0/16  100     16.0  16.0     0.0     0.0     0.0  30000     off        2     12     8.0         8.0
+
+per challenge (mean score per test, 0–1)
+
+challenge           qwen3.8-27b-nothink-29k
+json_deep_merge                        1.00
+system_info                            1.00
+http_client                            1.00
+csv_analysis                           1.00
+dijkstra_graph                         1.00
+file_tree_analysis                     1.00
+log_parser                             1.00
+matrix_ops                             1.00
+result file: $TMPDIR/tmp.9cxyw1aLmu/smoke-none.json

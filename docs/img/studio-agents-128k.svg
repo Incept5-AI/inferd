@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="531" viewBox="0 0 900 531" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="Qwen3.8-27B agents at 128k: total tok/s, Mac Studio M5 Ultra">
+<title>Qwen3.8-27B agents at 128k: total tok/s, Mac Studio M5 Ultra</title>
+<rect x="0" y="0" width="900" height="531" fill="#ffffff"/>
+<text x="20.0" y="28.0" font-size="16" text-anchor="start" fill="#0b0b0b" font-weight="600" >Qwen3.8-27B agents at 128k: total tok/s, Mac Studio M5 Ultra</text>
+<text x="20.0" y="47.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >conc.py --mode followup: each agent's context primed, then all N send a follow-up at once, 512 tokens each. End-to-end tok/s</text>
+<text x="20.0" y="63.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >(prefill included). Higher is better.</text>
+<rect x="20.0" y="77.0" width="12" height="12" rx="2" fill="#2a78d6"/>
+<text x="37.0" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >inferd, 1 Nov build</text>
+<rect x="186.7" y="77.0" width="12" height="12" rx="2" fill="#eb6834"/>
+<text x="203.7" y="88.0" font-size="12" text-anchor="start" fill="#52514e" font-weight="normal" >Splash 1.5.0</text>
+<line x1="70" x2="880" y1="417.0" y2="417.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="421.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >0</text>
+<line x1="70" x2="880" y1="342.0" y2="342.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="346.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >100</text>
+<line x1="70" x2="880" y1="267.0" y2="267.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="271.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >200</text>
+<line x1="70" x2="880" y1="192.0" y2="192.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="196.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >300</text>
+<line x1="70" x2="880" y1="117.0" y2="117.0" stroke="#e4e3df" stroke-width="1"/>
+<text x="64.0" y="121.0" font-size="11" text-anchor="end" fill="#77766f" font-weight="normal" >400</text>
+<text x="16.0" y="267.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" transform="rotate(-90 16 267.0)">total tokens per second</text>
+<line x1="70" x2="880" y1="417" y2="417" stroke="#52514e" stroke-width="1"/>
+<path d="M131.2,417 V304.7 Q131.2,300.7 135.2,300.7 H165.2 Q169.2,300.7 169.2,304.7 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=1: 155</title></path>
+<text x="150.2" y="296.7" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >155</text>
+<path d="M171.2,417 V309.2 Q171.2,305.2 175.2,305.2 H205.2 Q209.2,305.2 209.2,309.2 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=1: 149</title></path>
+<text x="190.2" y="301.2" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >149</text>
+<text x="171.2" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=1</text>
+<path d="M333.8,417 V252.0 Q333.8,248.0 337.8,248.0 H367.8 Q371.8,248.0 371.8,252.0 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=4: 225</title></path>
+<text x="352.8" y="244.0" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >225</text>
+<path d="M373.8,417 V222.0 Q373.8,218.0 377.8,218.0 H407.8 Q411.8,218.0 411.8,222.0 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=4: 265</title></path>
+<text x="392.8" y="214.0" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >265</text>
+<text x="373.8" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=4</text>
+<path d="M536.2,417 V216.2 Q536.2,212.2 540.2,212.2 H570.2 Q574.2,212.2 574.2,216.2 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=8: 273</title></path>
+<text x="555.2" y="208.2" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >273</text>
+<path d="M576.2,417 V219.7 Q576.2,215.7 580.2,215.7 H610.2 Q614.2,215.7 614.2,219.7 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=8: 268</title></path>
+<text x="595.2" y="211.7" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >268</text>
+<text x="576.2" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=8</text>
+<path d="M738.8,417 V201.4 Q738.8,197.4 742.8,197.4 H772.8 Q776.8,197.4 776.8,201.4 V417 Z" fill="#2a78d6"><title>inferd, 1 Nov build, N=16: 293</title></path>
+<text x="757.8" y="193.4" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >293</text>
+<path d="M778.8,417 V221.6 Q778.8,217.6 782.8,217.6 H812.8 Q816.8,217.6 816.8,221.6 V417 Z" fill="#eb6834"><title>Splash 1.5.0, N=16: 266</title></path>
+<text x="797.8" y="213.6" font-size="10" text-anchor="middle" fill="#0b0b0b" font-weight="normal" >266</text>
+<text x="778.8" y="432.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >N=16</text>
+<text x="475.0" y="461.0" font-size="12" text-anchor="middle" fill="#52514e" font-weight="normal" >concurrent agents</text>
+<text x="20.0" y="491.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Source: results/cmp/inferd14-agents.jsonl, results/cmp/splash-agents.jsonl</text>
+<text x="20.0" y="505.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >Data: Splash, Kapitsa and mlx-serve 2026-10-30; inferd 2026-11-01 (one sweep, single runs, see RESULTS.md for the long-uptime caveat). A missing bar was</text>
+<text x="20.0" y="519.0" font-size="10" text-anchor="start" fill="#77766f" font-weight="normal" >not run.</text>
+</svg>

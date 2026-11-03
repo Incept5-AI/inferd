@@ -1,0 +1,14 @@
+# m4pro  2026-11-02 18:50  http://127.0.0.1:18302/v1
+quickstart	8.8 s	exit 0
+agent-budgets	47.4 s	exit 0
+tools-web-search	23.6 s	exit 0
+tools-shell	24.7 s	exit 0
+structured-output	6.5 s	exit 1
+agent-contexts	0.2 s	exit 1
+ocr-agents	36.3 s	exit 0
+ocr-agents-compare	340.5 s	exit 0
+coding-smoke-none	167.7 s	exit 0
+coding-smoke-medium	478.4 s	exit 0
+agent-swarm	158.9 s	exit 0
+agent-followups	708.0 s	exit 0
+users-at-once	425.1 s	exit 0

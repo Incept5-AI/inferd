@@ -1,0 +1,47 @@
+server cache at start: pinned 0 blocks, cached 176 blocks, snapshots 16, session snapshots 0, sessions 0, contexts 0
+
+1. the lead (effort medium, max_context 32k, priority 5) reads a ~8k-token catalogue
+  lead turn 1   TTFT  31.85 s  prompt   8171  cached      0 (  0%)  wall   36.8 s (reasoned 369 chars) | **S-117** — owned by **Identity**, on-call **Tomas Nair**, s
+  PASS  lead turn 1 finished with an answer (finish stop)
+  PASS  lead found the incident: S-117, on-call Tomas Nair
+  lead turn 2   TTFT   0.93 s  prompt   8279  cached   8128 ( 98%)  wall   13.2 s (reasoned 720 chars) | 1. Page Tomas Nair (Identity on-call) and open **RB-7190** t
+  PASS  lead turn 2 finished with a plan (finish stop)
+  PASS  lead turn 2 resumed from its own turn 1 (8128 of 8279 prompt tokens cached)
+
+2. save the lead's whole conversation (system, document, 2 turns) as a context: POST /v1/contexts
+  handoff-18504b68: 8411 tokens, saved in 0.58 s (engine prefill 0.542 s), 8256 tokens were already cached, pinned=True, 266.1 MiB of KV
+  PASS  the context is pinned
+  PASS  saving reused the lead's cached turns (8256 of 8411 tokens already cached)
+  cache: pinned 262 blocks, cached 438 blocks, snapshots 19, session snapshots 1, sessions 1, contexts 1
+
+3. hand it to three agents at once, each with its own settings
+  all three answered in 26.0 s (the lead took 31.8 s just to read the document)
+  writer        TTFT   0.74 s  prompt   8439  cached   8384 ( 99%)  wall    5.8 s | S-117 (Identity) is experiencing a SEV-1 incident with a 41%
+  critic        TTFT   1.23 s  prompt   8436  cached   8384 ( 99%)  wall   26.0 s (reasoned 1930 chars) | The plan's biggest risk is that it sequences diagnosis (step
+  fact-checker  TTFT   0.74 s  prompt   8441  cached   8384 ( 99%)  wall    1.0 s | S-117
+  PASS  writer started from the lead's state: 8384 of 8439 tokens cached, TTFT 0.74 s vs 31.8 s to read
+  PASS  critic started from the lead's state: 8384 of 8436 tokens cached, TTFT 1.23 s vs 31.8 s to read
+  PASS  fact-checker started from the lead's state: 8384 of 8441 tokens cached, TTFT 0.74 s vs 31.8 s to read
+  PASS  fact-checker saw the lead's analysis (answered 'S-117', expected S-117)
+  PASS  writer finished inside its 16k max_context
+
+4. a reviewer at effort low (the effort is in the template's prefix: a variant of the context)
+  reviewer 1    TTFT  32.29 s  prompt   8462  cached   8416 ( 99%)  wall   49.4 s (reasoned 1450 chars) | No — it omits blast-radius assessment (checking whether S-11
+  variants now: none (8411 tokens, prefill 0.542 s), medium (8411 tokens, prefill 0.542 s), low (8437 tokens, prefill 31.79 s)
+  low renders a different prefix: the first low agent paid for that variant once
+  reviewer 2    TTFT   0.47 s  prompt   8457  cached   8416 (100%)  wall    6.8 s (reasoned 516 chars) | Notify the Identity team lead that S-117 is in a SEV-1 state
+  PASS  second low agent reused the variant (8416 of 8457 cached, TTFT 0.47 s)
+
+5. DELETE the context and all sessions, then verify with GET /v1/cache
+  before: pinned 525 blocks, cached 706 blocks, snapshots 23, session snapshots 4, sessions 5, contexts 2
+  PASS  DELETE /v1/contexts/handoff-18504b68
+  PASS  DELETE /v1/sessions/... for 5 sessions
+  after:  pinned 0 blocks, cached 176 blocks, snapshots 15, session snapshots 0, sessions 0, contexts 0
+  PASS  pinned blocks released (525 -> 0, 0 at start)
+  PASS  sessions released (5 -> 0, session snapshots 4 -> 0)
+  PASS  the engine lists no variant of the context
+  PASS  GET /v1/contexts/{id} answers 404
+  fresh request TTFT  31.90 s  prompt   8429  cached      0 (  0%)  wall   32.1 s | ok
+  PASS  the same prefix sent fresh is no longer cached (0 of 8429 tokens cached; TTFT 31.9 s, the cost of re-reading)
+
+PASS: agent-handoff, 0 failed check(s)

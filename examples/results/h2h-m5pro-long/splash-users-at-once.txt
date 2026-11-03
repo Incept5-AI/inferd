@@ -1,0 +1,5 @@
+users released together, 2k-token prompts each, 1024 tokens generated each, on http://127.0.0.1:8100/v1 (mlx-community/Qwen3.8-27B-4bit)
+
+users  prompt       gen  TTFT med last user 1st tok all generating end to end    wall
+    8    2023      1024    32.2 s            62.5 s          never  105.2 t/s    78 s
+      first tokens at [3.1, 13.3, 18.0, 25.2, 39.3, 48.3, 55.1, 62.5] s

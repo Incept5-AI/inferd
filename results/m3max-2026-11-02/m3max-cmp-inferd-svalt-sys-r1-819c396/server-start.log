@@ -1,0 +1,6 @@
+up on :8300
+inferd: DFlash2 drafter loaded (block 16)
+inferd: memory: GPU budget 77.8 GiB; model + state + scratch 21.9, drafter 5.9, KV 24.0 -> 51.8 allocated
+inferd: 8-bit KV, 24197 KV blocks (24 GiB, 0.8M tokens), 46 slots (6.6 GiB state), max ctx 147456
+inferd: SSD tier in /Volumes/MODELS/spill/inferd-spill (96 GiB, 1.0 MiB per block + 187 MiB state per context)
+inferd: listening on /tmp/inferd-8300.sock

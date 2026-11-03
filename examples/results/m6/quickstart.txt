@@ -1,0 +1,12 @@
+server http://127.0.0.1:18300/v1, model qwen3.8-27b
+
+== 1. chat (non-streaming)
+Run `lsof -i :8300` to list the process ID and name. If you need the full command line, add `-P -n` to avoid DNS lookups. For a quick check, `sudo lsof -i :8300` ensures you see root-owned processes.
+finish_reason=stop  usage={"prompt_tokens": 404, "completion_tokens": 67, "total_tokens": 471, "prompt_tokens_details": {"cached_tokens": 0}}  6.14s
+
+== 2. follow-up turn, streamed
+Use `kill <PID>` with the process ID obtained from the previous `lsof` output. If the process ignores the signal, escalate with `kill -9 <PID>`. Avoid `pkill -f` to prevent accidentally killing unrelated processes with similar command lines.
+
+time to first token 0.59s, total 3.68s, 15 tok/s
+usage={"prompt_tokens": 497, "completion_tokens": 57, "total_tokens": 554, "prompt_tokens_details": {"cached_tokens": 384}}
+-> 384 of 497 prompt tokens came from the prefix cache (turn 1, in 32-token blocks)

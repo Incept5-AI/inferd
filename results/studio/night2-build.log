@@ -1,0 +1,15 @@
+In file included from tools/server.mm:16:
+tools/../src/scheduler.h:307:28: warning: format specifies type 'int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
+  305 |       fprintf(stderr, "spill: restore FAILED for id%llu (%s; %d of %d blocks fresh, %d free blocks, %zu free slots)\n",
+      |                                                                                     ~~
+      |                                                                                     %zu
+  306 |               (unsigned long long)s.req.id, got_blocks ? "read" : slot < 0 && fresh.size() == (size_t)(D - keep) ? "no slot" : "no blocks",
+  307 |               D - keep, D, n_free, free_slots.size());
+      |                            ^~~~~~
+tools/../src/scheduler.h:572:102: warning: format specifies type 'int' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
+  571 |         fprintf(stderr, "admit id%llu: %d tokens, cached %d, %d running, %zu free slots, %d free blocks\n",
+      |                                                                                          ~~
+      |                                                                                          %zu
+  572 |                 (unsigned long long)s.req.id, P, s.computed, (int)running.size(), free_slots.size(), n_free);
+      |                                                                                                      ^~~~~~
+2 warnings generated.

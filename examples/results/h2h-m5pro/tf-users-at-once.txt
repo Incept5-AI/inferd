@@ -1,0 +1,7 @@
+users released together, 8k-token prompts each, 1024 tokens generated each, on http://127.0.0.1:8091/v1 (q27)
+
+users  prompt       gen  TTFT med last user 1st tok all generating end to end    wall
+    1    8174      1024    19.1 s            19.1 s    100.0 tok/s   34.9 t/s    29 s
+      first tokens at [19.1] s
+    4    8176      1024    57.9 s            80.5 s    171.3 tok/s   40.1 t/s   102 s
+      first tokens at [25.7, 48.8, 67.0, 80.5] s

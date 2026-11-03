@@ -1,0 +1,5 @@
+shared: off; columns: last 1st = the last user's first token, last end = the last user's last token (both from the release), setup = context save / priming before it
+  N trial  prompt  cached   gen  TTFT med  last 1st  last end  setup   total   A_e2e win tok/s err
+  1     0    8179       0  1024      19.2      19.2      31.7    0.0    31.7    32.3      82.0   0
+  2     0  8178.0     0.0 1024.0      30.3      38.9      56.9    0.0    56.9    36.0     109.7   0
+  4     0  8178.5     0.0 1024.0      52.8      78.2     102.2    0.0   102.2    40.1     167.3   0

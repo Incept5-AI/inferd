@@ -1,0 +1,66 @@
+01:25:39 coding runs finished
+01:25:59 gemm A/B (model /Volumes/SanDisk/models--mlx-community--Qwen3.8-27B-4bit/snapshots/10c35caafbb80f7dc6a7a432cdd11af10a6d4818)
+01:25:59 LANE=0
+M=   1 all linear layers: 17.1 ms per step (16.0 GB, 938 GB/s; bandwidth floor 14.0 ms)
+M=   2 all linear layers: 19.2 ms per step (16.0 GB, 835 GB/s; bandwidth floor 14.0 ms)
+M=   3 all linear layers: 19.5 ms per step (16.0 GB, 820 GB/s; bandwidth floor 14.0 ms)
+M=   5 all linear layers: 19.6 ms per step (16.0 GB, 816 GB/s; bandwidth floor 14.0 ms)
+M=   8 all linear layers: 19.8 ms per step (16.0 GB, 809 GB/s; bandwidth floor 14.0 ms)
+M=  12 all linear layers: 20.1 ms per step (16.0 GB, 798 GB/s; bandwidth floor 14.0 ms)
+M=  16 all linear layers: 20.2 ms per step (16.0 GB, 794 GB/s; bandwidth floor 14.0 ms)
+M=  24 all linear layers: 24.5 ms per step (16.0 GB, 653 GB/s; bandwidth floor 14.0 ms)
+01:26:01 LANE=1
+M=   1 all linear layers: 16.7 ms per step (16.0 GB, 957 GB/s; bandwidth floor 14.0 ms)
+M=   2 all linear layers: 19.1 ms per step (16.0 GB, 837 GB/s; bandwidth floor 14.0 ms)
+M=   3 all linear layers: 20.6 ms per step (16.0 GB, 776 GB/s; bandwidth floor 14.0 ms)
+M=   5 all linear layers: 20.9 ms per step (16.0 GB, 767 GB/s; bandwidth floor 14.0 ms)
+M=   8 all linear layers: 20.4 ms per step (16.0 GB, 783 GB/s; bandwidth floor 14.0 ms)
+M=  12 all linear layers: 20.7 ms per step (16.0 GB, 774 GB/s; bandwidth floor 14.0 ms)
+M=  16 all linear layers: 21.0 ms per step (16.0 GB, 764 GB/s; bandwidth floor 14.0 ms)
+M=  24 all linear layers: 24.6 ms per step (16.0 GB, 651 GB/s; bandwidth floor 14.0 ms)
+01:26:07 LANE=0
+M=   1 all linear layers: 16.7 ms per step (16.0 GB, 956 GB/s; bandwidth floor 14.0 ms)
+M=   2 all linear layers: 19.2 ms per step (16.0 GB, 835 GB/s; bandwidth floor 14.0 ms)
+M=   3 all linear layers: 19.5 ms per step (16.0 GB, 820 GB/s; bandwidth floor 14.0 ms)
+M=   5 all linear layers: 19.6 ms per step (16.0 GB, 815 GB/s; bandwidth floor 14.0 ms)
+M=   8 all linear layers: 19.8 ms per step (16.0 GB, 807 GB/s; bandwidth floor 14.0 ms)
+M=  12 all linear layers: 20.1 ms per step (16.0 GB, 798 GB/s; bandwidth floor 14.0 ms)
+M=  16 all linear layers: 20.2 ms per step (16.0 GB, 792 GB/s; bandwidth floor 14.0 ms)
+M=  24 all linear layers: 24.5 ms per step (16.0 GB, 653 GB/s; bandwidth floor 14.0 ms)
+01:26:09 LANE=1
+M=   1 all linear layers: 16.7 ms per step (16.0 GB, 958 GB/s; bandwidth floor 14.0 ms)
+M=   2 all linear layers: 19.1 ms per step (16.0 GB, 838 GB/s; bandwidth floor 14.0 ms)
+M=   3 all linear layers: 20.0 ms per step (16.0 GB, 800 GB/s; bandwidth floor 14.0 ms)
+M=   5 all linear layers: 20.2 ms per step (16.0 GB, 792 GB/s; bandwidth floor 14.0 ms)
+M=   8 all linear layers: 20.4 ms per step (16.0 GB, 785 GB/s; bandwidth floor 14.0 ms)
+M=  12 all linear layers: 20.7 ms per step (16.0 GB, 774 GB/s; bandwidth floor 14.0 ms)
+M=  16 all linear layers: 21.0 ms per step (16.0 GB, 764 GB/s; bandwidth floor 14.0 ms)
+M=  24 all linear layers: 24.6 ms per step (16.0 GB, 650 GB/s; bandwidth floor 14.0 ms)
+01:26:14 spec_test A/B on the challenge prompt
+01:26:25 LANE=0 plain: 794 kernel dispatches per cycle plain: 257 tokens in 5.26 s = 48.9 tok/s total over 1 seqs, 1.00 tokens per cycle, 19.9 ms GPU per cycle spec : 1250 kernel dispatches per cycle spec : 262 tokens in 2.63 s = 99.5 tok/s total over 1 seqs, 2.82 tokens per cycle, 26.4 ms GPU per cycle   drafter context 0.4 ms + block 2.8 ms + target step 23.3 ms per cycle 
+01:26:40 LANE=1 plain: 794 kernel dispatches per cycle plain: 257 tokens in 5.25 s = 49.0 tok/s total over 1 seqs, 1.00 tokens per cycle, 19.9 ms GPU per cycle spec : 1221 kernel dispatches per cycle spec : 259 tokens in 3.37 s = 76.8 tok/s total over 1 seqs, 2.33 tokens per cycle, 27.8 ms GPU per cycle   drafter context 0.4 ms + block 2.9 ms + target step 24.6 ms per cycle 
+01:26:51 LANE=0 plain: 794 kernel dispatches per cycle plain: 257 tokens in 5.26 s = 48.8 tok/s total over 1 seqs, 1.00 tokens per cycle, 20.0 ms GPU per cycle spec : 1250 kernel dispatches per cycle spec : 262 tokens in 2.59 s = 101.2 tok/s total over 1 seqs, 2.82 tokens per cycle, 26.5 ms GPU per cycle   drafter context 0.4 ms + block 2.8 ms + target step 23.3 ms per cycle 
+01:27:06 LANE=1 plain: 794 kernel dispatches per cycle plain: 257 tokens in 5.26 s = 48.8 tok/s total over 1 seqs, 1.00 tokens per cycle, 20.0 ms GPU per cycle spec : 1221 kernel dispatches per cycle spec : 259 tokens in 3.31 s = 78.2 tok/s total over 1 seqs, 2.33 tokens per cycle, 27.9 ms GPU per cycle   drafter context 0.4 ms + block 2.9 ms + target step 24.6 ms per cycle 
+01:27:15 server up LANE=1
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0     4.1     124.9    128.8  1.0     0.12     0.12      128.6  128.6   16352  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   4   4   0    5.74     356.6    395.0 0.88     0.56     0.56      105.0   97.1   16352  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   8   8   0    8.39     488.2    532.0 0.91     0.69     0.69       70.1   66.4   16352  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 64k   1   1   0    3.96     129.2    134.8  1.0     0.16     0.16      134.5  134.5   65632  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+128k   1   1   0    4.77     107.3    113.4  1.0     0.26     0.26      113.2  113.2  132064  []
+01:33:08 server up LANE=0
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   1   1   0    3.49     146.6    151.9  1.0     0.12     0.12      151.6  151.6   16352  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   4   4   0    5.49     373.1    402.4 0.92      0.4      0.4      106.2   98.9   16352  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 16k   8   8   0    8.38     488.8    532.8  0.9     0.69     0.69       69.1   66.5   16352  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+ 64k   1   1   0    3.08     166.3    175.8  1.0     0.17     0.17      175.5  175.5   65632  []
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+128k   1   1   0    3.38     151.3    163.9  1.0     0.26     0.26      163.6  163.6  132064  []
+01:38:51 done
