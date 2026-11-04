@@ -324,7 +324,7 @@ struct Scheduler {
   struct BlockTuner {
     static constexpr int kC = 5;
     int far_every = 1;  // set to 4 without neural accelerators (see choose)
-    const int cand[kC] = {4, 5, 8, 12, 16};
+    int cand[kC] = {4, 5, 8, 12, 16};  // MoE targets: {2, 3, 4, 5, 8} (the Scheduler constructor)
     double hits[kMaxBlock] = {}, trials[kMaxBlock] = {};
     struct Cell { double t[kC] = {}; int n[kC] = {}; uint64_t steps = 0; };
     std::unordered_map<int, Cell> cells;
@@ -520,6 +520,16 @@ struct Scheduler {
       m.verify = true;
     }
     stateless = m.conv_state.empty() && !m.ple_state.buf && !d && !mtp && (!getenv("PREFIX_ANY") || atoi(getenv("PREFIX_ANY")));
+    if (d && m.cfg.experts) {
+      // Qwen3.6-35B-A3B + DFlash2 (2026-11-04): every verify row brings its own routed experts' weights (8 rows of
+      // real text: ~33 unique of 64 picks per layer), so a row costs far more than on the dense 27B and the best block
+      // is shorter (laptop, one stream at 4k: block 4 230-250 tok/s, 8 240-276, 16 well below; 16 agents: block 4 only
+      // matches plain). Token trees (16 rows) lost to chains (120 vs 145 tok/s): off unless TREE is set. The tuner
+      // chooses among 2, 3, 4, 5 and 8.
+      if (!getenv("TREE")) tree_n = 0;
+      const int mc[BlockTuner::kC] = {2, 3, 4, 5, 8};
+      std::copy(mc, mc + BlockTuner::kC, tuner.cand);
+    }
     block_ref.assign(m.n_blocks, 0);
     is_free.assign(m.n_blocks, 0);
     grp_free.assign(m.n_blocks / 4 + 1, 0);

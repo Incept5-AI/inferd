@@ -549,3 +549,54 @@ template [[host_name("moe_dn2_4_4")]] kernel void moe_dn2<4, 4>(device const bfl
     device const float*, device const float*, device const uchar*, device const bfloat*, device const bfloat*,
     device const uchar*, device const bfloat*, device const bfloat*, device bfloat*, constant MoeDnArgs&, uint2, uint,
     uint);
+
+// Router logits from the 35B-A3B's 8-bit router (MoeW [1][N][K], group 64, unflipped; the shared gate is row N - 1)
+// for T <= TM rows, the weights read once: y float [T, N]. One simdgroup per output row, 16 columns per lane per
+// 512-column step; each row's sum is formed the same way whatever T (TM only bounds the rows), so verify rows route
+// as single-row decode does. grid: threadgroups ceil(N / 8), 256 threads.
+template <int TM>
+kernel void moe_router8(device const bfloat* x [[buffer(0)]], device const uchar* W [[buffer(1)]],
+                        device const bfloat* S [[buffer(2)]], device const bfloat* B [[buffer(3)]],
+                        device float* y [[buffer(4)]], constant RouterArgs& p [[buffer(5)]],
+                        uint tg [[threadgroup_position_in_grid]], uint sg [[simdgroup_index_in_threadgroup]],
+                        uint lane [[thread_index_in_simdgroup]]) {
+  const int n = tg * 8 + sg, K = p.K, G = K / 64;
+  if (n >= p.N) return;
+  device const uchar* w = W + (size_t)n * K;
+  float acc[TM];
+#pragma unroll
+  for (int t = 0; t < TM; t++) acc[t] = 0;
+  for (int k = lane * 16; k < K; k += 512) {
+    const float s = S[(size_t)n * G + k / 64], b = B[(size_t)n * G + k / 64];
+    const uint4 u = *(device const uint4*)(w + k);
+    const uint v[4] = {u.x, u.y, u.z, u.w};
+#pragma unroll
+    for (int t = 0; t < TM; t++) {
+      if (t >= p.T) break;
+      float xv[16];
+      const float sx = ld16(x + (size_t)t * K + k, xv);
+      float q = 0;
+#pragma unroll
+      for (int j = 0; j < 4; j++)
+#pragma unroll
+        for (int i = 0; i < 4; i++) q += float((v[j] >> (8 * i)) & 0xffu) * xv[4 * j + i];
+      acc[t] += s * q + b * sx;
+    }
+  }
+#pragma unroll
+  for (int t = 0; t < TM; t++) {
+    if (t >= p.T) break;
+    const float r = simd_sum(acc[t]);
+    if (lane == 0) y[(size_t)t * p.N + n] = r;
+  }
+}
+template [[host_name("moe_router8_t1")]] kernel void moe_router8<1>(device const bfloat*, device const uchar*,
+    device const bfloat*, device const bfloat*, device float*, constant RouterArgs&, uint, uint, uint);
+template [[host_name("moe_router8_t2")]] kernel void moe_router8<2>(device const bfloat*, device const uchar*,
+    device const bfloat*, device const bfloat*, device float*, constant RouterArgs&, uint, uint, uint);
+template [[host_name("moe_router8_t4")]] kernel void moe_router8<4>(device const bfloat*, device const uchar*,
+    device const bfloat*, device const bfloat*, device float*, constant RouterArgs&, uint, uint, uint);
+template [[host_name("moe_router8_t8")]] kernel void moe_router8<8>(device const bfloat*, device const uchar*,
+    device const bfloat*, device const bfloat*, device float*, constant RouterArgs&, uint, uint, uint);
+
+

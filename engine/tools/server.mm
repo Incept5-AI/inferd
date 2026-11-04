@@ -299,7 +299,7 @@ int main(int argc, char** argv) {
       // Verify rows the block policy can plan in a step: sizes the drafter's block scratch, the logits and the GDN
       // tapes (SPEC_ROWS overrides; 0 = the old sizing, every sequence at block 16 and tapes for every step row).
       m.spec_rows = getenv("SPEC_ROWS") ? (int)env_knob("SPEC_ROWS", 0, 0, max_running * kMaxBlock)
-                                        : Scheduler::spec_rows_cap(max_running, Drafter::env_block());
+                                        : Scheduler::spec_rows_cap(max_running, Drafter::env_block(m.cfg.experts ? 8 : kMaxBlock));
       drafter = new Drafter(g, m, dck);
       printf("inferd: DFlash2 drafter loaded (block %d)\n", drafter->block);
       // The verify scratch (logits for every block row, hidden captures, GDN tapes) before the KV pool is sized, so

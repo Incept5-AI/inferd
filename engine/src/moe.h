@@ -3,6 +3,7 @@
 // Kernels: kernels/moe.metal. These stay unflipped (W4A8 never sees them).
 #pragma once
 #include "weights.h"
+#include "qwen4.h"  // qspec: the MLX group size from config.json
 
 struct MoeW {  // one stacked affine matrix [E, N, K]
   BufRef wq, s, b;
@@ -13,6 +14,7 @@ struct MoeW {  // one stacked affine matrix [E, N, K]
 inline MoeW load_moe(Gpu& g, const Checkpoint& ck, const std::vector<std::string>& prefixes) {
   MoeW m;
   std::vector<int> ns;
+  int gs0 = 0;  // every part's group size (one stack, one expansion)
   for (auto& p : prefixes) {
     auto& w = ck.info(p + ".weight");
     auto& s = ck.info(p + ".scales");
@@ -24,8 +26,14 @@ inline MoeW load_moe(Gpu& g, const Checkpoint& ck, const std::vector<std::string
     ck.need_dtype(p + ".scales", "BF16");
     ck.need_dtype(p + ".biases", "BF16");
     const int E = three ? ck.dim(p + ".weight", 3, 0, 1, 1 << 16) : 1, N = ck.dim(p + ".weight", r, r - 2);
-    const int wk = ck.dim(p + ".weight", r, r - 1, 1, (1 << 30) / 32), G = ck.dim(p + ".scales", r, r - 1, 1, (1 << 30) / 64);
-    const int K = G * 64, bits = (int)((int64_t)wk * 32 / K);
+    // Group size from config.json (2026-11-04): the official Qwen MLX 4-bit (and 8-bit) 35B-A3B quantizes the experts
+    // at group 128, whose shapes are identical to 8-bit / group 64 at half the K; inferred from the shapes alone, they
+    // loaded as K/2 8-bit and the model computed garbage (cos -0.3 vs mlx_lm, top-1 wrong on every sequence). A group
+    // of 128 becomes two 64-groups with the same scale and bias (exact; the 4-bit codes are kept).
+    const int gs = qspec(ck, p).gs;
+    if (gs % 64) ck.reject(p + ".scales", "MoE group size " + std::to_string(gs) + " is not a multiple of 64");
+    const int wk = ck.dim(p + ".weight", r, r - 1, 1, (1 << 30) / 32), G = ck.dim(p + ".scales", r, r - 1, 1, (1 << 30) / gs);
+    const int K = G * gs, bits = (int)((int64_t)wk * 32 / K);
     if ((bits != 4 && bits != 8) || (int64_t)wk * 32 != (int64_t)K * bits) ck.reject(p + ".weight", "unsupported width");
     if (ck.dim(p + ".scales", r, r - 2) != N || (three && ck.dim(p + ".scales", 3, 0) != E) ||
         ck.info(p + ".biases").shape != s.shape)
@@ -35,6 +43,8 @@ inline MoeW load_moe(Gpu& g, const Checkpoint& ck, const std::vector<std::string
       exit(1);
     }
     if ((int64_t)m.N + N > (1 << 30) || (int64_t)E * (m.N + N) > (1ll << 34)) ck.reject(p + ".weight", "stack too large");
+    if (gs0 && gs0 != gs) ck.reject(p + ".scales", "MoE stack mixes group sizes");
+    gs0 = gs;
     m.E = E, m.K = K, m.bits = bits;
     m.N += N;
     ns.push_back(N);
@@ -50,12 +60,26 @@ inline MoeW load_moe(Gpu& g, const Checkpoint& ck, const std::vector<std::string
     const int N = ns[i];
     struct Part { const char* sfx; char* dst; size_t rb; } parts[3] = {
         {".weight", m.wq.ptr<char>(), wrow}, {".scales", m.s.ptr<char>(), srow}, {".biases", m.b.ptr<char>(), srow}};
+    const int f = gs0 / 64;  // 64-groups per source group (scales and biases are repeated f times)
     for (auto& pt : parts) {
       auto& ti = ck.info(prefixes[i] + pt.sfx);
-      std::vector<char> tmp((size_t)m.E * N * pt.rb);  // exactly E x N rows of rb bytes (shapes checked above)
+      const bool sb = pt.dst != m.wq.ptr<char>();
+      const size_t sr = sb ? pt.rb / f : pt.rb;  // source bytes per row
+      std::vector<char> tmp((size_t)m.E * N * sr);  // exactly E x N rows of sr bytes (shapes checked above)
       ck.read_into(ti, tmp.data(), tmp.size());
+      if (f == 1 || !sb) {
+        for (int e = 0; e < m.E; e++)
+          memcpy(pt.dst + ((size_t)e * m.N + n0) * pt.rb, tmp.data() + (size_t)e * N * pt.rb, (size_t)N * pt.rb);
+        continue;
+      }
+      const int Gs = (int)(sr / 2);
       for (int e = 0; e < m.E; e++)
-        memcpy(pt.dst + ((size_t)e * m.N + n0) * pt.rb, tmp.data() + (size_t)e * N * pt.rb, (size_t)N * pt.rb);
+        for (int n = 0; n < N; n++) {
+          const uint16_t* src = (const uint16_t*)(tmp.data() + ((size_t)e * N + n) * sr);
+          uint16_t* dst = (uint16_t*)(pt.dst + ((size_t)e * m.N + n0 + n) * pt.rb);
+          for (int j = 0; j < Gs; j++)
+            for (int k = 0; k < f; k++) dst[j * f + k] = src[j];
+        }
     }
     n0 += N;
   }

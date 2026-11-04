@@ -340,7 +340,8 @@ struct Qwen35 {
   // Knobs re-read by decode_test's BENCH_VARIANTS (timing several configurations on one load).
   void knobs() {
     hc_v2 = env_int("HC_V2", 4);
-    moe_v2 = env_int("MOE_V2", 4);
+    // Qwen3.6-35B-A3B (2026-11-04): up to 8 rows (one DFlash2 verify block), 8-bit router through moe_router8
+    moe_v2 = env_int("MOE_V2", cfg.qwen4 ? 4 : 8);
     moe_dedup = env_int("MOE_DEDUP", 1);
     fn_split_row = env_int("FN_SPLIT_ROW", 128);
     fn_mpp_min = env_int("FN_MPP_MIN", 1);
@@ -462,9 +463,9 @@ struct Qwen35 {
         max_blocks(max_blocks) {
     knobs();
     std::string P = ck.has("language_model.model.embed_tokens.weight") ? "language_model." : "";
-    embed = load_qlinear_w(g, ck, {P + "model.embed_tokens"});
+    embed = load_qlinear_w(g, ck, {P + "model.embed_tokens"}, !cfg.qwen4);
     if (cfg.qwen4) mixer = load_hyper(ck, P + "model.hyper_connection_mixer.", false);
-    lm_head = load_qlinear_w(g, ck, {ck.has(P + "lm_head.weight") ? P + "lm_head" : P + "model.embed_tokens"});  // tied: Gemma
+    lm_head = load_qlinear_w(g, ck, {ck.has(P + "lm_head.weight") ? P + "lm_head" : P + "model.embed_tokens"}, !cfg.qwen4);  // tied: Gemma
     if (!cfg.qwen4) final_norm = ck.load(g, P + "model.norm.weight", cfg.hidden);
     // Cross-tensor shapes (Codex review 2026-11-03, R01): every token id below vocab must have an embedding row and a
     // logit, and the layers' linears must chain through hidden.
@@ -482,7 +483,8 @@ struct Qwen35 {
       const int gq = cfg.hq / ly.hkv;
       if (!((gq == 6 || gq == 4 || gq == 8 || gq == 2 || gq == 12) && ly.dh == 256) && !(gq == 16 && ly.dh == 128) &&
           !(gq == 8 && ly.dh == 512)) use_gqa = false;
-      if (gq != 6 || ly.dh != 256) use_nax = false;
+      if ((gq != 6 && gq != 8) || ly.dh != 256) use_nax = false;
+      nax_g8 = gq == 8;  // attn_paged_nax_*_g8 (35B-A3B)
     }
     if (kv8 && !use_gqa) { fprintf(stderr, "KV8 needs the attn_gqa kernels\n"); exit(1); }
     // Without attn_gqa every attention layer decodes with attn_decode, written for Dh = 256 (32 lanes x 8, tacc[8][256]):
@@ -568,8 +570,10 @@ struct Qwen35 {
       mperm = g.alloc(R * 4);
       minv = g.alloc(R * 4);
       mxs = g.alloc(R * H * 2);
-      if (cfg.qwen4) moe_act2 = g.alloc((size_t)8 * (cfg.topk + 1) * cfg.moe_inter * 2);
-      if (cfg.qwen4) moe_plan_buf = g.alloc((size_t)(1 + 8 * cfg.topk * 9) * 4);
+      if (cfg.topk <= 16) moe_act2 = g.alloc((size_t)8 * (cfg.topk + 1) * cfg.moe_inter * 2);
+      // MOE_STATS=1: one plan per layer, so the unique-expert count of every layer's step can be read back (moe_uniq)
+      moe_stats = env_int("MOE_STATS", 0);
+      if (cfg.topk <= 16) moe_plan_buf = g.alloc((size_t)(1 + 8 * cfg.topk * 9) * 4 * (moe_stats ? cfg.layers + 1 : 1));
     }
     if (const int units = getenv("ANE_UNITS") ? atoi(getenv("ANE_UNITS")) : 0; !cfg.experts && units > 0 && B >= 512 &&
         L[0].gate_up.bits == 4 && cfg.hidden % AneFfn::SEG == 0)
@@ -716,8 +720,8 @@ struct Qwen35 {
       ly.post_norm = ck.load(g, p + "post_attention_layernorm.weight");
     }
     if (cfg.experts) {
-      ly.gate_up = load_qlinear_any(g, ck, {p + "mlp.shared_expert.gate_proj", p + "mlp.shared_expert.up_proj"});
-      ly.down = load_qlinear_any(g, ck, {p + "mlp.shared_expert.down_proj"});
+      ly.gate_up = load_qlinear_any(g, ck, {p + "mlp.shared_expert.gate_proj", p + "mlp.shared_expert.up_proj"}, 0, false, !cfg.qwen4);
+      ly.down = load_qlinear_any(g, ck, {p + "mlp.shared_expert.down_proj"}, 0, false, !cfg.qwen4);
       if (ck.info(p + "mlp.gate.weight").dtype == "BF16") ly.router = load_router16(ck, p + "mlp.");
       else ly.router = load_moe(g, ck, {p + "mlp.gate", p + "mlp.shared_expert_gate"});
       ly.egu = load_moe(g, ck, {p + "mlp.switch_mlp.gate_proj", p + "mlp.switch_mlp.up_proj"});
@@ -728,8 +732,8 @@ struct Qwen35 {
     }
     if (ly.linear) {
       std::string a = p + "linear_attn.";
-      ly.in_proj = load_qlinear_any(g, ck, {a + "in_proj_qkv", a + "in_proj_z", a + "in_proj_b", a + "in_proj_a"});
-      ly.out_proj = load_qlinear_any(g, ck, {a + "out_proj"});
+      ly.in_proj = load_qlinear_any(g, ck, {a + "in_proj_qkv", a + "in_proj_z", a + "in_proj_b", a + "in_proj_a"}, 0, false, !cfg.qwen4);
+      ly.out_proj = load_qlinear_any(g, ck, {a + "out_proj"}, 0, false, !cfg.qwen4);
       ly.conv_w = ck.load(g, a + "conv1d.weight");
       ly.A_log = ck.load_bf16(g, a + "A_log");
       ly.dt_bias = ck.load(g, a + "dt_bias");
@@ -778,11 +782,11 @@ struct Qwen35 {
           ly.has_qsa = true;
         }
       } else {
-        ly.in_proj = load_qlinear_w(g, ck, {a + "q_proj", a + "k_proj", a + "v_proj"});
+        ly.in_proj = load_qlinear_w(g, ck, {a + "q_proj", a + "k_proj", a + "v_proj"}, !cfg.qwen4);
         ly.q_norm = ck.load(g, a + "q_norm.weight");
         ly.k_norm = ck.load(g, a + "k_norm.weight");
       }
-      ly.out_proj = load_qlinear_any(g, ck, {a + "o_proj"});
+      ly.out_proj = load_qlinear_any(g, ck, {a + "o_proj"}, 0, false, !cfg.qwen4);
       ly.proj = ly.in_proj.N;
     }
     check_layer(ck, p, ly);
@@ -1743,10 +1747,16 @@ struct Qwen35 {
   // verify block picks ~27 distinct experts of 40 (0.68), 8 rows 0.53 (mlx_vlm router, 700 tokens).
   int moe_v2 = 0;
   BufRef moe_act2;  // [8, topk + 1, moe_inter]
-  int moe_dedup = 1;
+  int moe_dedup = 1, moe_stats = 0;
+  size_t moe_plan_bytes() const { return (size_t)(1 + 8 * cfg.topk * 9) * 4; }
+  // MOE_STATS: unique routed experts of layer li in the last step that took the four-launch path
+  int moe_uniq(int li) const { return moe_stats ? moe_plan_buf.at(moe_plan_bytes() * li).ptr<int>()[0] : 0; }
   BufRef moe_plan_buf;  // moe_plan's output: [unique count, unique experts [8 k], per unique expert its 8 rows' picks]
+  // The 35B-A3B (qwen3_5_moe) takes the same launches with its 8-bit router (moe_router8) and x += (2026-11-04): each
+  // row's arithmetic is the same whatever T, so a verify block's rows compute what single-row decode computes.
   bool moe2(const Layer& ly, int T) const {
-    return cfg.qwen4 && T <= std::min(moe_v2, 8) && moe_act2.buf && ly.router.bits == 16 && cfg.topk <= 16 &&
+    return T <= std::min(moe_v2, 8) && moe_act2.buf && (cfg.qwen4 ? ly.router.bits == 16 : ly.router.bits == 8) &&
+           cfg.topk <= 16 &&
            cfg.experts <= 512 && ly.egu.bits == 4 && ly.edown.bits == 4 && (ly.gate_up.bits == 4 || ly.gate_up.bits == 8) &&
            (ly.down.bits == 4 || ly.down.bits == 8) && cfg.inter == cfg.moe_inter && cfg.moe_inter % 64 == 0 &&
            cfg.hidden % 64 == 0 && cfg.moe_inter % 128 == 0 && ly.router.N <= cfg.experts + 1;
@@ -1777,20 +1787,26 @@ struct Qwen35 {
     else rmsnorm_for(e, x, ly.post_norm, xn, T, H, ly.gate_up);
     if (moe2(ly, T)) {  // four launches: router GEMV; routing plan; gate/up SwiGLU (routed and shared); down + combine
       struct { int N, K, T; } r1{ly.router.N, H, T};
-      if (on("mrouter")) {
+      if (on("mrouter") && ly.router.bits == 8) {
+        char rn[24];
+        snprintf(rn, sizeof rn, "moe_router8_t%d", T <= 1 ? 1 : T <= 2 ? 2 : T <= 4 ? 4 : 8);
+        e.k(rn).buf(0, xn).buf(1, ly.router.wq).buf(2, ly.router.s).buf(3, ly.router.b).buf(4, rlog).args(5, r1);
+        e.groups(S3((ly.router.N + 7) / 8), S3(256));
+      } else if (on("mrouter")) {
         e.k("moe_router16").buf(0, xn).buf(1, ly.router.wq).buf(2, rlog).args(3, r1);
         e.groups(S3((ly.router.N + 3) / 4), S3(256));
       }
       const int xg = ly.gate_up.flipped ? (ly.gate_up.bits == 4 ? 8 : 0x80) : 0;
       const int xd = ly.down.flipped ? (ly.down.bits == 4 ? 8 : 0x80) : 0;
       struct { int E, k, stride, T, dedup; } pa{cfg.experts, k, ly.router.N, T, moe_dedup};
-      e.k("moe_plan").buf(0, rlog).buf(1, ridx).buf(2, rw).buf(3, rsg).buf(4, moe_plan_buf).args(5, pa);
+      const BufRef plan = moe_stats ? moe_plan_buf.at(moe_plan_bytes() * std::clamp((int)(&ly - L.data()), 0, cfg.layers)) : moe_plan_buf;
+      e.k("moe_plan").buf(0, rlog).buf(1, ridx).buf(2, rw).buf(3, rsg).buf(4, plan).args(5, pa);
       e.groups(S3(1), S3(256));
       struct { int k, I, K, xr, T; } ga{k, cfg.moe_inter, H, xg, T};
       char nm[32];
       snprintf(nm, sizeof nm, "moe_gu2_%d_%d_t%d", ly.egu.bits, ly.gate_up.bits,
                T <= 1 ? 1 : T <= 2 ? 2 : T <= 4 ? 4 : 8);
-      e.k(nm).buf(0, xn).buf(1, moe_plan_buf).buf(2, ly.egu.wq).buf(3, ly.egu.s).buf(4, ly.egu.b).buf(5, ly.gate_up.wq)
+      e.k(nm).buf(0, xn).buf(1, plan).buf(2, ly.egu.wq).buf(3, ly.egu.s).buf(4, ly.egu.b).buf(5, ly.gate_up.wq)
           .buf(6, ly.gate_up.s).buf(7, ly.gate_up.b).buf(8, moe_act2).args(9, ga);
       if (on("mgu")) e.groups(S3(cfg.moe_inter / 8, T * k + T), S3(256));
       struct { int k, I, H, xr, assign; } da{k, cfg.moe_inter, H, xd, cfg.qwen4};
@@ -1799,6 +1815,7 @@ struct Qwen35 {
           .buf(6, ly.edown.b).buf(7, ly.down.wq).buf(8, ly.down.s).buf(9, ly.down.b).buf(10, dst).args(11, da);
       if (on("mdn")) e.groups(S3((H + 7) / 8, T), S3(256));
       if (cfg.qwen4) hyper_inject(e, blk_out, T, moe_next);
+      a8_ready = false;  // the norm's int8 rows (if it made them) are not the next GEMM's input
       return;
     }
     // shared expert -> sh_out
@@ -1930,6 +1947,7 @@ struct Qwen35 {
       (!getenv("NAX_MPP32") || atoi(getenv("NAX_MPP32")) != 0);
   int mpp_min = getenv("NAX_MPP_MIN") ? atoi(getenv("NAX_MPP_MIN")) : 6;
   int nax_tile_rows = getenv("NAX_TILE") ? atoi(getenv("NAX_TILE")) : 32;  // 32 (wm2) or 64 (wm4) packed rows
+  bool nax_g8 = false;  // GQ 8 instances of attn_paged_nax (no experiment variants)
   int set_batch(const std::vector<SeqWork>& w) {
     int T = 0;
     max_ctx = 1;
@@ -2597,7 +2615,8 @@ struct Qwen35 {
           static const char* nx = getenv("NAX_X");  // timing experiments (wrong results): 1, 2, 4, 8, 15
           char nk[40];
           static const bool vpre = getenv("NAX_VPRE") != nullptr;
-          snprintf(nk, sizeof nk, "attn_paged_nax_wm%d%s%s%s", nax_tile_rows / 16, nx ? "x" : "", nx ? nx : "", vpre ? "v" : "");
+          if (nax_g8) snprintf(nk, sizeof nk, "attn_paged_nax_wm%d_g8", nax_tile_rows / 16);
+          else snprintf(nk, sizeof nk, "attn_paged_nax_wm%d%s%s%s", nax_tile_rows / 16, nx ? "x" : "", nx ? nx : "", vpre ? "v" : "");
           e.k(kvk(nk)).buf(0, qbuf).buf(1, kc[ly.idx]).buf(2, vc[ly.idx]).buf(3, block_table)
               .buf(4, pos).buf(5, seq_start).buf(6, attn_part).args(7, qa).buf(8, rflag).buf(9, seq_len)
               .buf(10, ks[ly.idx]).buf(11, vs[ly.idx]);
@@ -2703,6 +2722,9 @@ struct Qwen35 {
     }
     if (cfg.experts) {
       encode_moe(e, ly, T);
+      // DFlash2 on the 35B-A3B (2026-11-04): the MoE layers returned before the hidden capture below, so the drafter
+      // read an unwritten hcap (1.06 tokens per cycle).
+      capture(e, li, T);
       return;
     }
     rmsnorm_for(e, x, ly.post_norm, xn, T, H, ly.gate_up);
@@ -2731,6 +2753,11 @@ struct Qwen35 {
     } else {
       gemm(e, act, ly.down, x, T, 1, !captured && li >= 0 && li + 1 < (int)L.size());
     }
+    capture(e, li, T);
+  }
+  // The drafter's hidden capture: layer li's output rows into their column block of hcap.
+  void capture(Enc& e, int li, int T) {
+    const int H = cfg.hidden;
     for (size_t c = 0; c < cap_layers.size(); c++)
       if (cap_layers[c] == li) {
         CapArgs ca{H, (int)cap_layers.size() * H, (int)c * H};

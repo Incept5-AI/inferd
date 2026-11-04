@@ -45,7 +45,8 @@ struct Drafter {
   // Inputs for the two phases
   BufRef c_rows[2], c_pos[2], c_tseq[2], c_slot[2], b_tok, b_pos, b_tseq, b_start, b_len, b_spec, b_slot, b_vstart;
 
-  static int env_block() { return std::clamp(getenv("DRAFT_BLOCK") ? atoi(getenv("DRAFT_BLOCK")) : kMaxBlock, 2, kMaxBlock); }
+  // dflt: the widest block without DRAFT_BLOCK (kMaxBlock; MoE targets 8, see the Scheduler constructor)
+  static int env_block(int dflt = kMaxBlock) { return std::clamp(getenv("DRAFT_BLOCK") ? atoi(getenv("DRAFT_BLOCK")) : dflt, 2, kMaxBlock); }
   int max_rows = 0;  // block rows the scratch holds: tgt.spec_rows when set (the scheduler's cap), else max_seqs x kMaxBlock
   Drafter(Gpu& g, Qwen35& tgt, const Checkpoint& ck) : g(g), tgt(tgt) {
     const size_t mem0 = g.dev.currentAllocatedSize;
@@ -67,7 +68,8 @@ struct Drafter {
     // mask tokens at the next positions (as TensorFold's 16-wide lanes do); `block` is the widest block the scheduler
     // may pick (DRAFT_BLOCK overrides; trained_block keeps the config's value).
     trained_block = (int)dc["block_size"].i();
-    block = env_block();
+    // MoE targets (35B-A3B): no blocks past the trained 8 unless DRAFT_BLOCK asks (rows cost experts' weights)
+    block = env_block(tgt.cfg.experts ? std::min(trained_block, kMaxBlock) : kMaxBlock);
     for (auto& v : dc["target_layer_ids"].a) target_layers.push_back(v.i());
     ring = window + kMaxBlock;
     if (Hq / Hkv != 4 || D != 128 || dc["selector_rank"].i() != 256 || dc["selector_top_k"].i() != 16 ||

@@ -49,13 +49,18 @@ inline int check_qpart(const Checkpoint& ck, const std::string& p, const QSpec& 
 // part is widened to 8-bit / group 64 with the same scale and bias per 64-group, which is exact (the quantized values
 // fit in 8 bits and a group of 128 or 32 maps onto 64-groups with shared or split scales; group 32 must not straddle,
 // so it is only accepted for 4-bit -> kept as is by the caller). pad_n: zero rows appended up to this N.
+// keep: parts that are all one width of 4 or 8 bits at a group that is a multiple of 64 (the official Qwen MLX 4-bit
+// 35B-A3B: group 128) keep their width, with each scale and bias repeated per 64-group (exact), instead of being widened
+// to 8 bits (twice the bytes per token; 2026-11-04). Off for Flash-Next, whose loads stay as they were.
 inline QLinear load_qlinear_any(Gpu& g, const Checkpoint& ck, const std::vector<std::string>& prefixes, int pad_n = 0,
-                                bool force8 = false) {
+                                bool force8 = false, bool keep = false) {
   std::vector<QSpec> sp;
   bool plain = !force8 && pad_n == 0;
+  bool same = keep && !force8;
   for (auto& p : prefixes) {
     sp.push_back(qspec(ck, p));
     if (sp.back().bits != 4 || sp.back().gs != 64) plain = false;
+    if ((sp.back().bits != 4 && sp.back().bits != 8) || sp.back().gs % 64 || sp.back().bits != sp[0].bits) same = false;
   }
   if (plain) return load_qlinear(g, ck, prefixes);
   // Target width: 8 bits by default (W8A8 serves batched rows). Q4_NATIVE56=1 keeps the widest part's native 5 or 6
@@ -65,6 +70,7 @@ inline QLinear load_qlinear_any(Gpu& g, const Checkpoint& ck, const std::vector<
   int tb = 4;
   for (auto& x : sp) tb = std::max(tb, x.bits);
   if (force8 || widen8 || tb > 6) tb = 8;
+  if (same) tb = sp[0].bits;
   QLinear q;
   q.bits = tb;
   std::vector<int> ns;
@@ -108,6 +114,9 @@ inline QLinear load_qlinear_any(Gpu& g, const Checkpoint& ck, const std::vector<
           }
     }
     const uint8_t* wp = wr.data();
+    if (bits == tb && rb == drow) {  // same width: the packed rows as they are
+      memcpy(W + (size_t)row * drow, wp, (size_t)n * drow);
+    } else
     dispatch_apply(n, dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^(size_t r) {
       const uint8_t* src = wp + r * rb;
       uint8_t* dst = W + (size_t)(row + r) * drow;
@@ -138,12 +147,12 @@ inline QLinear load_qlinear_any(Gpu& g, const Checkpoint& ck, const std::vector<
 // Dense-model linears (2026-11-02): bf16, or every part one width of 4 or 8 bits at group 64, go to the usual loader
 // unchanged; anything else (lmstudio 5/6-bit, the Jundot oQ*e mixes with 5-bit down/k projections) is widened
 // exactly by load_qlinear_any instead of stopping at "unsupported 5-bit weights".
-inline QLinear load_qlinear_w(Gpu& g, const Checkpoint& ck, const std::vector<std::string>& prefixes) {
+inline QLinear load_qlinear_w(Gpu& g, const Checkpoint& ck, const std::vector<std::string>& prefixes, bool keep = false) {
   if (ck.info(prefixes[0] + ".weight").dtype == "BF16") return load_qlinear(g, ck, prefixes);
   int b0 = 0;
   for (auto& p : prefixes) {
     const QSpec q = qspec(ck, p);
-    if (q.gs != 64 || (q.bits != 4 && q.bits != 8) || (b0 && q.bits != b0)) return load_qlinear_any(g, ck, prefixes);
+    if (q.gs != 64 || (q.bits != 4 && q.bits != 8) || (b0 && q.bits != b0)) return load_qlinear_any(g, ck, prefixes, 0, false, keep);
     b0 = q.bits;
   }
   return load_qlinear(g, ck, prefixes);

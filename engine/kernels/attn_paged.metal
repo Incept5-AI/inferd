@@ -39,7 +39,9 @@ METAL_FUNC void load_kv4(thread Tile& t, const device uchar* base, int ld) {
 
 struct GqaArgs { int T, Hq, Hkv, Dh, max_blocks, splits, chunk, proj_stride; float scale; int qtiles, own_splits, ns, win, gated; };
 
-template <int WM, int WN, int BK = 32, int X = 0, bool VPRE = false>
+// GQ_: query heads per kv head, 6 (Qwen3.8-27B) or 8 (Qwen3.6-35B-A3B, 2026-11-04: its 8-row verify blocks ran on
+// the scalar multi-row attn_gqa, 0.31 ms per layer at 4k).
+template <int WM, int WN, int BK = 32, int X = 0, bool VPRE = false, int GQ_ = 6>
 [[kernel, max_total_threads_per_threadgroup(WM * WN * 32)]] void attn_paged_nax(
     const device bfloat* q [[buffer(0)]],
     const device bfloat* Kc [[buffer(1)]],
@@ -58,7 +60,7 @@ template <int WM, int WN, int BK = 32, int X = 0, bool VPRE = false>
     uint3 tg [[threadgroup_position_in_grid]]) {
   using T = bfloat;
   using AccumType = float;
-  constexpr int D = 256, GQ = 6, kU = 16, PG = 32;  // PG: tokens per KV page; BK keys (BK / PG pages) per step
+  constexpr int D = 256, GQ = GQ_, kU = 16, PG = 32;  // PG: tokens per KV page; BK keys (BK / PG pages) per step
   constexpr int TD = D / kU, TDh = TD / WN, BDh = D / WN, TK = BK / kU;
   static_assert(TDh % 2 == 0, "P@V accumulates output fragments in pairs");
 
@@ -248,6 +250,8 @@ template <int WM, int WN, int BK = 32, int X = 0, bool VPRE = false>
 }
 
 instantiate_kernel("attn_paged_nax_wm2", attn_paged_nax, 2, 4)
+instantiate_kernel("attn_paged_nax_wm2_g8", attn_paged_nax, 2, 4, 32, 0, false, 8)
+instantiate_kernel("attn_paged_nax_wm4_g8", attn_paged_nax, 4, 4, 32, 0, false, 8)
 instantiate_kernel("attn_paged_nax_wm4", attn_paged_nax, 4, 4)
 instantiate_kernel("attn_paged_nax_wm2v", attn_paged_nax, 2, 4, 32, 0, true)
 instantiate_kernel("attn_paged_nax_wm2x1", attn_paged_nax, 2, 4, 32, 1)

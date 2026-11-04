@@ -169,7 +169,7 @@ int main(int argc, char** argv) {
       uint64_t disp0 = Enc::dispatches;
       if (Enc::hist) Enc::hist->clear();
       if (Enc::prof) Enc::prof->clear();
-      double gpu_ms = 0, draft_ms = 0, ctx_ms = 0;
+      double gpu_ms = 0, draft_ms = 0, ctx_ms = 0, moe_u = 0, moe_n = 0;
       double ts = now();
       g_wait_s = g_sched_s = 0;
       auto shortest = [&] { size_t n = SIZE_MAX; for (auto& t : toks) n = std::min(n, t.size()); return (int)n; };
@@ -240,6 +240,8 @@ int main(int argc, char** argv) {
         commit_cb(cb);
         gpu_ms += (cb.GPUEndTime - cb.GPUStartTime) * 1e3;
         cycles++;
+        if (m.moe_stats)  // MOE_STATS=1: unique routed experts per layer of this cycle's verify step
+          for (int li = 0; li < m.cfg.layers; li++) moe_u += m.moe_uniq(li), moe_n++;
         ctx.clear();
         if (spec_on && tree_sim_on) {  // TREE_SIM: keep the drafter's per-position output for the offline tree study
           const int K = 16, R = 256, bl = d.block;
@@ -295,6 +297,8 @@ int main(int argc, char** argv) {
         for (int c = 1; c <= kMaxBlock; c++) if (chist[c]) printf(" %d:%d", c, chist[c]);
         printf("\n");
       }
+      if (moe_n) printf("  MoE: %.1f unique experts per layer per step (of %d rows x top-%d)\n", moe_u / moe_n,
+                        spec_on ? d.block * B : B, m.cfg.topk);
       if (tree_on) printf("  tree: %d nodes, kids %d, depth %d, temp %.2f; host build %.3f ms per cycle\n", tree_n,
                           tparams.max_kids, tparams.max_depth, tparams.temp, tree_ms / cycles);
       if (draft_ms > 0)
