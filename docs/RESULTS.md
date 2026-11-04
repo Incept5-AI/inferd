@@ -1158,6 +1158,53 @@ Requests that omit top_k/top_p take the model's generation_config.json defaults 
 above 64 (or top_k off with top_p 1) decodes one token per step unless the request opts into `"spec_sampling":
 "truncate"`. The greedy 32-agent gain comes from the cc133d1 base (QA8 frees the PF8 copies for KV), not from these fixes.
 
+## (t) Qwen3.6-35B-A3B corrected and sped up; 32-agent Studio gain confirmed (4 November)
+
+**Correction.** inferd 0.2.0's 35B-A3B figures from the 4 November queues (jobs 140/141) are **invalid**: the minis held
+Qwen's official MLX 4-bit build, which quantizes at group 128, and 0.2.0 assumed group 64. A 4-bit/g128 tensor has the
+shapes of an 8-bit/g64 tensor at half the width, so the experts loaded wrongly and the model computed garbage at
+plausible speeds (top-1 wrong on every check sequence). Splash had run the mlx-community group-64 build, so that
+comparison was not like for like either. Since 9dd55ad the loader refuses the mismatch; since c5b1e48 it reads the group
+size from config.json and loads both builds correctly (top-1 matches mlx_lm at chunks 1/24/256 on both).
+
+**What c5b1e48 adds for the MoE target:** the DFlash2 drafter (it had read an unwritten hidden capture: 1.06 tokens per
+cycle, now ~5 at block 8), MoE in four launches at up to 8 rows (each unique expert's weights read once per step), NAX
+paged verify attention for 8 query heads per KV head, and a MoE speculation policy (blocks up to 8, no token trees). The
+27B's outputs are byte-identical.
+
+M5 Pro 64 GB, mlx-community group-64 checkpoint for every engine, tok/s unless stated:
+
+| | inferd 0.2.0 | **inferd c5b1e48 + DFlash2** | Splash 1.5 |
+|---|---:|---:|---:|
+| one agent, decode at 4k / 16k | 101.9 / 90.9 | **150.7–153.0 / 132.0–140.6** | 209–219 / 194–196 |
+| follow-ups 4k, 1/4/8/16 agents | 96.8/204/254/324 | **131/214/269/338** | 166/359/350/344 |
+| follow-ups 16k, 1/4/8/16 agents | 88.3/165/194/245 | **113/190/245/291** | 150/307/320/308 |
+| 8k agent fleet, turns/min, 8/16/32 agents | 53.8/57.4/55.2 | **59.3/60.0/62.1** (32 running: 65.5/63.8/70.6) | 76.2/79.2/81.4 |
+
+Mac mini M6 32 GB (Splash not installed on that box):
+
+| | inferd 0.2.0 | **inferd c5b1e48 + DFlash2** |
+|---|---:|---:|
+| one agent, decode at 4k / 16k | 68.0–69.3 / 60.5–61.8 | **92.8–97.1 / 85.5–87.4** |
+| follow-ups 4k, 1/4/8/16 agents | 65.7/128.6/163.5/206.1 | **76.4/130.6/177.1/220.7** |
+| follow-ups 16k, 1/4/8/16 agents | 60.0/106.5/127.2/163.4 | **75.9/126.6/162.3/153.9** |
+| 8k agent fleet, turns/min, 8/16/32 agents | 34.6/36.6/35.5 | **39.4/38.8/37.6** |
+
+**Splash 1.5 still leads on the 35B-A3B**: about 30% on one agent, 10–45% on follow-ups with 4–16 agents, and 15–20% on
+the fleet. The one regression (M6, 16k x 16: 163 → 154) is memory: the 1.4 GiB drafter shrinks the KV pool on 32 GB.
+Greedy speculative output equals plain decoding on 3 of 6 test prompts; the other 3 diverge at documented near-ties
+(logits 1–4 bf16 steps apart), which MoE routing amplifies.
+
+**Mac Studio, 9dd55ad vs v0.2.0** (Qwen3.8-27B, 16k follow-ups, greedy, 3 trials each, same session):
+
+| agents | v0.2.0 | 9dd55ad |
+|---:|---:|---:|
+| 1 | 141.7–145.4 | 144.4–150.8 |
+| 8 | 480.9–484.8 | 484.2–490.9 |
+| 32 | 612.7–621.3 | **711.4–726.2 (+16%)** |
+
+Slowest first token at 32 agents: 2.19–2.35 s → 1.63–1.71 s. 0 errors in every cell.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
