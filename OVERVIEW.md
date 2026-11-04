@@ -6,7 +6,7 @@ Agents are how software is starting to use language models: not one conversation
 |---|---|
 | **615 tok/s** | 32 agents on 16k contexts on one Mac Studio (the next engine levels off near 370) |
 | **0.2–0.7 s** | for an agent to resume from memory or SSD, instead of 15–18 s to re-read its context |
-| **29% sooner** | 8 Qwen3.8-27B agents all finish (125.6 vs 177.9 s on TensorFold 1.2.1, same drafter, 3 trials) |
+| **29% sooner** | 8 Qwen3.8-27B agents all finish (125.6 vs 177.6 s on TensorFold 1.2.2, 177.9 s on 1.2.1; same drafter, 3 trials) |
 | **32 GB → 256 GB** | from a Mac mini M6 to a Mac Studio M5 Ultra |
 
 ## Why agents need a different engine
@@ -58,7 +58,7 @@ we measured on the minis, and runs on a 32 GB M6.
 ## Where others are better
 
 - One fast stream: TensorFold's fast mode is about 19% faster on the 27B (275 vs 231 tok/s), and oMLX and TensorFold are faster on Flash-Next.
-- A few agents starting together on Flash-Next: TensorFold finishes sooner up to about five agents.
+- A few agents starting together on Flash-Next: TensorFold finishes sooner up to about five agents; with Flash-Next agents arriving at random the two are level on total time and TensorFold's slowest first tokens come sooner.
 - Prefill on smaller chips: Splash prefilled the 27B about 1.5× faster on an M5 Pro. inferd's new int8 prefill kernel puts it ahead (712 vs 618 tok/s), but it needs memory for a second copy of the weights, so on a 64 GB Mac it switches on only when the server is sized for a few agents; large fleets keep the KV cache instead.
 - Models without a drafter (Qwen3.5-9B, Gemma-4, Glimmer): mlx-lm and mlx-vlm are faster for one agent.
 - Maturity: inferd is days old, run by a small team with AI assistance, and tested on the machines named here. It is for a trusted local user, not a shared network service yet.

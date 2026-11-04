@@ -38,9 +38,15 @@ All rows are Qwen3.8-27B 4-bit (mlx-community) with the incoai DFlash2 drafter u
 | Mac Studio M5 Ultra | 32 agents × 64k, total tok/s (last agent done) | **430 (38.1 s)** | Splash 311 (52.7 s) | [Studio](#b1-agents-on-the-studio-concpy-follow-ups) |
 | Mac Studio M5 Ultra | 1 agent × 16k / 256k, tok/s | 136–157 / 95–115 | **Splash 172 / 132** | [Studio](#b1-agents-on-the-studio-concpy-follow-ups) |
 | Mac Studio M5 Ultra | single stream, 8k decode, tok/s | 191 | **mlx-serve 224, Splash 219** | [sweep](#b3-single-stream-sweep-speedpy) |
+| Mac Studio M5 Ultra (0.2.0) | 32 agents × 16k, total tok/s | **620** | Splash 369 (levels off from 8 agents) | [(n)](#n-release-020-on-four-macs-4-november) |
+| Mac Studio M5 Ultra | 8 agents at once, 14k prompts: all done | **125.6 s** | TensorFold 1.2.2 177.6 s | [(m)](#m-tensorfold-122-re-tests-34-november) |
+| Mac Studio M5 Ultra | 16 agents arriving at random (27B): all done / p95 first token | **78.7 / 34.0 s** | TensorFold 1.2.2 116.8 / 72.1 s | [(m)](#m-tensorfold-122-re-tests-34-november) |
+| Mac mini M5 Pro, 64 GB | relaunch 16 forked agents / resume 8 agents after unrelated load | **2.1 / 0.25 s** | TensorFold 1.2.2 195 / 15.4 s | [(m)](#m-tensorfold-122-re-tests-34-november) |
+| MacBook Pro M3 Max | 16 agents × 32k: last agent's first token | **28.4 s** | Splash 113–115 s | [(l)](#l-macbook-pro-m3-max-external-tester-23-november) |
 
-Where inferd trails: one agent on a short (16k) or very long (256k) context, single-stream decode, and cold prefill
-on the Studio. Where it leads: every multi-agent cell from 4 agents up to 64k on the Studio, 16 agents at 128k, and
+Where inferd trails: one agent on a short (16k) or very long (256k) context, single-stream decode, cold prefill on
+the Studio, Flash-Next with 1–5 agents starting together, and one agent on GPUs without neural accelerators (M3 Max).
+The fleet rows above the 0.2.0 line are from the 1–2 November builds; (n) has the same workloads on the release. Where it leads: every multi-agent cell from 4 agents up to 64k on the Studio, 16 agents at 128k, and
 every fleet cell on both Mac minis. 128k × 4 and × 8 and 256k × 4 are level with Splash within run-to-run noise (see
 below).
 
@@ -999,6 +1005,27 @@ TF 1.2.2 130.7 / 49.1 tok/s, inferd 88.6 / 35.9. Managed (their protocol): 1.2.1
 (their 48 GB figure: 89.1 / 47.2).
 
 OCR vs TensorFold was not measured: both versions refuse JPEG without libjpeg-turbo 3.1.4.1 (the Studio has 3.2.0).
+
+## (n) Release 0.2.0 on four Macs, 4 November
+
+The prebuilt `inferd-0.2.0-macos27-arm64.tar.gz` (sha256 verified) on each machine, Qwen3.8-27B 4-bit + DFlash2
+(M4 Pro fleets without the drafter, as run.sh advises for M3/M4). Raw files: `examples/results/<machine>-0.2.0/` and
+`results/agent-scenarios/<machine>-0.2.0/`.
+
+| | Studio M5 Ultra | Mac mini M5 Pro 64 GB | Mac mini M6 32 GB | Mac mini M4 Pro 64 GB |
+|---|---|---|---|---|
+| Release gate (logits 1/24/256/1536 rows vs mlx_lm, top-1) | pass | pass | pass ¹ | pass |
+| Self-tests (`examples/run_all.sh`) | – | 13/13 | 13/13 | 15/15 |
+| Follow-ups, 16 agents, 4k contexts, total tok/s | – | 190.1 | 111.4 | 71.3 (no drafter) |
+| Follow-ups, 16 agents, 16k contexts, total tok/s | 581 ² | 169.3 | 64.4 ³ | 54.8 (no drafter) |
+| Follow-ups, 32 agents, 16k contexts, total tok/s | **619.9** (last first token 2.25 s) | – | – | – |
+| Forked agents relaunched after unrelated load, first token | 1.03 s (32 agents) | 2.1 s ⁴ | – | 6.8 s (16 agents) |
+| Agent resumed after unrelated load, first token | 0.09 s | 0.25 s ⁴ | 0.43 s ⁴ | 0.52 s |
+
+¹ The bench step's 64 × 2048 does not fit 32 GB; run at 1 and 16. ² 3 Nov sweep on the same code. ³ The M6's KV pool
+holds about four 16k contexts; the rest are re-read or restored from SSD. ⁴ From (m) (inferd 4a1c66a, the release code).
+The 0.2.0 numbers match or beat the 1–3 November builds within run-to-run noise (M5 Pro 16 × 4k 184.6 → 190.1, Studio
+32 × 16k 615.2 → 619.9).
 
 ## Engine-level measurements
 
