@@ -11,3 +11,7 @@ Qwen3.8-27B 4-bit (mlx-community) + DFlash2 (incoai).
   26.7 tok/s over 4 sequences (11.95 tokens per cycle). Two of the four very repetitive test prompts diverge after
   69 and 79 identical tokens: a near-tie flipped by the different kernel path in verify (documented in
   docs/EXPERIMENTS.md; the engine is not batch-invariant at the bit level, like vLLM).
+
+Self-tests (`examples/run_all.sh`, server `run.sh 8320 16 1024 0 8 32768` with the SSD tier and `VISION=1`): 13 / 13
+PASS. agent-team reports SKIP for its comparison: with the SSD tier on, the workers stayed cached even without the
+API, so there was no memory pressure to compare (the README explains how to force it).
