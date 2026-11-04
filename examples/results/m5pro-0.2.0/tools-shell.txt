@@ -1,0 +1,54 @@
+task: Look around the sandbox: list the files, tell me how many lines data.csv has, show the first 3 lines of notes.txt, and how much disk space is free. Also show me /etc/hosts.
+(max_context 4096, effort none, sandbox /private/var/folders/tv/6t0jkstd367cm82k50k61_600000gn/T/inferd-sandbox-u375ktzx)
+
+step 1: 5 tool call(s) [context 518/4096]
+  $ ls
+    data.csv
+    notes.txt
+    src
+  $ wc -l data.csv
+    42 data.csv
+  $ head -3 notes.txt
+    Ship examples on Monday.
+    Review tool calling.
+    Stop the server after.
+  $ df
+    Filesystem     512-blocks       Used  Available Capacity iused      ifree %iused  Mounted on
+    /dev/disk3s1s1 3896808080   26667744 1384780832     2%  484019 4294062940    0%   /
+    devfs                 395        395          0   100%     684          0  100%   /dev
+    /dev/disk3s6   3896808080    4194344 1384780832     1%       2 6923904160    0%   /System/Volumes/VM
+    /dev/disk3s2   3896808080   22208984 1384780832     2%     987 6923904160    0%   /System/Volumes/Preboot
+    /dev/disk3s4   3896808080      47408 1384780832     1%      67 6923904160    0%   /System/Volumes/Update
+    /dev/disk1s2      1126400      12328    1091360     2%       1    5456800    0%   /System/Volumes/xarts
+    /dev/disk1s1      1126400      12112    1091360     2%      38    5456800    0%   /System/Volumes/iSCPreboot
+    /dev/disk1s3      1126400        792    1091360     1%      61    5456800    0%   /System/Volumes/Hardware
+    /dev/disk3s5   3896808080 2454443312 1384780832    64% 1174691 6923904160    0%   /System/Volumes/Data
+    map auto_home           0          0          0   100%       0          0     -   /System/Volumes/Data/home
+  $ head /etc/hosts
+    REFUSED: path '/etc/hosts' is outside the sandbox
+step 2: final answer [context 1359/4096]
+
+Here's the sandbox overview:
+
+- **Files:** `data.csv`, `notes.txt`, `src` (directory)
+- **data.csv:** 42 lines
+- **notes.txt (first 3 lines):**
+  ```
+  Ship examples on Monday.
+  Review tool calling.
+  Stop the server after.
+  ```
+- **Disk space:** ~1.38 TB available on the root volume (2% used)
+
+**/etc/hosts:** I can't show that — the sandbox only allows access to paths inside it, and `/etc/hosts` is outside the sandbox, so the request was refused.
+
+6.6s total
+
+The guard on its own (what a misbehaving model would get back):
+  'rm -rf notes.txt'     -> REFUSED: 'rm' is not on the allow-list ['date', 'df', 'head', 'ls', 'pwd', 'uname', 'wc']
+  'head /etc/passwd'     -> REFUSED: path '/etc/passwd' is outside the sandbox
+  'ls ..'                -> REFUSED: path '..' is outside the sandbox
+  'ls; date'             -> REFUSED: shell metacharacters are not allowed
+  'cat notes.txt'        -> REFUSED: 'cat' is not on the allow-list ['date', 'df', 'head', 'ls', 'pwd', 'uname', 'wc']
+  'df /'                 -> REFUSED: df takes no path arguments here
+  'wc --files0-from=/etc/passwd' -> REFUSED: flag '--files0-from=/etc/passwd' is not allowed

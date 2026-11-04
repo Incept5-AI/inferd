@@ -1,0 +1,14 @@
+# re-run quickstart,agent-budgets,tools-web-search,tools-shell,structured-output,agent-contexts,agent-handoff,agent-team,ocr-agents,ocr-agents-compare,agent-swarm,agent-followups,users-at-once  2026-11-03 23:57  http://127.0.0.1:8320/v1
+quickstart	3.6 s	exit 0
+agent-budgets	34.5 s	exit 0
+tools-web-search	8.6 s	exit 0
+tools-shell	6.6 s	exit 0
+structured-output	11.0 s	exit 0
+agent-contexts	48.3 s	exit 0
+agent-handoff	95.9 s	exit 0
+agent-team	185.3 s	exit 0
+ocr-agents	10.9 s	exit 0
+ocr-agents-compare	108.5 s	exit 0
+agent-swarm	48.4 s	exit 0
+agent-followups	183.4 s	exit 0
+users-at-once	135.1 s	exit 0

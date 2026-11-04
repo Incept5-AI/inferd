@@ -1,0 +1,29 @@
+== host: grammar
+   ok
+== host: json
+   ok
+== host: spill
+   ok
+== host: weights
+   ok
+== front end: test_structured
+   ok
+== front end: test_tools
+   ok
+== front end: test_stream
+   ok
+== reference tokens
+   ok
+== logits, chunk 1
+   ok
+== compare, chunk 1
+   ok
+== logits, chunk 24
+   ok
+== compare, chunk 24
+   ok
+== bench
+   ok
+== speculative = plain
+   ok
+gate passed: gate-20261103-2355.log
