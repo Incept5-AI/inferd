@@ -34,7 +34,10 @@ numbers) and `docs/RESULTS.md` (every measurement) before changing anything.
 ```bash
 cd engine && ./build.sh                       # needs Xcode's Metal toolchain (Metal 4); build on the machine's own macOS
 MODEL=<27B dir> DRAFT=<DFlash2 dir> ./run.sh 8300      # inferd + OpenAI front end on :8300
+./run.sh start --model 27b [--dry-run]                 # the same, resolved from ~/models and sized from RAM (install.sh)
 ./run.sh stop 8300
+./test_run.sh && ./test_run_start.sh                   # run.sh's tests (fake processes; after any run.sh change)
+tools/package.sh <version>                             # release tarball for this macOS (never lower the Metal target)
 ```
 
 Smoke tests, to run after every kernel change (each takes seconds):
