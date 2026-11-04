@@ -1,0 +1,35 @@
+prime agent 0: {'prompt_tokens': 8173, 'completion_tokens': 64, 'cached_tokens': 0, 'ttft_s': 6.59, 'decode_tps': 49.81, 'secs': 7.86}
+prime agent 1: {'prompt_tokens': 8176, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.3, 'decode_tps': 49.82, 'secs': 6.56}
+prime agent 2: {'prompt_tokens': 8178, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.43, 'decode_tps': 49.31, 'secs': 6.7}
+prime agent 3: {'prompt_tokens': 8176, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.64, 'decode_tps': 49.13, 'secs': 6.93}
+prime agent 4: {'prompt_tokens': 8174, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.72, 'decode_tps': 49.04, 'secs': 7.01}
+prime agent 5: {'prompt_tokens': 8173, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.74, 'decode_tps': 49.04, 'secs': 7.03}
+prime agent 6: {'prompt_tokens': 8175, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.99, 'secs': 7.05}
+prime agent 7: {'prompt_tokens': 8174, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.77, 'decode_tps': 49.02, 'secs': 7.06}
+{"label": "tf122-q9b4", "ctx": "8k", "kind": "cell", "n": 8, "k": 8, "rounds": 2, "wall_s": 23.1, "turns": 16, "ok": 16, "err": 0, "errors": [], "capped": false, "gen_tps": 77.9, "turns_per_min": 41.55, "lat_p50": 9.94, "lat_p95": 16.98, "ttft_p50": 3.77, "ttft_p95": 7.91, "wait_p50": 0.0, "decode_p50": 17.39, "new_tokens": 19073, "cache_hit": 0.88, "full_hits": 0, "disk_gib_before": null, "disk_gib_after": null}
+prime agent 8: {'prompt_tokens': 8174, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.78, 'decode_tps': 48.76, 'secs': 7.07}
+prime agent 9: {'prompt_tokens': 8175, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.87, 'decode_tps': 48.7, 'secs': 7.17}
+prime agent 10: {'prompt_tokens': 8177, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.89, 'decode_tps': 48.64, 'secs': 7.19}
+prime agent 11: {'prompt_tokens': 8178, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.9, 'decode_tps': 48.73, 'secs': 7.19}
+prime agent 12: {'prompt_tokens': 8178, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.89, 'decode_tps': 48.8, 'secs': 7.18}
+prime agent 13: {'prompt_tokens': 8175, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.85, 'decode_tps': 48.83, 'secs': 7.14}
+prime agent 14: {'prompt_tokens': 8172, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.82, 'decode_tps': 48.88, 'secs': 7.11}
+prime agent 15: {'prompt_tokens': 8178, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.81, 'decode_tps': 48.87, 'secs': 7.1}
+{"label": "tf122-q9b4", "ctx": "8k", "kind": "cell", "n": 16, "k": 16, "rounds": 2, "wall_s": 90.8, "turns": 32, "ok": 32, "err": 0, "errors": [], "capped": false, "gen_tps": 33.9, "turns_per_min": 21.16, "lat_p50": 41.98, "lat_p95": 76.85, "ttft_p50": 26.58, "ttft_p95": 65.54, "wait_p50": 0.0, "decode_p50": 10.69, "new_tokens": 103155, "cache_hit": 0.675, "full_hits": 0, "disk_gib_before": null, "disk_gib_after": null}
+prime agent 16: {'prompt_tokens': 8174, 'completion_tokens': 64, 'cached_tokens': 0, 'ttft_s': 5.71, 'decode_tps': 48.93, 'secs': 7.0}
+prime agent 17: {'prompt_tokens': 8177, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.92, 'secs': 7.05}
+prime agent 18: {'prompt_tokens': 8174, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.77, 'decode_tps': 48.88, 'secs': 7.06}
+prime agent 19: {'prompt_tokens': 8174, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.77, 'decode_tps': 48.88, 'secs': 7.05}
+prime agent 20: {'prompt_tokens': 8176, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.95, 'secs': 7.05}
+prime agent 21: {'prompt_tokens': 8170, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.92, 'secs': 7.05}
+prime agent 22: {'prompt_tokens': 8179, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.95, 'secs': 7.05}
+prime agent 23: {'prompt_tokens': 8176, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.97, 'secs': 7.05}
+prime agent 24: {'prompt_tokens': 8178, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.93, 'secs': 7.05}
+prime agent 25: {'prompt_tokens': 8177, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.97, 'secs': 7.05}
+prime agent 26: {'prompt_tokens': 8177, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.93, 'secs': 7.05}
+prime agent 27: {'prompt_tokens': 8174, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.82, 'secs': 7.06}
+prime agent 28: {'prompt_tokens': 8180, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.96, 'secs': 7.05}
+prime agent 29: {'prompt_tokens': 8176, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.76, 'decode_tps': 48.91, 'secs': 7.05}
+prime agent 30: {'prompt_tokens': 8177, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.77, 'decode_tps': 48.97, 'secs': 7.05}
+prime agent 31: {'prompt_tokens': 8176, 'completion_tokens': 64, 'cached_tokens': 3, 'ttft_s': 5.78, 'decode_tps': 48.99, 'secs': 7.06}
+{"label": "tf122-q9b4", "ctx": "8k", "kind": "cell", "n": 32, "k": 32, "rounds": 2, "wall_s": 491.9, "turns": 64, "ok": 64, "err": 0, "errors": [], "capped": false, "gen_tps": 13.4, "turns_per_min": 7.81, "lat_p50": 224.99, "lat_p95": 254.68, "ttft_p50": 200.82, "ttft_p95": 225.99, "wait_p50": 0.0, "decode_p50": 3.03, "new_tokens": 635341, "cache_hit": 0.0, "full_hits": 0, "disk_gib_before": null, "disk_gib_after": null}

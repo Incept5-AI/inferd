@@ -1,0 +1,6 @@
+usage: agents_scenarios.py [-h] [--url URL] [--model MODEL]
+                           [--mode {api,implicit,plain}] [--scenario SCENARIO]
+                           [--preset {m5pro,m6,studio}] [--set SET]
+                           [--d-oneoff-cache {keep,drop}] [--label LABEL]
+                           [--tag TAG] [--out OUT] [--pid PID]
+agents_scenarios.py: error: unrecognized arguments: --pid 15670

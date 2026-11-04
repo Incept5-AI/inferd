@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "~/inference/conc.py", line 18, in <module>
+    import sse_client  # validated SSE: normal finish, [DONE], consistent usage (Codex review 2026-11-02, S04)
+ModuleNotFoundError: No module named 'sse_client'

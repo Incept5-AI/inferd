@@ -1067,6 +1067,23 @@ packed 4-bit weights directly (no 22.7 GiB int8 copy like inferd's PF8). That ke
 (32–64 GB Macs, where PF8 does not fit). Their back-to-back long-prompt fix (90.7 → 13.1 s) did not reproduce as a
 collapse on the Studio: 0.7.3 was already 6.6 s, 0.7.4 5.7–6.0 s, inferd 9.1 s flat.
 
+## (q) Benchmark queues on five minis, 4 November (Qwen3.5-9B 4-/8-bit, Qwen3.8-27B)
+
+Every mini (two M6, two M5 Pro, one M4 Pro) ran a job queue on inferd 0.2.0 against TensorFold 1.2.2 (and Splash 1.5
+where installed), same checkpoints and harness. Every table: [results/queue-2026-11-04/](../results/queue-2026-11-04/README.md)
+(harness in its `harness/`). Headlines, 16 agents taking turns (total tok/s, inferd vs TensorFold 1.2.2):
+
+| machine | 9B 4-bit, 4k | 9B 4-bit, 16k | 9B 8-bit, 16k |
+|---|---|---|---|
+| Mac mini M6 32 GB | **209** vs 92–98 | **158–160** vs 23 | **114–115** vs 8.7 |
+| Mac mini M5 Pro 64 GB | **381–391** vs 274–276 | **287–295** vs 40–46 | **218** vs 20 |
+| Mac mini M4 Pro 64 GB | **193** vs 144 | **156** vs 17 | |
+
+TensorFold leads at 4–8 agents on the 4k cells of the M4 Pro and M5 Pro (e.g. M5 Pro 8 × 4k 269–273 vs 255–264) and
+at 4 agents on the M6; one agent is level. 9B agent fleets on the M5 Pro (8k, turns/min, 8/16/32 agents): inferd
+44.5 / 54.0 / 53.3 vs TensorFold 40.7 / 20.4 / 7.7 (4-bit) and 44.0 / 42.8 / 45.8 vs 19.3 / 8.6 / 3.0 (8-bit).
+27B long context on the M5 Pro (one agent, cold prompt + 512 out): 32k 68 s, 64k 149–152 s.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

@@ -1,0 +1,5 @@
+2026-11-04 15:04:43 030-9b-fleet inferd-q9b4-fleet up: inferd: memory: GPU budget 25.0 GiB; model + state + scratch 5.9, drafter 0.0, PF8 6.4, KV 11.1 (auto) -> 23.5 allocated inferd: 8-bit KV, 22358 KV blocks (11 GiB, 0.7M tokens), 16 slots (0.8 GiB state), max ctx 12288 
+2026-11-04 15:12:51 030-9b-fleet inferd-q9b4 fleet: turns_per_min": 28.99;turns_per_min": 31.11;turns_per_min": 30.37;
+2026-11-04 15:13:10 030-9b-fleet tf122-q9b4-fleet up (tensorfold): info: qwen27: 7.5 GiB kept wired between requests, inside 70% of 32 GiB of RAM info: prompt cache: 6.3 GiB from 6.3 GiB free under the 70% cap (7.8 GiB in use once loaded and 6.3 GiB reserved outside that reading, 32 GiB of RAM, 2 GiB kept for prompt buffers) [tensorfold] serving tf at http://127.0.
+2026-11-04 15:39:35 030-9b-fleet tf122-q9b4 fleet: turns_per_min": 16.09;turns_per_min": 4.91;turns_per_min": 4.95;
+2026-11-04 15:40:00 030-9b-fleet inferd-q9b8-fleet up: inferd: memory: GPU budget 25.0 GiB; model + state + scratch 10.1, drafter 0.0, PF8 6.4, KV 6.9 (auto) -> 23.5 allocated inferd: 8-bit KV, 13952 KV blocks (7 GiB, 0.4M tokens), 16 slots (0.8 GiB state), max ctx 12288 

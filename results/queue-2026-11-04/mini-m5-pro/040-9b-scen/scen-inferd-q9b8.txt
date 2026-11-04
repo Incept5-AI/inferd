@@ -1,0 +1,25 @@
+agent scenarios b,c,e on http://127.0.0.1:8320/v1 (inferd), mode api, preset m6
+
+[b] forked agents
+  cold: 8 agents, full prompts       n=8    err=0   TTFT med 9.662 p90 9.663 max 9.663 s, cached 87% wall_s=11.5 gen_tok_s=24.1 peak_kv_used=19744 peak_kv_cached=19232 peak_kv_pinned=0 peak_snapshots=9 peak_rss_gib=8.98 preempted=0 ssd_restored=0
+  saved once (8.7 s), 8 agents       n=8    err=0   TTFT med 0.816 p90 0.816 max 0.816 s, cached 100% setup_s=8.7 wall_s=2.78 gen_tok_s=102.9 peak_kv_used=39328 peak_kv_cached=39040 peak_kv_pinned=19072 peak_snapshots=16 peak_rss_gib=10.53 preempted=0 ssd_restored=0
+  (filler: 4 x ~14k prompts in 19.97 s, 0 errors)
+  relaunch after unrelated load      n=8    err=0   TTFT med 0.699 p90 0.699 max 0.699 s, cached 100% wall_s=2.57 gen_tok_s=111.3 peak_kv_used=84128 peak_kv_cached=83744 peak_kv_pinned=19072 peak_snapshots=16 peak_rss_gib=11.39 preempted=0 ssd_restored=3
+  context: [{"effort": "none", "tokens": 19085, "kv_tokens": 19072, "prefill_s": 8.685, "cached_at_save": 0, "pinned": true, "resident": {"gpu": true, "ssd": false}, "kv_mib": 302.7}]
+  (46 s)
+
+[c] re-used agents
+  resume after: resident             n=6    err=0   TTFT med 0.112 p90 0.113 max 0.114 s, cached 98% wall_s=4.94 gen_tok_s=28.1 peak_kv_used=112768 peak_kv_cached=112736 peak_kv_pinned=0 peak_snapshots=19 peak_rss_gib=11.39 preempted=0 ssd_restored=3
+  (filler: 4 x ~14k prompts in 20.33 s, 0 errors)
+  resume after: filler               n=6    err=0   TTFT med 0.118 p90 0.125 max 0.15 s, cached 98% wall_s=4.98 gen_tok_s=27.3 peak_kv_used=177152 peak_kv_cached=177120 peak_kv_pinned=0 peak_snapshots=23 peak_rss_gib=11.97 preempted=0 ssd_restored=4
+  resume after: offload              n=6    err=0   TTFT med 0.204 p90 2.166 max 2.176 s, cached 66% wall_s=9.55 gen_tok_s=15.2 peak_kv_used=191648 peak_kv_cached=191616 peak_kv_pinned=0 peak_snapshots=23 peak_rss_gib=12.56 preempted=0 ssd_restored=7
+  (83 s)
+
+[e] mixed fleet
+  researchers (effort low, priority 5) n=4    err=0   TTFT med 3.85 p90 12.904 max 12.904 s, cached 50% wall_s=43.68 gen_tok_s=35.2
+    researcher turn median 21.64 s, decode 24.2 tok/s per stream
+  helpers (effort none, priority -1) n=24   err=0   TTFT med 1.199 p90 1.744 max 2.042 s, cached 60% wall_s=43.68 gen_tok_s=17.5
+    helper request p90 13.41 s
+  whole fleet                        n=28   err=0   TTFT med 1.199 p90 1.785 max 12.904 s, cached 54% wall_s=43.68 gen_tok_s=52.7 peak_kv_used=194528 peak_kv_cached=187040 peak_kv_pinned=736 peak_snapshots=12 peak_rss_gib=12.67 preempted=0 ssd_restored=8
+  (44 s)
+

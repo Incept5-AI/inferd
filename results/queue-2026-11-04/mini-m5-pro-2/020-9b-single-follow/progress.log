@@ -1,0 +1,12 @@
+2026-11-04 11:59:18 020-9b-single-follow inferd-q9b4 up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 6.4, drafter 0.0, PF8 6.4, KV 37.5 (auto) -> 50.3 allocated inferd: 8-bit KV, 75576 KV blocks (37 GiB, 2.4M tokens), 24 slots (1.2 GiB state), max ctx 32768 
+2026-11-04 11:59:18 020-9b-single-follow inferd-q9b4 single: 
+2026-11-04 11:59:18 020-9b-single-follow inferd-q9b4 follow-ups: 
+2026-11-04 11:59:39 020-9b-single-follow tf122-q9b4 up (tensorfold): info: qwen27: 11.1 GiB kept wired between requests, inside 70% of 64 GiB of RAM info: prompt cache: 16.0 GiB from 24.0 GiB free under the 70% cap (11.4 GiB in use once loaded and 7.4 GiB reserved outside that reading, 64 GiB of RAM, 2 GiB kept for prompt buffers); 16 GiB by default: --prompt-cache-g
+2026-11-04 11:59:39 020-9b-single-follow tf122-q9b4 single: 
+2026-11-04 11:59:39 020-9b-single-follow tf122-q9b4 follow-ups: 
+2026-11-04 12:00:01 020-9b-single-follow inferd-q9b8 up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 10.6, drafter 0.0, PF8 6.4, KV 33.3 (auto) -> 50.3 allocated inferd: 8-bit KV, 67170 KV blocks (33 GiB, 2.1M tokens), 24 slots (1.2 GiB state), max ctx 32768 
+2026-11-04 12:00:01 020-9b-single-follow inferd-q9b8 single: 
+2026-11-04 12:00:01 020-9b-single-follow inferd-q9b8 follow-ups: 
+2026-11-04 12:00:20 020-9b-single-follow tf122-q9b8 up (tensorfold): info: qwen27: 15.3 GiB kept wired between requests, inside 70% of 64 GiB of RAM info: prompt cache: 16.0 GiB from 19.9 GiB free under the 70% cap (15.6 GiB in use once loaded and 7.4 GiB reserved outside that reading, 64 GiB of RAM, 2 GiB kept for prompt buffers); 16 GiB by default: --prompt-cache-g
+2026-11-04 12:00:20 020-9b-single-follow tf122-q9b8 single: 
+2026-11-04 12:00:20 020-9b-single-follow tf122-q9b8 follow-ups: 

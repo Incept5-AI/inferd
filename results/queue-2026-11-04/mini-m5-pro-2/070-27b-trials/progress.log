@@ -1,0 +1,1 @@
+2026-11-04 15:14:27 070-27b-trials inferd27-trials up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 18.3, drafter 2.8, PF8 0.0, KV 29.3 (auto) -> 50.3 allocated inferd: 8-bit KV, 29530 KV blocks (29 GiB, 0.9M tokens), 24 slots (3.4 GiB state), max ctx 32768 

@@ -1,0 +1,2 @@
+2026-11-04 15:22:42 060-27b-long inferd27-long up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 16.1, drafter 1.9, PF8 22.7, KV 9.7 (auto) -> 50.3 allocated inferd: 8-bit KV, 9763 KV blocks (10 GiB, 0.3M tokens), 8 slots (1.1 GiB state), max ctx 70000 
+2026-11-04 15:26:22 060-27b-long inferd27-long single:  32k 1 1 0 67.82 7.5 55.1; 64k 1 1 0 152.31 3.4 48.4;
