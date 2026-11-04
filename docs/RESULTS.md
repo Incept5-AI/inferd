@@ -32,6 +32,8 @@ All rows are Qwen3.8-27B 4-bit (mlx-community) with the incoai DFlash2 drafter u
 |---|---|---:|---:|---|
 | Mac mini M6, 32 GB | 8–64 agents, 8k contexts, turns/min | **10.9–11.3** (with the Neural Engine split) | Splash 6.8–8.9 | [fleet](#a1-headline-turns-per-minute) |
 | Mac mini M6, 32 GB | 8–32 agents, 16k contexts, turns/min | **8.8–9.3** (Neural Engine split) | Splash 6.8–8.2 | [fleet](#a1-headline-turns-per-minute) |
+| Mac mini M6, 32 GB (0.2.0) | 27B, 16 agents, 8k, turns/min / 9B 16 agents × 16k, tok/s | **14.3** (NE split; GPU 9.7) / **160** | Splash 8.8 / TensorFold 23; TensorFold cannot load the 27B | [(o)](#o-mac-mini-m6-head-to-head-4-november-inferd-020-vs-splash-150-vs-tensorfold-122) |
+| Mac mini M6, 32 GB (0.2.0) | 27B, 8–16 agents taking turns on 16k, tok/s | 64–66 | **Splash 86–89** | [(o)](#o-mac-mini-m6-head-to-head-4-november-inferd-020-vs-splash-150-vs-tensorfold-122) |
 | Mac mini M5 Pro, 64 GB | 8–64 agents, 16k, turns/min | **13.5–14.3** | Splash 11.9–12.0 | [fleet](#a1-headline-turns-per-minute) |
 | Mac mini M5 Pro, 64 GB | 8–32 agents, 32k, turns/min | **11.0–12.8** | Splash 10.3–10.6 | [fleet](#a1-headline-turns-per-minute) |
 | Mac Studio M5 Ultra | 16 agents × 16k / 32k / 64k, total tok/s | **563 / 504 / 390** | Splash 369 / 354 / 300 | [Studio](#b1-agents-on-the-studio-concpy-follow-ups) |
@@ -1026,6 +1028,26 @@ The prebuilt `inferd-0.2.0-macos27-arm64.tar.gz` (sha256 verified) on each machi
 holds about four 16k contexts; the rest are re-read or restored from SSD. ⁴ From (m) (inferd 4a1c66a, the release code).
 The 0.2.0 numbers match or beat the 1–3 November builds within run-to-run noise (M5 Pro 16 × 4k 184.6 → 190.1, Studio
 32 × 16k 615.2 → 619.9).
+
+## (o) Mac mini M6 head-to-head, 4 November (inferd 0.2.0 vs Splash 1.5.0 vs TensorFold 1.2.2)
+
+Two M6 boxes (32 GB; macOS 27.0 and 27.2, level within noise), same weights (Qwen3.8-27B 4-bit + DFlash2; Qwen3.5-9B
+4-bit and 8-bit) and harness for every engine. Full tables, configs and raw files:
+[results/m6-h2h-2026-11-04/](../results/m6-h2h-2026-11-04/README.md); the benchmark-queue jobs that followed are
+summarised there too.
+
+- **TensorFold 1.2.2 cannot load the 27B on 32 GB**: refused in all 25 configurations (down to one stream, a 1,024-token
+  context and no drafter), because of its fixed 8 GiB margin.
+- **27B agent fleet, 8k contexts, turns/min (8 / 16 / 32 agents):** inferd 9.67 / 9.72 / 9.57, with the Neural Engine
+  split 11.58 / 14.33 / 12.12; Splash 8.71 / 8.78 / 8.82.
+- **27B follow-ups, total tok/s, 1 / 4 / 8 / 16 agents:** 4k: inferd 27.4 / 74.4 / 94.9 / **111.4**, Splash
+  **36.4 / 93.2** / 94.9 / 88.5; 16k: inferd 25.2 / 66.6 / 65.8 / 64.4, Splash **32.6 / 69.6 / 86.4 / 88.6**. Splash
+  is faster for one agent (prefill ~1.8x) and on 16k fleets of 8–16 agents: inferd's KV pool on 32 GB holds about
+  four 16k contexts.
+- **27B agents coming back (inferd API):** forked from a saved context 2.36 s (cold 75.2 s), relaunched after unrelated
+  load 1.09 s, resumed 0.42–0.60 s.
+- **9B follow-ups at 16k, 16 agents:** inferd 158–160 tok/s vs TensorFold 22.6–22.8 (4-bit); 114–115 vs 8.7 (8-bit).
+  TensorFold leads at 4 agents (4k 98 vs 75).
 
 ## Engine-level measurements
 

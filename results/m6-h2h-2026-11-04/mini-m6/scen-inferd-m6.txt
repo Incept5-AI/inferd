@@ -1,0 +1,17 @@
+agent scenarios b,c on http://127.0.0.1:8300/v1 (qwen3.8-27b), mode api, preset m6
+
+[b] forked agents
+  cold: 8 agents, full prompts       n=8    err=0   TTFT med 75.231 p90 75.231 max 75.231 s, cached 87% wall_s=77.9 gen_tok_s=4.0 peak_kv_used=77568 peak_kv_cached=77568 peak_kv_pinned=0 peak_snapshots=20 preempted=0 ssd_restored=0
+  saved once (73.1 s), 8 agents      n=8    err=0   TTFT med 2.357 p90 2.357 max 2.357 s, cached 100% setup_s=73.1 wall_s=5.24 gen_tok_s=59.1 peak_kv_used=76864 peak_kv_cached=76352 peak_kv_pinned=19072 peak_snapshots=16 preempted=0 ssd_restored=0
+  (filler: 4 x ~14k prompts in 168.89 s, 0 errors)
+  relaunch after unrelated load      n=8    err=0   TTFT med 1.091 p90 1.092 max 1.092 s, cached 100% wall_s=3.97 gen_tok_s=79.6 peak_kv_used=76704 peak_kv_cached=76224 peak_kv_pinned=19072 peak_snapshots=14 preempted=0 ssd_restored=0
+  context: [{"effort": "none", "tokens": 19085, "kv_tokens": 19072, "prefill_s": 73.087, "cached_at_save": 0, "pinned": true, "resident": {"gpu": true, "ssd": false}, "kv_mib": 605.3}]
+  (329 s)
+
+[c] re-used agents
+  resume after: resident             n=6    err=0   TTFT med 0.425 p90 0.427 max 0.492 s, cached 98% wall_s=7.27 gen_tok_s=19.5 peak_kv_used=76000 peak_kv_cached=75936 peak_kv_pinned=0 peak_snapshots=16 preempted=0 ssd_restored=0
+  (filler: 4 x ~14k prompts in 169.21 s, 0 errors)
+  resume after: filler               n=6    err=0   TTFT med 0.418 p90 0.426 max 0.493 s, cached 98% wall_s=7.63 gen_tok_s=19.1 peak_kv_used=77696 peak_kv_cached=77696 peak_kv_pinned=0 peak_snapshots=16 preempted=0 ssd_restored=0
+  resume after: offload              n=6    err=0   TTFT med 0.598 p90 0.634 max 0.658 s, cached 98% wall_s=8.82 gen_tok_s=16.5 peak_kv_used=75712 peak_kv_cached=75712 peak_kv_pinned=0 peak_snapshots=16 preempted=0 ssd_restored=6
+  (526 s)
+

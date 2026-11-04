@@ -1,0 +1,3 @@
+ ctx   N  ok err  wall s agg tok/s  agg dec  ovl TTFT med TTFT max stream med    min  cached
+  4k   1   1   0   19.88      25.8     44.0  1.0     8.24     8.24       43.9   43.9       0  []
+ 16k   1   1   0   49.83      10.3     38.9  1.0    36.67    36.67       38.8   38.8       0  []

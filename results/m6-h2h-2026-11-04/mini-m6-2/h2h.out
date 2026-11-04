@@ -1,0 +1,11 @@
+10:25:56 ##### h2h m6-2 start
+10:26:06 inferd27-ctl up: inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, PF8 0.0, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 
+10:29:40 inferd-m62 single:  4k 1 1 0 28.37 18.0 38.6; 16k 1 1 0 76.66 6.7 36.4; 4k 1 1 0 28.69 17.8 36.8; 16k 1 1 0 79.75 6.4 33.1;
+10:37:21 inferd control m6-2:  4k 8 8 0 46.91 87.3 96.8 0.86 4.58 4.58 12.7 11.8 4000 [] |  16k 4 4 0 28.34 72.3 77.3 0.92 1.85 1.85 20.0 19.3 16368 []
+10:37:42 tf q9 up: info: qwen27: prompt capacity=512 rows, startup stream and scratch reserve=11548917760 bytes info: qwen27: 7.5 GiB kept wired between requests, inside 70% of 32 GiB of RAM info: prompt cache: 6.3 GiB from 6.3 GiB free under the 70% cap (7.8 GiB in use once loaded and 6.3 GiB reserved outside that reading, 32 GiB of RAM, 2 GiB kept for prompt buffers) info: Qwen3.8-27B: 7 streams of 32768 tokens 
+10:39:41 tf122-q9 single:  4k 1 1 0 22.02 23.3 30.6; 16k 1 1 0 37.32 13.7 27.5; 4k 1 1 0 21.76 23.5 30.4; 16k 1 1 0 37.45 13.7 27.5;
+11:05:29 tf122-q9 follow-ups:  4k 1 1 0 16.98 30.2; 4k 4 4 0 20.71 98.9; 4k 8 8 0 41.12 99.6; 4k 16 16 0 83.51 98.1; 16k 1 1 0 18.85 27.2; 16k 4 4 0 28.17 72.7; 16k 8 8 0 149.74 27.4; 16k 16 16 0 359.13 22.8;
+11:05:50 inferd-q9 up: inferd: memory: GPU budget 25.0 GiB; model + state + scratch 6.4, drafter 0.0, PF8 6.4, KV 10.6 (auto) -> 23.5 allocated inferd: 8-bit KV, 21373 KV blocks (11 GiB, 0.7M tokens), 24 slots (1.2 GiB state), max ctx 32768 
+11:07:31 inferd-q9 single:  4k 1 1 0 20.2 25.3 30.9; 16k 1 1 0 30.29 16.9 29.3; 4k 1 1 0 19.8 25.9 30.5; 16k 1 1 0 30.47 16.8 29.0;
+11:21:35 inferd-q9 follow-ups:  4k 1 1 0 17.09 30.0; 4k 4 4 0 27.18 75.3; 4k 8 8 0 31.05 131.9; 4k 16 16 0 39.15 209.2; 16k 1 1 0 18.04 28.4; 16k 4 4 0 31.47 65.1; 16k 8 8 0 37.38 109.6; 16k 16 16 0 51.29 159.7;
+11:21:52 ##### h2h m6-2 done

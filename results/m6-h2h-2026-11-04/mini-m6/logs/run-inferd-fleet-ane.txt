@@ -1,0 +1,12 @@
+up on 127.0.0.1:8300 (inferd pid 74739, front end pid 74888, socket <tmp>)
+inferd: Neural Engine FFN split: 12288 of 17408 channels (24 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+inferd: DFlash2 drafter loaded (block 16)
+inferd: drafter memory: 2.03 GiB own (context rings 0.63 for 16 slots), 0.25 GiB verify scratch (GDN tapes 0.16 for 72 rows; 72 output rows)
+inferd: memory: GPU budget 25.0 GiB; model + state + scratch 17.4, drafter 2.3, PF8 0.0, KV 3.3 (auto) -> 23.0 allocated
+inferd: 8-bit KV, 3339 KV blocks (3 GiB, 0.1M tokens), 16 slots (2.3 GiB state), max ctx 12288
+inferd: PF8: off (auto: the copies would shrink the KV pool; KV room after copies -19.4 GiB, need 3.0 for 8 x 12288 tokens), copies 22.71 GiB (not made), KV 3.3 GiB
+inferd: SSD tier in /tmp/h2hspill/inferd-spill (96 GiB, 1.0 MiB per block + 187 MiB state per context)
+inferd: warm-up: 637 + 24-token prompts, 8 tokens each (12 steps; PF8 off, DFlash2 verify), 59 pipelines created (10 ms), 4.03 s (WARMUP=0 disables)
+inferd: listening on <tmp>
+inferd: vocabulary for structured output: 248077 tokens
+run.sh: stopped 2 process(es) on port 8300

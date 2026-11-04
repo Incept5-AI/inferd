@@ -1,0 +1,1 @@
+tensorfold: --parallel 1 needs 3.0 GiB for its streams and 512-row prompt scratch at a 4096-token context; 1.1 GiB remains beside the weights and an 8 GiB margin: lower --parallel or --context

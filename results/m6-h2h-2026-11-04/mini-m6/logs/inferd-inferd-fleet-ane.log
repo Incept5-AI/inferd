@@ -1,0 +1,321 @@
+inferd: Neural Engine FFN split: 12288 of 17408 channels (24 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+inferd: DFlash2 drafter loaded (block 16)
+inferd: drafter memory: 2.03 GiB own (context rings 0.63 for 16 slots), 0.25 GiB verify scratch (GDN tapes 0.16 for 72 rows; 72 output rows)
+inferd: memory: GPU budget 25.0 GiB; model + state + scratch 17.4, drafter 2.3, PF8 0.0, KV 3.3 (auto) -> 23.0 allocated
+inferd: 8-bit KV, 3339 KV blocks (3 GiB, 0.1M tokens), 16 slots (2.3 GiB state), max ctx 12288
+inferd: PF8: off (auto: the copies would shrink the KV pool; KV room after copies -19.4 GiB, need 3.0 for 8 x 12288 tokens), copies 22.71 GiB (not made), KV 3.3 GiB
+inferd: SSD tier in /tmp/h2hspill/inferd-spill (96 GiB, 1.0 MiB per block + 187 MiB state per context)
+inferd: warm-up: 637 + 24-token prompts, 8 tokens each (12 steps; PF8 off, DFlash2 verify), 59 pipelines created (10 ms), 4.03 s (WARMUP=0 disables)
+inferd: listening on <tmp>
+inferd: vocabulary for structured output: 248077 tokens
+spill: wrote 255 blocks, 0.08 s total so far, 0.4 GiB on disk
+spill: wrote 254 blocks, 0.16 s total so far, 0.9 GiB on disk
+spill: wrote 254 blocks, 0.24 s total so far, 1.3 GiB on disk
+spill: wrote 254 blocks, 0.31 s total so far, 1.7 GiB on disk
+spill: wrote 254 blocks, 0.39 s total so far, 2.2 GiB on disk
+spill: wrote 255 blocks, 0.47 s total so far, 2.6 GiB on disk
+spill: wrote 255 blocks, 0.55 s total so far, 3.0 GiB on disk
+spill: wrote 254 blocks, 0.63 s total so far, 3.5 GiB on disk
+spill: wrote 291 blocks, 0.67 s total so far, 3.7 GiB on disk
+spill: wrote 256 blocks, 0.70 s total so far, 3.9 GiB on disk
+spill: wrote 291 blocks, 0.73 s total so far, 4.1 GiB on disk
+spill: wrote 291 blocks, 0.76 s total so far, 4.3 GiB on disk
+spill: wrote 291 blocks, 0.80 s total so far, 4.5 GiB on disk
+spill: wrote 291 blocks, 0.83 s total so far, 4.8 GiB on disk
+spill: wrote 291 blocks, 0.87 s total so far, 5.0 GiB on disk
+spill: wrote 291 blocks, 0.90 s total so far, 5.2 GiB on disk
+spill: wrote 291 blocks, 0.93 s total so far, 5.4 GiB on disk
+spill: wrote 325 blocks, 0.96 s total so far, 5.6 GiB on disk
+spill: wrote 325 blocks, 1.00 s total so far, 5.8 GiB on disk
+spill: wrote 292 blocks, 1.02 s total so far, 6.0 GiB on disk
+spill: wrote 326 blocks, 1.05 s total so far, 6.2 GiB on disk
+spill: wrote 292 blocks, 1.07 s total so far, 6.4 GiB on disk
+spill: wrote 294 blocks, 1.10 s total so far, 6.6 GiB on disk
+spill: wrote 295 blocks, 1.12 s total so far, 6.8 GiB on disk
+spill: wrote 329 blocks, 1.16 s total so far, 7.0 GiB on disk
+spill: wrote 292 blocks, 1.19 s total so far, 7.2 GiB on disk
+spill: wrote 292 blocks, 1.22 s total so far, 7.4 GiB on disk
+spill: wrote 294 blocks, 1.25 s total so far, 7.5 GiB on disk
+spill: wrote 296 blocks, 1.27 s total so far, 7.7 GiB on disk
+spill: wrote 325 blocks, 1.30 s total so far, 7.9 GiB on disk
+spill: wrote 330 blocks, 1.34 s total so far, 8.2 GiB on disk
+spill: wrote 327 blocks, 1.37 s total so far, 8.3 GiB on disk
+spill: wrote 329 blocks, 1.41 s total so far, 8.6 GiB on disk
+spill: wrote 328 blocks, 1.43 s total so far, 8.7 GiB on disk
+spill: wrote 330 blocks, 1.47 s total so far, 8.9 GiB on disk
+spill: wrote 329 blocks, 1.50 s total so far, 9.1 GiB on disk
+spill: wrote 331 blocks, 1.53 s total so far, 9.3 GiB on disk
+spill: restored 255 blocks (255 already in memory) for id33, 0.05 s total so far
+spill: wrote 329 blocks, 1.57 s total so far, 9.6 GiB on disk
+spill: wrote 255 blocks, 1.65 s total so far, 10.0 GiB on disk
+spill: wrote 331 blocks, 1.68 s total so far, 10.2 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id34, 0.31 s total so far
+spill: wrote 255 blocks, 1.74 s total so far, 10.6 GiB on disk
+spill: wrote 332 blocks, 1.77 s total so far, 10.8 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id35, 0.49 s total so far
+spill: wrote 255 blocks, 1.83 s total so far, 11.2 GiB on disk
+spill: wrote 333 blocks, 1.87 s total so far, 11.4 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id36, 0.77 s total so far
+spill: wrote 254 blocks, 1.95 s total so far, 11.8 GiB on disk
+spill: restored 254 blocks (205 already in memory) for id37, 0.97 s total so far
+spill: wrote 256 blocks, 1.99 s total so far, 12.0 GiB on disk
+spill: wrote 254 blocks, 2.06 s total so far, 12.5 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id38, 1.23 s total so far
+spill: wrote 255 blocks, 2.13 s total so far, 12.9 GiB on disk
+spill: wrote 256 blocks, 2.16 s total so far, 13.1 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id39, 1.43 s total so far
+spill: wrote 256 blocks, 2.19 s total so far, 13.3 GiB on disk
+spill: wrote 255 blocks, 2.26 s total so far, 13.7 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id40, 1.72 s total so far
+spill: wrote 255 blocks, 2.33 s total so far, 14.1 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id41, 1.84 s total so far
+spill: restored 254 blocks (0 already in memory) for id42, 1.98 s total so far
+spill: restored 254 blocks (0 already in memory) for id43, 2.13 s total so far
+spill: wrote 291 blocks, 2.36 s total so far, 14.4 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id44, 2.33 s total so far
+spill: wrote 291 blocks, 2.39 s total so far, 14.6 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id45, 2.46 s total so far
+spill: wrote 291 blocks, 2.43 s total so far, 14.8 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id46, 2.61 s total so far
+spill: wrote 291 blocks, 2.46 s total so far, 15.0 GiB on disk
+spill: wrote 291 blocks, 2.50 s total so far, 15.2 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id47, 2.74 s total so far
+spill: wrote 291 blocks, 2.53 s total so far, 15.4 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id48, 2.90 s total so far
+spill: restored 291 blocks (0 already in memory) for id49, 3.08 s total so far
+spill: wrote 291 blocks, 2.58 s total so far, 15.7 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id50, 3.25 s total so far
+spill: wrote 291 blocks, 2.63 s total so far, 15.9 GiB on disk
+spill: wrote 291 blocks, 2.67 s total so far, 16.1 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id51, 3.44 s total so far
+spill: restored 291 blocks (0 already in memory) for id52, 3.62 s total so far
+spill: wrote 290 blocks, 2.71 s total so far, 16.3 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id53, 3.79 s total so far
+spill: wrote 291 blocks, 2.76 s total so far, 16.5 GiB on disk
+spill: wrote 291 blocks, 2.80 s total so far, 16.7 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id54, 3.97 s total so far
+spill: wrote 291 blocks, 2.85 s total so far, 17.0 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id55, 4.15 s total so far
+spill: restored 291 blocks (0 already in memory) for id56, 4.32 s total so far
+spill: wrote 291 blocks, 2.88 s total so far, 17.2 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id57, 4.44 s total so far
+spill: wrote 291 blocks, 2.92 s total so far, 17.4 GiB on disk
+spill: wrote 291 blocks, 2.97 s total so far, 17.6 GiB on disk
+spill: restored 290 blocks (0 already in memory) for id58, 4.62 s total so far
+spill: wrote 325 blocks, 3.01 s total so far, 17.8 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id59, 4.81 s total so far
+spill: wrote 325 blocks, 3.04 s total so far, 18.0 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id60, 5.01 s total so far
+spill: wrote 325 blocks, 3.09 s total so far, 18.3 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id61, 5.26 s total so far
+spill: wrote 325 blocks, 3.12 s total so far, 18.5 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id62, 5.56 s total so far
+spill: wrote 325 blocks, 3.16 s total so far, 18.7 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id63, 5.70 s total so far
+spill: wrote 325 blocks, 3.20 s total so far, 18.9 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id64, 5.86 s total so far
+spill: wrote 325 blocks, 3.24 s total so far, 19.1 GiB on disk
+spill: wrote 325 blocks, 3.28 s total so far, 19.3 GiB on disk
+spill: wrote 325 blocks, 3.32 s total so far, 19.6 GiB on disk
+spill: wrote 326 blocks, 3.35 s total so far, 19.7 GiB on disk
+spill: wrote 325 blocks, 3.40 s total so far, 20.0 GiB on disk
+spill: wrote 325 blocks, 3.44 s total so far, 20.2 GiB on disk
+spill: wrote 325 blocks, 3.48 s total so far, 20.4 GiB on disk
+spill: wrote 325 blocks, 3.52 s total so far, 20.6 GiB on disk
+spill: wrote 325 blocks, 3.57 s total so far, 20.8 GiB on disk
+spill: wrote 325 blocks, 3.62 s total so far, 21.0 GiB on disk
+spill: wrote 325 blocks, 3.66 s total so far, 21.3 GiB on disk
+spill: wrote 328 blocks, 3.69 s total so far, 21.4 GiB on disk
+spill: wrote 255 blocks, 3.76 s total so far, 21.9 GiB on disk
+spill: wrote 328 blocks, 3.80 s total so far, 22.1 GiB on disk
+spill: wrote 254 blocks, 3.88 s total so far, 22.5 GiB on disk
+spill: wrote 254 blocks, 3.97 s total so far, 22.9 GiB on disk
+spill: wrote 255 blocks, 4.06 s total so far, 23.4 GiB on disk
+spill: wrote 254 blocks, 4.15 s total so far, 23.8 GiB on disk
+spill: wrote 255 blocks, 4.23 s total so far, 24.2 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id81, 6.26 s total so far
+spill: wrote 255 blocks, 4.33 s total so far, 24.7 GiB on disk
+spill: wrote 256 blocks, 4.36 s total so far, 24.9 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id82, 6.52 s total so far
+spill: wrote 255 blocks, 4.44 s total so far, 25.3 GiB on disk
+spill: wrote 256 blocks, 4.47 s total so far, 25.5 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id83, 6.71 s total so far
+spill: wrote 255 blocks, 4.55 s total so far, 25.9 GiB on disk
+spill: wrote 256 blocks, 4.58 s total so far, 26.1 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id84, 6.97 s total so far
+spill: wrote 254 blocks, 4.65 s total so far, 26.5 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id85, 7.16 s total so far
+spill: wrote 254 blocks, 4.75 s total so far, 27.0 GiB on disk
+spill: wrote 256 blocks, 4.78 s total so far, 27.2 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id86, 7.43 s total so far
+spill: wrote 254 blocks, 4.86 s total so far, 27.6 GiB on disk
+spill: wrote 254 blocks, 4.93 s total so far, 28.0 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id87, 7.61 s total so far
+spill: wrote 254 blocks, 5.04 s total so far, 28.5 GiB on disk
+spill: wrote 255 blocks, 5.11 s total so far, 28.9 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id88, 7.75 s total so far
+spill: wrote 255 blocks, 5.19 s total so far, 29.3 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id89, 7.88 s total so far
+spill: restored 256 blocks (0 already in memory) for id90, 8.04 s total so far
+spill: restored 255 blocks (0 already in memory) for id91, 8.19 s total so far
+spill: wrote 291 blocks, 5.24 s total so far, 29.5 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id92, 8.36 s total so far
+spill: wrote 291 blocks, 5.28 s total so far, 29.8 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id93, 8.48 s total so far
+spill: wrote 291 blocks, 5.31 s total so far, 30.0 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id94, 8.62 s total so far
+spill: wrote 291 blocks, 5.35 s total so far, 30.2 GiB on disk
+spill: wrote 291 blocks, 5.40 s total so far, 30.4 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id95, 8.76 s total so far
+spill: wrote 290 blocks, 5.44 s total so far, 30.6 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id96, 8.88 s total so far
+spill: restored 255 blocks (0 already in memory) for id97, 9.03 s total so far
+spill: wrote 291 blocks, 5.48 s total so far, 30.8 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id98, 9.17 s total so far
+spill: wrote 291 blocks, 5.52 s total so far, 31.1 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id99, 9.32 s total so far
+spill: wrote 291 blocks, 5.55 s total so far, 31.3 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id100, 9.46 s total so far
+spill: wrote 291 blocks, 5.61 s total so far, 31.5 GiB on disk
+spill: wrote 291 blocks, 5.65 s total so far, 31.7 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id101, 9.61 s total so far
+spill: wrote 291 blocks, 5.69 s total so far, 31.9 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id102, 9.79 s total so far
+spill: wrote 291 blocks, 5.74 s total so far, 32.1 GiB on disk
+spill: wrote 291 blocks, 5.78 s total so far, 32.4 GiB on disk
+spill: wrote 291 blocks, 5.84 s total so far, 32.6 GiB on disk
+spill: wrote 291 blocks, 5.89 s total so far, 32.8 GiB on disk
+spill: wrote 291 blocks, 5.93 s total so far, 33.0 GiB on disk
+spill: wrote 291 blocks, 5.96 s total so far, 33.2 GiB on disk
+spill: wrote 291 blocks, 6.01 s total so far, 33.4 GiB on disk
+spill: wrote 291 blocks, 6.05 s total so far, 33.7 GiB on disk
+spill: wrote 291 blocks, 6.10 s total so far, 33.9 GiB on disk
+spill: wrote 292 blocks, 6.14 s total so far, 34.1 GiB on disk
+spill: wrote 292 blocks, 6.18 s total so far, 34.2 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id103, 10.02 s total so far
+spill: wrote 291 blocks, 6.22 s total so far, 34.5 GiB on disk
+spill: wrote 293 blocks, 6.25 s total so far, 34.6 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id104, 10.16 s total so far
+spill: restored 254 blocks (0 already in memory) for id105, 10.30 s total so far
+spill: wrote 292 blocks, 6.28 s total so far, 34.8 GiB on disk
+spill: wrote 292 blocks, 6.31 s total so far, 35.0 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id106, 10.43 s total so far
+spill: restored 254 blocks (0 already in memory) for id107, 10.57 s total so far
+spill: wrote 293 blocks, 6.34 s total so far, 35.2 GiB on disk
+spill: wrote 294 blocks, 6.38 s total so far, 35.4 GiB on disk
+spill: wrote 295 blocks, 6.43 s total so far, 35.6 GiB on disk
+spill: restored 256 blocks (0 already in memory) for id108, 10.70 s total so far
+spill: wrote 291 blocks, 6.49 s total so far, 35.8 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id109, 10.84 s total so far
+spill: wrote 291 blocks, 6.54 s total so far, 36.0 GiB on disk
+spill: wrote 295 blocks, 6.58 s total so far, 36.2 GiB on disk
+spill: wrote 291 blocks, 6.65 s total so far, 36.4 GiB on disk
+spill: wrote 291 blocks, 6.70 s total so far, 36.6 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id110, 11.09 s total so far
+spill: wrote 291 blocks, 6.78 s total so far, 36.8 GiB on disk
+spill: wrote 291 blocks, 6.84 s total so far, 37.1 GiB on disk
+spill: wrote 292 blocks, 6.88 s total so far, 37.2 GiB on disk
+spill: restored 254 blocks (0 already in memory) for id111, 11.22 s total so far
+spill: wrote 291 blocks, 6.93 s total so far, 37.5 GiB on disk
+spill: wrote 291 blocks, 7.00 s total so far, 37.7 GiB on disk
+spill: wrote 292 blocks, 7.03 s total so far, 37.9 GiB on disk
+spill: restored 255 blocks (0 already in memory) for id112, 11.36 s total so far
+spill: wrote 292 blocks, 7.08 s total so far, 38.1 GiB on disk
+spill: wrote 292 blocks, 7.12 s total so far, 38.2 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id113, 11.53 s total so far
+spill: wrote 292 blocks, 7.16 s total so far, 38.4 GiB on disk
+spill: wrote 292 blocks, 7.20 s total so far, 38.6 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id114, 11.70 s total so far
+spill: restored 291 blocks (0 already in memory) for id115, 11.86 s total so far
+spill: wrote 294 blocks, 7.23 s total so far, 38.8 GiB on disk
+spill: wrote 291 blocks, 7.28 s total so far, 39.0 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id116, 12.03 s total so far
+spill: wrote 294 blocks, 7.32 s total so far, 39.2 GiB on disk
+spill: wrote 294 blocks, 7.36 s total so far, 39.4 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id117, 12.20 s total so far
+spill: wrote 325 blocks, 7.41 s total so far, 39.6 GiB on disk
+spill: wrote 291 blocks, 7.47 s total so far, 39.8 GiB on disk
+spill: restored 290 blocks (0 already in memory) for id118, 12.37 s total so far
+spill: wrote 295 blocks, 7.53 s total so far, 40.0 GiB on disk
+spill: wrote 325 blocks, 7.60 s total so far, 40.2 GiB on disk
+spill: wrote 325 blocks, 7.65 s total so far, 40.4 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id119, 12.51 s total so far
+spill: wrote 325 blocks, 7.70 s total so far, 40.6 GiB on disk
+spill: wrote 325 blocks, 7.75 s total so far, 40.9 GiB on disk
+spill: wrote 325 blocks, 7.79 s total so far, 41.1 GiB on disk
+spill: wrote 295 blocks, 7.82 s total so far, 41.3 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id120, 12.64 s total so far
+spill: wrote 325 blocks, 7.87 s total so far, 41.5 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id121, 12.79 s total so far
+spill: restored 291 blocks (0 already in memory) for id122, 12.96 s total so far
+spill: wrote 326 blocks, 7.89 s total so far, 41.7 GiB on disk
+spill: wrote 326 blocks, 7.93 s total so far, 41.9 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id123, 13.13 s total so far
+spill: wrote 295 blocks, 7.96 s total so far, 42.0 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id124, 13.30 s total so far
+spill: restored 291 blocks (0 already in memory) for id125, 13.43 s total so far
+spill: wrote 326 blocks, 7.99 s total so far, 42.2 GiB on disk
+spill: wrote 294 blocks, 8.02 s total so far, 42.4 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id126, 13.76 s total so far
+spill: wrote 326 blocks, 8.05 s total so far, 42.6 GiB on disk
+spill: wrote 325 blocks, 8.08 s total so far, 42.8 GiB on disk
+spill: wrote 325 blocks, 8.12 s total so far, 43.0 GiB on disk
+spill: wrote 325 blocks, 8.16 s total so far, 43.2 GiB on disk
+spill: wrote 325 blocks, 8.23 s total so far, 43.5 GiB on disk
+spill: restored 293 blocks (0 already in memory) for id127, 13.97 s total so far
+spill: wrote 327 blocks, 8.27 s total so far, 43.6 GiB on disk
+spill: wrote 326 blocks, 8.33 s total so far, 43.8 GiB on disk
+spill: restored 295 blocks (0 already in memory) for id128, 14.08 s total so far
+spill: wrote 325 blocks, 8.44 s total so far, 44.0 GiB on disk
+spill: wrote 325 blocks, 8.49 s total so far, 44.3 GiB on disk
+spill: restored 295 blocks (0 already in memory) for id129, 14.25 s total so far
+spill: wrote 325 blocks, 8.55 s total so far, 44.5 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id130, 14.41 s total so far
+spill: wrote 327 blocks, 8.59 s total so far, 44.7 GiB on disk
+spill: wrote 328 blocks, 8.70 s total so far, 44.8 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id131, 14.66 s total so far
+spill: wrote 328 blocks, 8.80 s total so far, 45.0 GiB on disk
+spill: wrote 328 blocks, 8.87 s total so far, 45.2 GiB on disk
+spill: restored 292 blocks (0 already in memory) for id132, 14.82 s total so far
+spill: wrote 328 blocks, 8.90 s total so far, 45.4 GiB on disk
+spill: restored 292 blocks (0 already in memory) for id133, 14.97 s total so far
+spill: wrote 329 blocks, 9.02 s total so far, 45.6 GiB on disk
+spill: wrote 329 blocks, 9.05 s total so far, 45.8 GiB on disk
+spill: wrote 329 blocks, 9.09 s total so far, 46.0 GiB on disk
+spill: wrote 329 blocks, 9.12 s total so far, 46.2 GiB on disk
+spill: restored 294 blocks (0 already in memory) for id134, 15.13 s total so far
+spill: wrote 329 blocks, 9.17 s total so far, 46.5 GiB on disk
+spill: restored 291 blocks (0 already in memory) for id135, 15.29 s total so far
+spill: wrote 329 blocks, 9.22 s total so far, 46.7 GiB on disk
+spill: wrote 329 blocks, 9.26 s total so far, 46.9 GiB on disk
+spill: wrote 329 blocks, 9.30 s total so far, 47.1 GiB on disk
+spill: wrote 331 blocks, 9.32 s total so far, 47.3 GiB on disk
+spill: wrote 331 blocks, 9.36 s total so far, 47.5 GiB on disk
+spill: restored 294 blocks (0 already in memory) for id136, 15.44 s total so far
+spill: wrote 331 blocks, 9.39 s total so far, 47.7 GiB on disk
+spill: restored 294 blocks (0 already in memory) for id137, 15.71 s total so far
+spill: wrote 331 blocks, 9.42 s total so far, 47.9 GiB on disk
+spill: restored 295 blocks (0 already in memory) for id138, 15.86 s total so far
+spill: wrote 330 blocks, 9.46 s total so far, 48.1 GiB on disk
+spill: wrote 328 blocks, 9.51 s total so far, 48.3 GiB on disk
+spill: wrote 333 blocks, 9.55 s total so far, 48.5 GiB on disk
+spill: wrote 333 blocks, 9.58 s total so far, 48.7 GiB on disk
+spill: restored 292 blocks (0 already in memory) for id139, 16.12 s total so far
+spill: restored 294 blocks (0 already in memory) for id140, 16.27 s total so far
+spill: restored 295 blocks (0 already in memory) for id141, 16.42 s total so far
+spill: wrote 332 blocks, 9.61 s total so far, 48.9 GiB on disk
+spill: restored 292 blocks (0 already in memory) for id142, 16.68 s total so far
+spill: wrote 333 blocks, 9.64 s total so far, 49.0 GiB on disk
+spill: wrote 328 blocks, 9.69 s total so far, 49.3 GiB on disk
+spill: wrote 329 blocks, 9.73 s total so far, 49.5 GiB on disk
+spill: restored 295 blocks (0 already in memory) for id143, 16.84 s total so far
+spill: wrote 329 blocks, 9.77 s total so far, 49.7 GiB on disk
+spill: wrote 329 blocks, 9.81 s total so far, 49.9 GiB on disk
+spill: wrote 333 blocks, 9.87 s total so far, 50.1 GiB on disk
+spill: wrote 328 blocks, 9.91 s total so far, 50.3 GiB on disk
+spill: wrote 329 blocks, 9.95 s total so far, 50.5 GiB on disk
+spill: wrote 329 blocks, 10.00 s total so far, 50.7 GiB on disk
+spill: wrote 329 blocks, 10.05 s total so far, 51.0 GiB on disk
+spill: restored 294 blocks (0 already in memory) for id144, 17.09 s total so far
+spill: wrote 330 blocks, 10.09 s total so far, 51.1 GiB on disk
+spill: wrote 330 blocks, 10.21 s total so far, 51.3 GiB on disk

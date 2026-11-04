@@ -1,0 +1,8 @@
+inferd: DFlash2 drafter loaded (block 16)
+inferd: drafter memory: 2.38 GiB own (context rings 0.94 for 24 slots), 0.42 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows)
+inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, PF8 0.0, KV 2.4 (auto) -> 23.5 allocated
+inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768
+inferd: PF8: off (auto: the copies would shrink the KV pool; KV room after copies -20.3 GiB, need 16.3 for 16 x 32768 tokens), copies 22.71 GiB (not made), KV 2.4 GiB
+inferd: SSD tier in /tmp/h2hspill/inferd-spill (96 GiB, 1.0 MiB per block + 187 MiB state per context)
+inferd: warm-up: 637 + 24-token prompts, 8 tokens each (12 steps; PF8 off, DFlash2 verify), 59 pipelines created (21 ms), 4.12 s (WARMUP=0 disables)
+inferd: listening on <tmp>
