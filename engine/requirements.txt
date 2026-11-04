@@ -3,5 +3,6 @@ uvicorn==0.54.0
 transformers==5.19.0
 mlx==0.32.3
 mlx-vlm==0.7.8
+mlx-lm==0.32.2
 pillow==13.0.0
 numpy==2.5.4

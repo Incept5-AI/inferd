@@ -3,7 +3,8 @@
 #   run.sh [port=8300] [max_running=64] [step_tokens=2048] [kv_gib=96] [snapshots=96] [max_ctx=131072]   start
 #   run.sh stop [port=8300]     stop exactly what run.sh started on that port (pid files: SIGTERM, wait up to
 #                               STOP_WAIT s, then SIGKILL); exit 0 when nothing is running
-#   run.sh status [port=8300]   pids, socket and log paths; exit 0 when both processes run, 3 otherwise
+#   run.sh status [port=8300]   pids, socket and log paths (the log directory the last start used); exit 0 when
+#                               both processes run, 3 otherwise
 # The engine socket is no longer /tmp/inferd-<port>.sock: use `run.sh stop` / `run.sh status`, not lsof on a path.
 # Env: MODEL (checkpoint dir, required to start), DRAFT (DFlash2 dir; speculation off without it), DRAFT_BITS, PY (python
 # with the front end's packages, default python3), SPILL_DIR/SPILL_GIB (SSD tier), VISION, plus the engine knobs in
@@ -48,6 +49,7 @@ if [[ -e $RUN ]]; then
   [[ -d $RUN && -O $RUN ]] || die "$RUN is not a directory owned by $USER"
 fi
 SOCK=$RUN/inferd-$PORT.sock IPID=$RUN/inferd-$PORT.pid SPID=$RUN/serve-$PORT.pid
+LOGF=$RUN/logs-$PORT  # the log directory the last start used (status reports it, not the current INFERD_LOGS)
 LEGACY=/tmp/inferd-$PORT.sock  # where run.sh put the socket before 2026-11-03
 
 alive() { kill -0 "$1" 2>/dev/null }
@@ -110,7 +112,12 @@ if [[ $CMD == status ]]; then
   print -r -- "inferd    ${ipid:-not running}${ipid:+  ($(ps -o command= -p $ipid))}"
   print -r -- "socket    $SOCK$([[ -S $SOCK ]] && print ' (present)' || print ' (absent)')"
   print -r -- "pid files $SPID $IPID"
-  print -r -- "logs      $LOGS/inferd-$PORT.log $LOGS/serve-$PORT.log"
+  if [[ -f $LOGF && ! -L $LOGF ]]; then
+    L=$(<$LOGF)
+    print -r -- "logs      $L/inferd-$PORT.log $L/serve-$PORT.log (from the last start)"
+  else
+    print -r -- "logs      $LOGS/inferd-$PORT.log $LOGS/serve-$PORT.log (INFERD_LOGS; no start recorded)"
+  fi
   for pid in $(holders); do
     [[ $pid == ($spid|$ipid) ]] || print -r -- "other     pid $pid holds the port or a socket: $(ps -o command= -p $pid)"
   done
@@ -132,6 +139,7 @@ PY=${PY:-python3}
   die "PY=$PY lacks the front end's packages (pip install -r requirements.txt)"
 HOST=${INFERD_HOST:-127.0.0.1}
 mkdir -p -- "$LOGS" || die "cannot create the log directory $LOGS"
+LOGS=${LOGS:A}  # absolute, so status run from anywhere names the right files
 mkdir -p -m 700 -- "$RUN" || die "cannot create $RUN"
 [[ -d $RUN && -O $RUN && ! -L $RUN ]] || die "$RUN is not a directory owned by $USER"
 chmod 700 "$RUN" || die "cannot set $RUN to mode 700"
@@ -144,6 +152,7 @@ if [[ -e $SOCK || -L $SOCK ]]; then  # a stale socket would let the front end st
   rm -f -- "$SOCK" || die "cannot remove the stale socket $SOCK"
 fi
 
+rm -f -- "$LOGF"; print -r -- "$LOGS" > "$LOGF"
 INFERD_HOME=$PWD DRAFT=${DRAFT:-} nohup ./build/inferd "$MODEL" "$SOCK" "$RUNNING" "$STEP" "$KV" "$SNAPS" "$MAXCTX" \
   > "$LOGS/inferd-$PORT.log" 2>&1 < /dev/null &
 print -r -- $! > "$IPID"

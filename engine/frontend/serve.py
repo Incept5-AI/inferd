@@ -116,10 +116,17 @@ eos = gen_cfg.get("eos_token_id", gen_cfg.get("text_config", {}).get("eos_token_
 _end = [tok.convert_tokens_to_ids(t) for t in ("<|im_end|>", "<|eot|>", "<end_of_turn>", "<turn|>") if t in tok.get_vocab()]
 STOP = sorted(set(i for i in (eos if isinstance(eos, list) else [eos]) + _end if i is not None))
 THINK_END = "</think>"
-app = FastAPI()
+@contextlib.asynccontextmanager
+async def _lifespan(_app):  # FastAPI's lifespan (on_event("startup") is deprecated); engine and _expire_loop are below
+    await engine.connect()
+    asyncio.create_task(_expire_loop())
+    yield
+
+
+app = FastAPI(lifespan=_lifespan)
 ids = itertools.count(1)
 
-# Vision: only for checkpoints that carry the vision tower's weights (the mlx-community 27B 4-bit build has none).
+# Vision: only for checkpoints that carry the vision tower's weights (older mlx-community 27B 4-bit snapshots have none).
 _vision = None
 _vision_lock = threading.Lock()  # one image encode at a time (MLX in worker threads)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # run with -I: our own vision.py
@@ -337,12 +344,6 @@ class Guard:
         finally:
             self.n -= 1
             self.bytes -= held
-
-
-@app.on_event("startup")
-async def startup():
-    await engine.connect()
-    asyncio.create_task(_expire_loop())
 
 
 @app.exception_handler(Exception)

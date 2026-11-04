@@ -37,6 +37,10 @@ out=$(./run.sh stop $PORT 2>&1); check "stop with nothing running exits 0" test 
 out=$(./run.sh status $PORT 2>&1); rc=$?
 check "status with nothing running exits 3" test $rc -eq 3
 check "status names the socket and logs" eval '[[ $out == *$SOCK* && $out == *serve-$PORT.log* && $out == *"not running"* ]]'
+print -r -- $INFERD_LOGS > $INFERD_RUN_DIR/logs-$PORT   # what a start records
+out=$(INFERD_LOGS=/nonexistent ./run.sh status $PORT 2>&1)
+check "status reports the log directory the start used" eval '[[ $out == *"$INFERD_LOGS/inferd-$PORT.log"* && $out != *nonexistent* ]]'
+rm -f $INFERD_RUN_DIR/logs-$PORT
 
 # a running pair: front end (matches frontend/serve.py --port) and an inferd that ignores SIGTERM (SIGKILL after STOP_WAIT)
 spawn perl -e 'sleep 600' frontend/serve.py --model m --socket $SOCK --host 127.0.0.1 --port $PORT; fe=$REPLY
