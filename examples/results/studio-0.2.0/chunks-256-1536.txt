@@ -1,0 +1,12 @@
+== chunk 256
+loaded in 1.7 s
+wrote 2 x 248320 logits (chunk 256)
+seq 0: cos 0.99937  max|diff| 0.381  KL 0.00208  top1 ok (',')  top5 overlap 4/5
+seq 1: cos 0.99926  max|diff| 0.742  KL 0.00065  top1 ok (' the')  top5 overlap 4/5
+exit 0
+== chunk 1536
+loaded in 1.7 s
+wrote 2 x 248320 logits (chunk 1536)
+seq 0: cos 0.99953  max|diff| 0.333  KL 0.00208  top1 ok (',')  top5 overlap 4/5
+seq 1: cos 0.99921  max|diff| 0.688  KL 0.00062  top1 ok (' the')  top5 overlap 4/5
+exit 0
