@@ -1,5 +1,5 @@
 task: Look around the sandbox: list the files, tell me how many lines data.csv has, show the first 3 lines of notes.txt, and how much disk space is free. Also show me /etc/hosts.
-(max_context 4096, effort none, sandbox /private/var/folders/tv/6t0jkstd367cm82k50k61_600000gn/T/inferd-sandbox-u375ktzx)
+(max_context 4096, effort none, sandbox <tmp>)
 
 step 1: 5 tool call(s) [context 518/4096]
   $ ls
