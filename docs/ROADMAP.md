@@ -284,7 +284,8 @@ measured faster single-stream), fewer dispatches (a decode step is ~1,250 dispat
   - `bench/` scripts carry machine-specific paths.
   - `build.sh` prints two `-Wformat` warnings (`scheduler.h`).
   - There's no CI, no versioned binary release, and no launchd plist.
-  - Neither `requirements.txt` nor the README lists `mlx-lm`, which `tools/ref_logits.py` imports.
+  - ~~Neither `requirements.txt` nor the README lists `mlx-lm`, which `tools/ref_logits.py` imports.~~ Fixed 5 Nov 2026:
+    `requirements.txt` pins `mlx-lm==0.32.2`.
 - **Work:**
   - Make the paths configurable (`INFERD_LOG_DIR`, required `MODEL`).
   - Ship a signed tarball or Homebrew formula with a prebuilt `core.metallib`.

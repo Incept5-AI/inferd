@@ -13,8 +13,9 @@ with Pillow, so the answers are known exactly:
 ~/.venvs/mlxvlm/bin/python ocr_agents.py --compare 3  # the test behind its settings: effort none/low/medium x 3 rounds
 ```
 
-It needs a checkpoint **with the vision tower**. The mlx-community 4-bit build is text-only; use
-`lmstudio-community` 4-bit (`~/.lmstudio/models/Qwen/Qwen3.8-27B-MLX-4bit`) or mlx-community 8-bit. Images must be inline
+It needs a checkpoint **with the vision tower**: `mlx-community/Qwen3.8-27B-4bit` at revision 10c35caa or later (21/21
+fields through the server on an M4 Max, 4 Nov 2026; older snapshots were text-only), `lmstudio-community` 4-bit or
+mlx-community 8-bit. Images must be inline
 `data:` URLs: inferd does not fetch URLs or read files unless `INFERD_IMAGE_URLS=1` / `INFERD_IMAGE_FILES=1`.
 
 ## Sample output (MacBook Pro M5 Max, 1 November 2026)

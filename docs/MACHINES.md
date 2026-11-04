@@ -14,6 +14,7 @@ in the study log (summarised in [EXPERIMENTS.md](EXPERIMENTS.md)).
 | MacBook Pro M5 Max | 40-core | 128 GB | stock limit (not logged) | ~520 GB/s achieved by the `lane4` GEMM | Development laptop: builds, kernel experiments |
 | Mac Studio M3 Ultra (**lightly tested**) | 80-core, no neural accelerators | 512 GB | 464 GiB | not measured (decode step 27 ms) | Portability and non-NAX tuning (1 Nov 2026) |
 | Mac mini M4 Pro (**lightly tested**) | 20-core, no neural accelerators | 64 GB | 51.8 GiB | ~225 GB/s effective in plain decode (15 GB at 15 tok/s) | Portability check (1 Nov 2026) |
+| MacBook Pro M4 Max (**lightly tested**, external tester) | 40-core, no neural accelerators | 64 GB | not logged | not measured (decode step 34 ms) | First source build on an M4 Max with macOS 27 (2d2a108, 4 Nov 2026) |
 
 Sources: Studio bandwidth and working set, [results/micro-2026-10-29-r2.txt](../results/micro-2026-10-29-r2.txt); mini
 core counts, memory and effective decode bandwidth (one 16 GB weight pass per plain decode step: M6 100 ms, M5 Pro
@@ -166,7 +167,10 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
 - **Two bugs found, both fixed** (`src/gpu.h` `Gpu::nax`, `src/qwen35.h`, `src/dflash.h`):
   - MLX's NAX kernels we vendor (quantized matmul at M >= 256 rows, flash attention for chunks > 256 rows) compute wrong
     results on the M4 at prefill sizes (a 601-token prompt in one chunk: cos 0.29, wrong top-1). Without neural
-    accelerators every quantized GEMM stays on W4A8 and every multi-row chunk on the key-split `attn_shared` path.
+    accelerators the quantized GEMMs no longer touch them: 1-10 rows go to MLX's `qmv_wide`, 11 rows and more
+    (`SG_MIN`) to MLX's simdgroup `mlx_qmm_sg`, both with bf16 activations, so W4A8 is unused by default (`SG_MIN=0`
+    sends 11+ rows back to it); every multi-row chunk runs on the key-split `attn_shared` path. (The first fix kept
+    every GEMM on W4A8; this routing replaced it.)
     `NAX_GPU=0/1` overrides the detection. Our own `attn_paged_nax` (used only with `NAX_MPP=0`) is also wrong there.
   - **On every machine:** the DFlash2 drafter's input layer (`fc`, K = 25,600) is wider than the W4A8 activation
     scratch was sized for; a prefill chunk of more than ~0.68 x max_tokens rows overflowed it and filled the draft
@@ -196,5 +200,32 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
 - **Still wrong on the M4, off the default path:** `NAX_MPP=0` (`attn_paged_nax`). **Not rerouted, probably wrong
   there (untested):** bf16 checkpoints (`mlx_gemm`) and the Neural Engine split's K-slice GEMM (forces `mlx_qmm`).
 - **Not tested on the M4:** 32k and longer contexts under load, 16+ agents with the drafter, the SSD tier,
-  vision, long uptime, other models, Flash-Next, 8-bit and bf16 checkpoints, other M4 variants (base M4, M4 Max).
+  vision, long uptime, other models, Flash-Next, 8-bit and bf16 checkpoints, the base M4. (An M4 Max has since run
+  the full self-test set; see the next section.)
   Some no-drafter single-user requests at 4k/16k errored or stopped after two tokens before the fixes; not re-checked.
+
+## MacBook Pro M4 Max: source build on macOS 27, lightly tested (4 November 2026)
+
+**Status: lightly tested, by an external tester.** One MacBook Pro (Mac16,6: M4 Max, 40-core GPU, 64 GB, no GPU
+neural accelerators, so the M1-M4 kernel path above) on macOS 27.0 (26A428), Xcode 26.6 with the Metal toolchain
+installed by `xcodebuild -downloadComponent MetalToolchain`, built from source at **2d2a108** (engine code identical
+to v0.2.0). Model `mlx-community/Qwen3.8-27B-4bit` revision 10c35caa, drafter `incoai/Qwen3.8-27B-DFlash2` revision
+015e7956. The raw outputs stayed on the tester's Mac; the findings and their fixes are in
+[CHANGES-m4max-report-2026-11-04.md](CHANGES-m4max-report-2026-11-04.md).
+
+- **Everything passed:** the build (35 s, no warnings), every host and front-end test, `tools/release_gate.sh` with the
+  drafter, logits vs mlx_lm at chunks 1 and 24 (seqs 1-3 cos 0.99969-0.99997) and at 256 and 1,536 rows on 4 x 1,536
+  tokens (cos 0.99959-0.99987, top-1 8/8), `KV8=0` at chunks 1/24/256 (cos >= 0.99983), the server smoke test and
+  `examples/run_all.sh` 15/15 (OCR 21/21 on the 4-bit build above, which has the vision tower).
+- **Speed (Qwen3.8-27B 4-bit), about 1.6-1.9x the M4 Pro:**
+
+| Measure | M4 Max (2d2a108) | M4 Pro (above) |
+|---|---:|---:|
+| `decode_test bench`, 2,048 context, B = 1 / 16 / 64 | 33.96 / 101.44 / 333.95 ms per step (29.4 / 157.7 / 191.6 rows/s) | 15.1 tok/s plain decode, one stream |
+| `spec_test`, 4 sequences (the gate's short prompts) | plain 78.9 tok/s total; speculative 115.6 tok/s, 11.75 tokens per cycle at block 16 (repetitive prompts) | |
+| Server, one stream, drafter on | ~40 tok/s, 2.8 tokens per cycle (`SPEC_AUTO` chose blocks 4-5) | 24.6 tok/s |
+| Prefill (`users-at-once`, 8,174-token prompt) | first token at 39.9 s, ~205 tok/s | ~110 tok/s |
+| `coding-smoke` (16 tests), effort none / medium | 15.0 / 16 (14 first try), 16 / 16 | 15.5 / 16 (none) |
+
+  The `agent-followups` timings from that run are invalid (the Mac slept during it); its 24/24 answers were correct.
+

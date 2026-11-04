@@ -37,9 +37,9 @@ server, which is how the engine comparisons in [docs/RESULTS.md](../docs/RESULTS
 
 ```bash
 cd engine
-export MODEL=~/.lmstudio/models/Qwen/Qwen3.8-27B-MLX-4bit        # lmstudio-community 4-bit: has the vision tower
-export DRAFT=$(ls -d ~/.cache/huggingface/hub/models--z-lab--Qwen3.8-27B-DFlash2/snapshots/*)
-VISION=1 PY=~/.venvs/mlxvlm/bin/python DRAFT_BITS=4 ./run.sh 8300 16 1024 16 32 32768
+export MODEL=~/models/Qwen3.8-27B-4bit          # mlx-community 4-bit (revision 10c35caa+ has the vision tower)
+export DRAFT=~/models/Qwen3.8-27B-DFlash2       # incoai/Qwen3.8-27B-DFlash2
+VISION=1 PY=~/.venvs/inferd/bin/python DRAFT_BITS=4 ./run.sh 8300 16 1024 16 32 32768
 #                                                  port agents step KV-GiB snapshots max-context
 curl -s localhost:8300/v1/models
 ```

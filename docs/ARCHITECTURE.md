@@ -639,8 +639,9 @@ carry the vision tower *(study log: "Vision (2026-10-29 night)")*:
 - **Engine:** per-row rope positions `rpos [T, 3]` (`mrope_section` [11, 11, 10]: frequency i takes component i mod 3;
   text rows have t = h = w, so text is unchanged bit for bit), `rope_delta` for generated positions, and `embed_ext`
   overwrites image rows' embeddings with the features.
-- The mlx-community 27B 4-bit build has no vision tower; the front end returns HTTP 400 for images there. The
-  mlx-community 8-bit/bf16 and lmstudio-community 4-bit builds have it. Greedy output on a synthetic test image is
+- A checkpoint without the vision tower's weights gets HTTP 400 for images (older snapshots of the mlx-community 27B
+  4-bit build; its revision 10c35caa has the tower). The mlx-community 8-bit/bf16 and lmstudio-community 4-bit builds
+  have it. Greedy output on a synthetic test image is
   word-for-word identical to `mlx_vlm.generate`.
 
 ## 15. Other model families

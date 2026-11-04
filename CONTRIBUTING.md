@@ -56,8 +56,7 @@ Start with these:
 
   ```bash
   python3.12 -m venv ~/.venvs/inferd
-  ~/.venvs/inferd/bin/pip install -r engine/requirements.txt   # fastapi uvicorn transformers mlx mlx-vlm pillow numpy
-  ~/.venvs/inferd/bin/pip install mlx-lm                        # used by tools/ref_logits.py, if not already pulled in
+  ~/.venvs/inferd/bin/pip install -r engine/requirements.txt   # fastapi uvicorn transformers mlx mlx-vlm mlx-lm pillow numpy
   ```
 
   The benchmark harnesses in `bench/` use only the standard library.
@@ -66,8 +65,8 @@ Start with these:
 
 | Use | Hugging Face repo |
 |---|---|
-| Target, 4-bit, text only (the benchmark default) | `mlx-community/Qwen3.8-27B-4bit` |
-| Target, 4-bit with vision tower | `lmstudio-community` 4-bit build of Qwen3.8-27B |
+| Target, 4-bit (the benchmark default; revision 10c35caa has the vision tower, no MTP head) | `mlx-community/Qwen3.8-27B-4bit` |
+| Target, 4-bit with vision tower (alternative) | `lmstudio-community` 4-bit build of Qwen3.8-27B |
 | Target, 8-bit / bf16 (with vision tower) | `mlx-community/Qwen3.8-27B-8bit`, `mlx-community/Qwen3.8-27B-bf16` |
 | Drafter (DFlash2) | `incoai/Qwen3.8-27B-DFlash2` (the `z-lab` DFlash2 also works) |
 
@@ -229,8 +228,9 @@ Each of these has already cost someone hours. Most come with a study-log post-mo
 - **Weight views must carry every derived copy.** The drafter's k|v rows are an offset view of a fused weight. Twice,
   a repacked copy (`qmst`, then lane4) wasn't offset with the view, and the drafter quietly produced junk. Use
   `rows_of` (`weights.h`).
-- **The mlx-community 27B 4-bit build is text-only** (no vision tower, no MTP head). For images, use the
-  mlx-community 8-bit/bf16 or lmstudio-community 4-bit builds.
+- **The mlx-community 27B 4-bit build has no MTP head.** Its current revision (10c35caa) has the vision tower (333
+  `vision_tower.*` tensors; OCR 21/21 through the server); older snapshots were text-only, so check the index for
+  `vision_tower.*` keys. The mlx-community 8-bit/bf16 and lmstudio-community 4-bit builds have it too.
 
 **GEMM routing**
 
@@ -288,7 +288,10 @@ PY=~/.venvs/inferd/bin/python tools/release_gate.sh $M $D    # host tests, logit
 The gate's log starts with the machine, macOS version and build, the metallib and binary sha-256 and the model and
 drafter config hashes. Its logits step runs 4 prompts of 2,048 tokens at chunks 1, 24, 256 and 1,536 (the 256+ row
 kernels are where a wrong build target broke logits before), with the thresholds above. The bench step is skipped,
-with a note in the log, when Metal's GPU budget is under 40 GiB. Run it on every supported macOS version and build.
+with a note in the log, when Metal's GPU budget is under 40 GiB. The speculative step passes when plain and speculative
+decoding match, or when every diverging sequence among 1-3 is a near-tie (reference gap <= 0.5, `tools/tie_check.py`);
+sequence 0, the repetitive prompt, is reported but not judged ([TESTING §2.2](docs/TESTING.md)). Run it on every
+supported macOS version and build.
 
 Then the fleet gates with a server running: `conc.py --mode followup` at 16k × 8/16/32, `wall.py` N = 1–8, mixed
 arrivals and SSD pressure ([TESTING](docs/TESTING.md)). Record the commit, binary and metallib hashes, the model and
@@ -357,7 +360,6 @@ Pick something, comment on its issue (or open one), and ask questions early.
   scripts ([P2-6](docs/ROADMAP.md)).
 - A launchd service definition, a release tarball with a prebuilt `core.metallib`, and a self-hosted CI job that
   builds and runs the smoke tests.
-- Add `mlx-lm` to `engine/requirements.txt` if `mlx-vlm` doesn't already pull it in.
 
 **Docs**
 

@@ -29,13 +29,14 @@ Coverage legend used throughout:
 | Other M5-family Macs (base M5, other memory sizes) | — | **Untested** | They should work: the kernels need the Metal 4 tensor units (NAX) found on M5-class and newer GPUs. |
 | Mac mini M4 Pro | 20-core GPU, 64 GB, no neural accelerators | **Light** | Works since 1 Nov 2026 (NAX kernels routed around; drafter scratch fix). Correct vs mlx_lm; 27B decode 24.7 tok/s with the drafter. **Not fully tested**: see the list in docs/MACHINES.md. |
 | Mac Studio M3 Ultra | 80-core GPU, 512 GB, no neural accelerators | **Light** | Works since 1 Nov 2026 with bf16-activation GEMMs (MLX `qmv_wide` / fitted `qmm` tiles, no W4A8). §3.1 smoke set and conc.py 16k × 1/4/8 only (the study log "M3 Ultra round 2"). |
+| MacBook Pro M4 Max | 40-core GPU, 64 GB, no neural accelerators | **Light** (external tester) | Source build on macOS 27.0 at 2d2a108 (4 Nov 2026): every host and front-end test, logits at 1/24/256/1,536 rows, the release gate, server smoke test and 15/15 demos pass. Numbers in docs/MACHINES.md. An M4 Max on macOS 26 also built from source earlier. |
 | Other M4 Macs, other M3 Macs and older | — | **Untested** | M4 and M3 should behave like the M4 Pro / M3 Ultra (same Apple9 family). M2 and older are untested. |
 
 ### 1.2 Models and precisions
 
 | Model / checkpoint | Precision | Drafter | Coverage | Evidence |
 |---|---|---|---|---|
-| Qwen3.8-27B, `mlx-community/Qwen3.8-27B-4bit` | 4-bit | incoai DFlash2 | **Tested** | Every scoreboard run. The checkpoint is text-only, with no vision tower and no MTP head. |
+| Qwen3.8-27B, `mlx-community/Qwen3.8-27B-4bit` | 4-bit | incoai DFlash2 | **Tested** | Every scoreboard run. No MTP head. Revision 10c35caa has the vision tower (333 `vision_tower.*` tensors; OCR 21/21 through the server on an M4 Max, 4 Nov 2026); older snapshots were text-only. |
 | Qwen3.8-27B, `mlx-community` 8-bit | 8-bit | DFlash2 | **Light** | Logits check, `decode_test` and `spec_test` numbers, and the vision check ("Weight precisions", "Vision"). No fleet runs. |
 | Qwen3.8-27B, `mlx-community` bf16 | bf16 | DFlash2 | **Light** | Logits check and `decode_test`/`spec_test` only. |
 | Qwen3.8-27B, `lmstudio-community` 4-bit | 4-bit | DFlash2 | **Light** | Logits check only. This is the 4-bit build that has a vision tower. |
@@ -148,8 +149,14 @@ token ids.
   brown fox…" repeated, a deliberately fragile, highly repetitive prompt. It has measured 0.996 / KL 0.003 since day 1
   because the reference uses MLX's prefill path and the engine a different one, and that gap grows on repetitive
   text.
-- **KL:** with the default int8 activations (W4A8), expect KL ≤ 0.0007 on normal sequences and 0.005–0.009 on the
-  repetitive one. With `W4A8=0`, the repetitive one drops to about 0.004 ("W4A8").
+- **KL:** with the default int8 activations (W4A8, M5-class GPUs), expect KL ≤ 0.0007 on normal sequences and
+  0.005–0.009 on the repetitive one. With `W4A8=0`, the repetitive one drops to about 0.004 ("W4A8").
+- **M1–M4 (no neural accelerators, bf16 activations: `qmv_wide` / `mlx_qmm_sg`):** on an M4 Max (macOS 27, 4 Nov
+  2026) the 2,048-token sequence 2 (`docs/RESULTS.md` text; its next token is whitespace in a markdown table, a flat
+  distribution) measured KL 0.00115 in decode, 0.00235 at 256 rows, 0.00246 at 1,536 rows and 0.00240 with `KV8=0`,
+  top-1 and top-5 holding: prefill roughly doubles it over decode. Expect KL up to ~0.0025 on such sequences, well
+  inside the gate's 0.03. The gate's sequence 0 at chunk 24 measured cos 0.99479 and KL 0.00284 (0.99828 with
+  `KV8=0`), just under the ~0.996 quoted above and inside its 0.99 / 0.05 floor.
 - **The engine isn't batch-invariant at the bit level** (vLLM isn't either). Different kernel paths can flip a
   near-tie. That isn't a bug unless top-1 moves on a normal sequence.
 
@@ -183,7 +190,22 @@ run**, and turning off `ATTN_IQ` or 8-bit KV does not remove it (those are not t
 the gap is large. Check it with `tools/tie_check.py`, which prints the reference (mlx_lm) logits of the two competing
 tokens at the first differing position: a near-tie is a gap of about 0.5 or less. Expect a few such sequences in any
 `spec_test` run on repetitive prompts: the 0.2.0 gate on a Mac mini M6 had 2 of 4 diverge after 69 and 79 identical
-tokens, and an external M4 Max on macOS 26 had one. Like vLLM, the engine is not batch-invariant at the bit level. Two traps:
+tokens, and an external M4 Max on macOS 26 had one. Like vLLM, the engine is not batch-invariant at the bit level.
+
+`spec_test` prints `lossless: <same>/<B> identical, <n> diverged[: seqs ...]` and writes both runs' tokens to
+`SPEC_OUT` (default: a fresh `$TMPDIR/spec_out-XXXXXX.txt`, printed as `outputs:`). It exits 0 either way unless
+`SPEC_STRICT=1`, which makes a divergence exit 3. Then `python tools/tie_check.py $M <outputs file> --max-gap 0.5`
+prints each diverging sequence's gap and exits 1 when one is wider than the threshold (`--ignore-seqs` reports a
+sequence without judging it).
+
+**The release gate** runs exactly that: a divergence fails the gate only when a sequence among 1–3 has a reference gap
+above 0.5 (`TIE_MAX`). Sequence 0 (the repetitive "quick brown fox" prompt) is reported but not judged
+(`TIE_IGNORE=0`; `TIE_IGNORE=` judges it). Its 93-token prefix (24 prompt + 69 generated tokens) sits on a choice the
+reference scores 1.5 logits apart, and the engine flips it **without the drafter** from the shape of the last step
+alone: on an M4 Max one decode row and an 8-row step agree with the reference, while 5-, 16- and 93-row steps flip it
+(engine gaps −0.4 to −0.75 against the reference's +1.5), and with `KV8=0` every shape tried flips it (−2.1 to −3.5). The M6's 0.2.0 gate diverged on the same sequence. That is the
+prompt's sensitivity to precision and kernel shape, not a speculation bug, so it cannot be a lossless criterion.
+Two traps:
 
 - **`spec_test` on short chat prompts reports about 1.01 tokens/cycle.** That comes from the tool, not the engine.
   Measure acceptance on a long prompt (about 1k+ tokens of code or prose), or on the server.
@@ -205,8 +227,8 @@ has been done once.
 
 There's no script. To repeat the original check:
 
-1. Use a checkpoint that has the vision tower (mlx-community 8-bit or bf16, or lmstudio-community 4-bit). The
-   mlx-community 4-bit build returns HTTP 400 for images.
+1. Use a checkpoint that has the vision tower (mlx-community 4-bit at revision 10c35caa or later, 8-bit or bf16, or
+   lmstudio-community 4-bit). A checkpoint without it returns HTTP 400 for images.
 2. Draw a synthetic image, for example a red circle, a blue rectangle and the text "HELLO 42", then send it as an
    `image_url` (a PNG/JPEG/WebP/GIF data URI) with `temperature: 0`.
 3. Compare the reply against `mlx_vlm.generate` on the same checkpoint, image and prompt, greedy. It should match word

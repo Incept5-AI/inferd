@@ -50,8 +50,10 @@ Smoke tests, to run after every kernel change (each takes seconds):
 - Narrow GEMM outputs (N=5120 → 80 tiles) starve the GPU: split-K. The split-K scratch must be sized for the
   *widest* projection the split condition can catch (that bug corrupted logits once).
 - Never pass more than ~2 rows to `qmv4` (R ≥ 4 spills registers: 381 ms per step at R=8).
-- The mlx-community 27B 4-bit checkpoint is text-only (no vision tower, no MTP head). For images use the
-  mlx-community 8-bit/bf16 or lmstudio-community 4-bit builds. Weight bits (4/8/16) are detected per tensor.
+- The mlx-community 27B 4-bit checkpoint has no MTP head. Its current revision (10c35caa) does carry the vision tower
+  (333 `vision_tower.*` tensors; the OCR demos score 21/21 through the server on it), as do the mlx-community
+  8-bit/bf16 and lmstudio-community 4-bit builds; older snapshots of the 4-bit repo were text-only, so check for
+  `vision_tower.*` keys in `model.safetensors.index.json`. Weight bits (4/8/16) are detected per tensor.
 - spec_test prefills one prompt per step: a single step over B prompts sizes the per-layer verify tapes for B x T
   tokens (177 GiB at 16 x 6k) and the residency cost of binding them looked like a 16-sequence regression.
 - Drafter kernels must cover every row of the block: `draft_attn` was written for 5 rows and silently drafted junk at
@@ -65,7 +67,10 @@ Smoke tests, to run after every kernel change (each takes seconds):
 - Metal: a **runtime branch in a kernel's final store** made W4A8 1.7× slower (make it a template parameter), and a
   GEMM micro-benchmark that cycles a few weight copies is served from the SLC; `decode_test gemm` walks real layers.
 - Env knobs: `DRAFT` (DFlash2 dir), `MODEL`, `KV8` (8-bit KV, default on since 2026-10-31; `KV8=0` bf16), `ATTN_IQ` (int8 queries in verify attention with KV8, default on), `SPEC_AUTO` (self-tuning draft block per load regime, default on; `INFERD_DEBUG=1` logs its table), `W4A8=0` (bf16 activations via MLX qmm),
-  `W4A8_MAX` (default 256: larger M uses MLX qmm), `DRAFT_BLOCK` (the drafter's block_size, 8; above `SPEC_WIDE`=4 decoders it drops to 5), `DRAFT_SKIP` (timing only), `SPEC_BLOCKS` (overrides the default tile-aware rule: block 4 when it saves a 32-row W4A8 tile),
+  `W4A8_MAX` (default 256: larger M uses MLX qmm), `DRAFT_BLOCK` (the widest draft block, default `kMaxBlock` = 16 since 2026-11-02, `src/qwen35.h` / `src/dflash.h`
+  `env_block`; DFlash2's trained block is 8 and the extra rows are mask tokens; MoE targets default to 8. Blocks past 8
+  run only while decoders x block <= `SPEC_WIDE_ROWS` (32); above `SPEC_WIDE`=4 decoders it drops to 5, and without
+  neural accelerators the scheduler starts at 5), `DRAFT_SKIP` (timing only), `SPEC_BLOCKS` (overrides the default tile-aware rule: block 4 when it saves a 32-row W4A8 tile),
   `DRAFT_BITS` (drafter linears, default 4; 8 for 8-bit), `SPILL_DIR`/`SPILL_GIB` (SSD tier, off unless set; default quota 64 GiB), `SNAP_BRANCH_MIN` (256: snapshot at the system prompt's end, from the front end's `snap_at`, and where a prompt branches off a cached one; 0 off), `ADMIT_RESERVE` (generated tokens budgeted per admitted turn, 512: admission is by KV budget, preemption re-queues the newest sequence when the pool runs dry), `W4A8_TM`/`W4A8_TN`/`W4A8_SPLIT_CAP` (auto: 16-row tiles at M ≤ 16), `NO_NAX_ATTN`, `NAX_ROWS`/`NAX_TILE` (8 / 32), `FLASH_ROWS`, `CHUNK_TILE_MAX` (256: chunks of 9..256 rows go to
   `attn_shared` as key-split tiles, mode 6; `CHUNK_TILE_CTX` = minimum history, 0), `RESIDENCY=1` (an MTLResidencySet
   over every buffer; no gain measured), `INFERD_DEBUG`. `decode_test bench <M> <B list> <L>

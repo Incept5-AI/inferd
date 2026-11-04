@@ -15,10 +15,11 @@ Model: **Qwen3.8-27B** (mlx-community 4-bit, 8-bit or bf16) with the **incoai Qw
 - macOS 27 for the prebuilt `build/` (it refuses to start on macOS 26). On macOS 26 or 27 you can build from source with
   Xcode's Metal toolchain (`./build.sh`; if it reports "missing Metal Toolchain", run
   `xcodebuild -downloadComponent MetalToolchain` once, about 690 MB).
-- Python 3.12 with `fastapi uvicorn transformers` for the OpenAI front end, plus `mlx mlx-vlm pillow numpy` for images (`requirements.txt`: Pillow 13.0.0, which fixes decoder advisories in
-  12.3.0). `requirements-test.txt` is the host-test set (CI).
-- Weights: `mlx-community/Qwen3.8-27B-4bit` (text only) or `lmstudio-community` 4-bit / mlx-community 8-bit (with
-  the vision tower), and `incoai/Qwen3.8-27B-DFlash2`.
+- Python 3.12 with `fastapi uvicorn transformers` for the OpenAI front end, plus `mlx mlx-vlm pillow numpy` for images
+  and `mlx-lm` for the release gate's logits reference, `tools/ref_logits.py` (`requirements.txt`: Pillow 13.0.0,
+  which fixes decoder advisories in 12.3.0). `requirements-test.txt` is the host-test set (CI).
+- Weights: `mlx-community/Qwen3.8-27B-4bit` (revision 10c35caa includes the vision tower; no MTP head),
+  `lmstudio-community` 4-bit or mlx-community 8-bit, and `incoai/Qwen3.8-27B-DFlash2`.
 
 ## Run
 
@@ -162,14 +163,14 @@ The full comparison is in [docs/RESULTS.md](../docs/RESULTS.md).
 ## Known limits
 
 - One model family (Qwen3.8 / Qwen3.5-style hybrid attention + Gated DeltaNet). The 4-bit mlx-community build has no
-  vision tower.
+  MTP head (its current revision does have the vision tower).
 - One agent at 16k (142 vs 172) and at 256k (111 vs 132) trails Splash; prefill is ~10% behind it.
 - The SSD tier is a cache: it is cleared when the model, drafter or KV geometry changes.
 
 ## Tuning knobs (environment)
 
 `KV8` (default 1), `KV4` (4-bit KV, opt-in, 0: twice the tokens of 8-bit KV at a measured accuracy cost, see above),
-`RING8` (8-bit drafter context rings: drafts only, the output stays exact; 1, 0 = bf16), `ATTN_IQ` (int8 queries, 1; 0 under `KV4`), `SPEC_AUTO` (self-tuning block, 1), `DRAFT_BLOCK` (8),
+`RING8` (8-bit drafter context rings: drafts only, the output stays exact; 1, 0 = bf16), `ATTN_IQ` (int8 queries, 1; 0 under `KV4`), `SPEC_AUTO` (self-tuning block, 1), `DRAFT_BLOCK` (widest block, 16; the drafter's trained block is 8),
 `SPEC_BLOCKS` (fixed block by load, e.g. `8:4,16:3`), `ADMIT_RESERVE` (generated tokens budgeted per admitted turn,
 512), `SPILL_DIR`/`SPILL_GIB`, `W4A8` (1), `INFERD_DEBUG` (per-step logs and the tuner table), `SPILL_DEBUG`,
 `SPEC_ROWS` (verify rows to size the drafter and GDN tapes for; default from the block policy, 0 = the old

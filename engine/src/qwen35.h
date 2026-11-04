@@ -520,12 +520,13 @@ struct Qwen35 {
       flip_weights();
     }
     if (!g.nax) {
-      // No GPU neural accelerators (M4 Pro): MLX's NAX qmm (M >= W4A8_MAX) and flash attention (chunks of more than
+      // No GPU neural accelerators (M3/M4): MLX's NAX qmm (M >= W4A8_MAX) and flash attention (chunks of more than
       // CHUNK_TILE_MAX rows) give wrong logits at prefill sizes there (a 601-token prompt in one chunk: cos 0.29,
-      // top-1 wrong; garbage text in the server). Keep every quantized GEMM on W4A8 and every multi-row chunk on
-      // attn_shared (mode 6; attn_gqa when that is unavailable). 4k prefill on the M4 Pro: 110 tok/s, correct.
-      // M3/M4 (Apple9): matmul2d's int8 path is emulated there, so from SG_MIN rows on the GEMMs go to MLX's
-      // simdgroup qmm (kernels/mlx_qmm_sg.metal, what mlx_lm runs on these GPUs) instead of W4A8. SG_MIN=0: W4A8 only.
+      // top-1 wrong; garbage text in the server), so neither is used: every multi-row chunk runs on attn_shared
+      // (mode 6; attn_gqa when that is unavailable), and the quantized GEMMs take bf16 activations through MLX's
+      // kernels: 1..WIDE_MAX (10) rows qmv_wide (wide_route, checked first in gemm()), SG_MIN (11) rows and more the
+      // simdgroup qmm (kernels/mlx_qmm_sg.metal, what mlx_lm runs on these GPUs). matmul2d's int8 path is emulated
+      // on Apple9, so W4A8 is unused by default (w4a8_max = SG_MIN below); SG_MIN=0 routes 11+ rows back to W4A8.
       if (!getenv("W4A8_MAX")) w4a8_max = sg_min > 0 ? sg_min : 1 << 30;
       if (!getenv("FLASH_ROWS")) flash_rows = 1 << 30;
       if (!getenv("CHUNK_TILE_MAX")) chunk_tile_max = 1 << 30;

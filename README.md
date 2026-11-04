@@ -80,7 +80,7 @@ macOS, 26 or 27). Recent Xcode releases (e.g. 26.6) ship **without the Metal com
 ```bash
 cd engine
 ./build.sh                                              # kernels + inferd + tools
-python3 -m venv ~/.venvs/inferd && ~/.venvs/inferd/bin/pip install -r requirements.txt
+python3 -m venv ~/.venvs/inferd && ~/.venvs/inferd/bin/pip install -r requirements.txt   # includes mlx-lm (the gate's reference)
 hf download mlx-community/Qwen3.8-27B-4bit --local-dir ~/models/Qwen3.8-27B-4bit
 hf download incoai/Qwen3.8-27B-DFlash2 --local-dir ~/models/Qwen3.8-27B-DFlash2
 MODEL=~/models/Qwen3.8-27B-4bit DRAFT=~/models/Qwen3.8-27B-DFlash2 PY=~/.venvs/inferd/bin/python \
