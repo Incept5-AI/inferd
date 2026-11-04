@@ -1,5 +1,8 @@
 // inferd: the engine as a local server. Listens on a Unix socket for newline-delimited JSON:
-//   {"op":"gen","id":N,"tokens":[...],"max_tokens":N,"temperature":T,"top_p":P,"top_k":K,"stop":[...],"seed":S,
+//   {"op":"gen","id":N,"tokens":[...],"max_tokens":N,"temperature":T,"top_p":P,"top_k":K (0: no limit),"stop":[...],"seed":S,
+//    "spec_truncate":1 (sampled requests the GPU sampler cannot draw exactly, top_k > 64 or top_k 0 with top_p 1:
+//    speculate with each step cut to the top 64; otherwise they decode one token per step on the exact host
+//    sampler, src/sampling.h),
 //    "max_context":C,"priority":R,"snap_at":[pos...],"gen_snap":1}   (optional: context cap, preemption priority, positions
 //    worth a prefix-cache snapshot, e.g. the end of the system prompt)
 //   multimodal prompts add "mrope":[t,h,w per prompt token...],"rope_delta":D,"embeds":"<base64 bf16 [n, hidden]>"
@@ -13,7 +16,9 @@
 //   {"op":"vocab","hex":["<token bytes as hex>",...],"special":[ids...]}   (once per connection, before any
 //   "json_schema" request: the vocabulary as bytes for structured output; "gen" then takes "json_schema":{...}
 //   (the token stream is constrained to it, src/grammar.h) and "think_end":ID (unconstrained until that token))
-// and writes events: {"id":N,"t":[tok]} per token, then {"id":N,"done":"stop|length|...","p":P,"c":C,"cached":K}.
+// and writes events: {"id":N,"t":[tok]} per token, then {"id":N,"done":"stop|length|...","p":P,"c":C,"cached":K,"spec":0|1}
+// ("spec": admitted to speculative decoding; "spec_host": N speculative rows sampled on the host, present when N > 0). Every line that names an id ends in exactly one done event; a line that
+// does not parse and has no recoverable id drops the connection (all its requests end).
 // One client (the HTTP front end) at a time; it multiplexes requests by id.
 // usage: inferd <model_dir> <socket> [max_running=64] [step_tokens=2048] [kv_gib=96] [snapshots=96] [max_ctx=131072]
 #include <poll.h>
@@ -27,6 +32,7 @@
 #include <mutex>
 #include <thread>
 #include "../src/scheduler.h"
+#include "../src/protocol.h"
 
 // Image features arrive as base64 little-endian bf16. Strict (Codex review 2026-11-03, R03): anything but the alphabet
 // and trailing '=' padding, or an odd byte count, is a bad request (stray bytes used to be skipped and a trailing odd
@@ -105,16 +111,7 @@ static void compile_schema(Msg& m) {
 }
 static bool client_gone = false;
 
-// The request id at the end of a (discarded) line: the last "id": N in its tail, or 0.
-static uint64_t tail_id(const std::string& t) {
-  size_t k = t.rfind("\"id\"");
-  if (k == std::string::npos) return 0;
-  k += 4;
-  while (k < t.size() && (t[k] == ' ' || t[k] == ':')) k++;
-  uint64_t id = 0;
-  for (int d = 0; k < t.size() && isdigit((unsigned char)t[k]) && d < 19; k++, d++) id = id * 10 + (t[k] - '0');
-  return id;
-}
+using proto::tail_id;  // src/protocol.h
 
 static void push_msg(Msg m) {
   {
@@ -131,8 +128,14 @@ static void push_msg(Msg m) {
   cv.notify_one();
 }
 
-static void handle_line(const std::string& line) {
-  if (line.empty()) return;
+using proto::plain;
+
+// A line that does not parse (Codex review 2026-11-04, R05: it used to be logged and dropped, so its request never
+// ended) fails its request: the id is recovered from the line's tail, where the front end writes it. A line whose id
+// cannot be recovered fails the connection (returns false): every open request then ends, rather than one waiting
+// forever.
+static bool handle_line(const std::string& line) {
+  if (line.empty()) return true;
   try {
     Msg m{json::parse(line)};
     // Parsed requests are larger than their text: every array element is a json::Value.
@@ -141,8 +144,17 @@ static void handle_line(const std::string& line) {
     if (m.v["op"].s == "gen" && m.v.has("json_schema")) compile_schema(m);
     push_msg(std::move(m));
   } catch (std::exception& e) {
-    fprintf(stderr, "bad request: %s\n", e.what());
+    Msg r;
+    r.reject = "error: bad request: " + plain(e.what());
+    r.reject_id = tail_id(line);
+    if (!r.reject_id) {
+      fprintf(stderr, "inferd: unparseable request line with no recoverable id (%s): dropping the client\n", e.what());
+      return false;
+    }
+    fprintf(stderr, "bad request id%llu: %s\n", (unsigned long long)r.reject_id, e.what());
+    push_msg(std::move(r));
   }
+  return true;
 }
 
 static void reader(int fd) {
@@ -183,11 +195,13 @@ static void reader(int fd) {
         skipping = false;
         tail.clear();
       } else {
-        handle_line(buf);
+        const bool ok = handle_line(buf);
         buf.clear();
+        if (!ok) goto done;
       }
     }
   }
+done:
   std::lock_guard<std::mutex> l(mu);
   client_gone = true;
   cv.notify_one();
@@ -569,6 +583,7 @@ int main(int argc, char** argv) {
           if (v.has("temperature")) r.temperature = (float)num_field(v, "temperature", 0, 1e4);
           if (v.has("top_p")) r.top_p = (float)num_field(v, "top_p", 0, 1);
           if (v.has("top_k")) r.top_k = v["top_k"].i();
+          if (v.has("spec_truncate")) r.spec_truncate = v["spec_truncate"].i() != 0;  // opt-in approximation (R03)
           if (v.has("seed")) { r.seed = (uint64_t)v["seed"].i64(); r.has_seed = true; }
           if (v.has("max_context")) r.max_context = v["max_context"].i();
           if (v.has("priority")) r.priority = std::clamp(v["priority"].i(), -10, 10);  // a bounded scale (Codex R06)
@@ -610,9 +625,7 @@ int main(int argc, char** argv) {
           uint64_t eid = 0;
           try { eid = (uint64_t)msg.v["id"].i64(); } catch (...) {}
           fprintf(stderr, "bad request id%llu: %s\n", (unsigned long long)eid, ex.what());
-          std::string why = "error: bad request: ";  // plain text, as for json_schema errors
-          for (const char* p = ex.what(); *p && why.size() < 160; p++)
-            why += (std::isalnum((unsigned char)*p) || strchr(" .,:;_()+*?[]{}^$|/-", *p)) ? *p : '?';
+          std::string why = "error: bad request: " + plain(ex.what(), 140);  // plain text, as for json_schema errors
           if (eid && msg.v["op"].s != "cancel" && msg.v["op"].s != "vocab") sch.emit(Event{eid, {}, true, why, 0, 0, 0});
         }
         if (!gone && !flush_out(fd, out, out_off)) gone = true;  // events go out around each step, never blocking it (R02)
@@ -640,6 +653,11 @@ int main(int argc, char** argv) {
       printf("inferd: client disconnected (%d cached prefix blocks, %d snapshots; %.2f tokens per spec cycle; %llu preempted)\n",
              (int)sch.cache.nodes.size(), sch.snapshot_count,
              sch.stat_cycles ? (double)sch.stat_committed / sch.stat_cycles : 0.0, (unsigned long long)sch.stat_preempted);
+      if (sch.stat_spec_sampled_rows || sch.stat_spec_refused)
+        printf("inferd: speculative sampling: %llu rows committed, %llu of them sampled on the host (nucleus beyond %d "
+               "candidates); %llu sampled requests not speculated (not exact on the GPU)\n",
+               (unsigned long long)sch.stat_spec_sampled_rows, (unsigned long long)sch.stat_spec_host_rows, m.vtop_k,
+               (unsigned long long)sch.stat_spec_refused);
       if (sch.stat_grammar_fix)
         printf("inferd: structured output: %llu block tokens replaced by the grammar, %llu re-prefills\n",
                (unsigned long long)sch.stat_grammar_fix, (unsigned long long)sch.stat_grammar_rollback);

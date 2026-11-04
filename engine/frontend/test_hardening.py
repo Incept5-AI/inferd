@@ -1,4 +1,5 @@
-# Front-end hardening (Codex review 2026-11-03: R02 budgets, R03 validation, R04 context lifecycle, R07 submit
+# Front-end hardening (Codex review 2026-11-04: R03 sampling report, R05 Unicode and terminal events, R06 context
+# admission, R07 disconnects, real sockets included; Codex review 2026-11-03: R02 budgets, R03 validation, R04 context lifecycle, R07 submit
 # cancellation, R08 auth and socket checks, R12 host-side retention). Imports the real serve.py (a stub tokenizer and a
 # temporary model directory stand in for the checkpoint) and drives it through its ASGI stack (Guard + FastAPI) with
 # httpx, against a fake inferd that speaks the JSON-lines protocol into the real Engine.pump. No engine, no model.
@@ -98,9 +99,15 @@ class FakeInferd:
             self.gens.append(m)
             if self.gen_gate is not None:
                 await self.gen_gate.wait()
+            if rid in self.cancelled:
+                return self.send({"id": rid, "done": "cancelled", "p": 0, "c": 0, "cached": 0})
             for t in self.tokens[:m.get("max_tokens", 4096)]:
                 self.send({"id": rid, "t": [t]})
-            self.send({"id": rid, "done": "stop", "p": len(m.get("tokens", [])), "c": len(self.tokens), "cached": 0})
+            # "spec" as the engine reports it with a drafter loaded (src/sampling.h spec_exact, or the opt-in)
+            k, temp, p = m.get("top_k", 0), m.get("temperature", 0), m.get("top_p", 1)
+            spec = int(temp <= 0 or 1 <= k <= 64 or (k == 0 and p < 1) or bool(m.get("spec_truncate")))
+            self.send({"id": rid, "done": "stop", "p": len(m.get("tokens", [])), "c": len(self.tokens), "cached": 0,
+                       "spec": spec})
         elif op in ("ctx_drop", "ctx_offload"):
             ok = m["ctx"] in self.saved
             if op == "ctx_drop":
@@ -120,6 +127,8 @@ def fresh():
     S.contexts.clear()
     S._ctx_locks.clear()
     S._sessions.clear()
+    S._ctx_pending.clear()
+    S._ctx_new.clear()
     S._prep_sem = None
     eng.background(eng.pump(fake.reader))
     return eng, fake
@@ -654,6 +663,308 @@ class Retention(unittest.TestCase):
             return fake.saved
         self.assertEqual(run(main()), set())
         self.assertEqual((S._ctx_locks, S.contexts), ({}, {}))
+
+# ------------------------------------------------------------------------------------------- 2026-11-04 review fixes
+class LimSaved(unittest.TestCase):
+    def setUp(self):
+        self.saved = {k: getattr(S.LIM, k) for k in vars(S.LIM) if not k.startswith("_")}
+
+    def tearDown(self):
+        for k, v in self.saved.items():
+            setattr(S.LIM, k, v)
+
+
+class UnicodeAndTerminalEvents(LimSaved):  # R05
+    def test_review_repro_lone_surrogate_is_400(self):
+        # repros.py unicode_protocol: "\ud800" passed Python's decoder, the engine's parser rejected the line and the
+        # request waited forever. Now refused at the HTTP boundary, before anything is forwarded.
+        async def main(raw):
+            eng, fake = fresh()
+            async with client() as c:
+                r = await c.post("/v1/chat/completions", content=raw, headers={"content-type": "application/json"})
+            return r, fake, eng
+        for raw in (json.dumps({**CHAT, "inferd": {"session": "\ud800"}}).encode(),
+                    json.dumps({**CHAT, "messages": [{"role": "user", "content": "a\udc00b"}]}).encode(),
+                    json.dumps({**CHAT, "metadata": {"k\ud800": 1}}).encode(),
+                    b'{"model": "m", "messages": [{"role": "user", "content": "\xed\xa0\x80"}]}'):  # raw surrogate
+            r, fake, eng = run(main(raw))
+            self.assertEqual(r.status_code, 400, (raw, r.text))
+            self.assertEqual(r.json()["error"]["code"], "invalid_unicode")
+            self.assertEqual((fake.gens, eng.queues), ([], {}))
+        r, fake, _ = run(main(json.dumps({**CHAT, "messages": [{"role": "user", "content": "\U0001F600 é"}]}).encode()))
+        self.assertEqual(r.status_code, 200, r.text)  # a valid pair (escaped by json.dumps) is fine
+        ctx = json.dumps({"name": "u", "system": "x\ud800" * 40}).encode()
+        async def ctx_main():
+            fresh()
+            async with client() as c:
+                return await c.post("/v1/contexts", content=ctx, headers={"content-type": "application/json"})
+        self.assertEqual(run(ctx_main()).status_code, 400)
+
+    def test_engine_rejection_ends_the_request(self):
+        # The fixed engine answers an unparseable line with an error event for its id (server.mm handle_line).
+        async def main(stream):
+            eng, fake = fresh()
+
+            async def reject(m):
+                fake.send({"id": m["id"], "done": "error: bad request: json: lone high surrogate", "p": 0, "c": 0,
+                           "cached": 0})
+            fake.handle = reject
+            async with client() as c:
+                r = await asyncio.wait_for(c.post("/v1/chat/completions", json={**CHAT, "stream": stream}), 5)
+            await settle()
+            return r, eng
+        r, eng = run(main(False))
+        self.assertEqual(r.status_code, 400, r.text)
+        self.assertIn("lone high surrogate", r.json()["error"]["message"])
+        self.assertEqual(eng.queues, {})
+        r, eng = run(main(True))
+        self.assertIn('"error"', r.text)
+        self.assertIn("[DONE]", r.text)
+        self.assertEqual(eng.queues, {})
+
+    def test_event_deadline_backstop(self):
+        S.LIM.event_timeout = 0.3
+
+        async def main(stream):
+            eng, fake = fresh()
+            fake.gen_gate = asyncio.Event()  # the engine never answers
+            async with client() as c:
+                r = await asyncio.wait_for(c.post("/v1/chat/completions", json={**CHAT, "stream": stream}), 5)
+            await settle()
+            rid = fake.gens[0]["id"]
+            fake.gen_gate.set()
+            await settle()
+            return r, eng, fake, rid
+        r, eng, fake, rid = run(main(False))
+        self.assertEqual(r.status_code, 504, r.text)
+        self.assertIn("INFERD_EVENT_TIMEOUT", r.json()["error"]["message"])
+        self.assertIn(rid, fake.cancelled)  # abandoned: cancelled in the engine too
+        self.assertEqual(eng.queues, {})
+        r, eng, fake, rid = run(main(True))
+        self.assertIn("INFERD_EVENT_TIMEOUT", r.text)
+        self.assertIn(rid, fake.cancelled)
+        self.assertEqual(eng.queues, {})
+
+
+class ContextAdmission(LimSaved):  # R06
+    def test_review_repro_concurrent_creates(self):
+        # repros.py context_limit: INFERD_MAX_CONTEXTS=1, four creates held at the save: all four returned 200.
+        async def main():
+            _, fake = fresh()
+            S.LIM.contexts = 1
+            fake.save_gate = asyncio.Event()
+            async with client() as c:
+                pending = [asyncio.create_task(c.post("/v1/contexts", json={
+                    "name": f"ctx{i}", "system": "context " * 16})) for i in range(4)]
+                await settle(100)
+                fake.save_gate.set()
+                results = await asyncio.gather(*pending)
+            await settle()
+            return [r.status_code for r in results], fake
+        codes, fake = run(main())
+        self.assertEqual(sorted(codes), [200, 400, 400, 400])
+        self.assertEqual((len(S.contexts), len(fake.saved)), (1, 1))
+        self.assertEqual((S._ctx_pending, S._ctx_new, S._ctx_locks), ({}, set(), {}))
+
+    def test_failed_create_releases_its_slot(self):
+        async def main():
+            _, fake = fresh()
+            S.LIM.contexts = 1
+            orig = fake.handle
+
+            async def fail_once(m):
+                if m.get("ctx", "").startswith("bad@"):
+                    return fake.send({"id": m["id"], "done": "error: boom", "p": 0, "c": 0, "cached": 0})
+                await orig(m)
+            fake.handle = fail_once
+            async with client() as c:
+                a = await c.post("/v1/contexts", json={"name": "bad", "system": "x " * 40})
+                b = await c.post("/v1/contexts", json={"name": "good", "system": "y " * 40})
+                rep = await c.post("/v1/contexts", json={"name": "good", "system": "z " * 40})  # replace: no new slot
+            return a.status_code, b.status_code, rep.status_code
+        self.assertEqual(run(main()), (400, 200, 200))
+        self.assertEqual(list(S.contexts), ["good"])
+
+    def test_retained_bytes_budget(self):
+        async def main():
+            _, fake = fresh()
+            S.LIM.context_bytes = 20_000  # stub tokenizer: a token per character, ~36 bytes each
+            async with client() as c:
+                a = await c.post("/v1/contexts", json={"name": "a", "system": "a" * 200})
+                big = await c.post("/v1/contexts", json={"name": "b", "system": "b" * 50_000})  # text alone too big
+                c2 = await c.post("/v1/contexts", json={"name": "c", "system": "c" * 600})  # its tokens push it over
+                await settle()
+            return a, big, c2, fake
+        a, big, c2, fake = run(main())
+        self.assertEqual(a.status_code, 200, a.text)
+        self.assertEqual((big.status_code, big.json()["error"]["code"]), (413, "context_memory_limit"))
+        self.assertEqual((c2.status_code, c2.json()["error"]["code"]), (413, "context_memory_limit"))
+        self.assertEqual(set(S.contexts), {"a"})
+        self.assertEqual(fake.saved, handles_of_live())  # the refused saves' handles were dropped
+        self.assertLessEqual(S._ctx_used(), S.LIM.context_bytes)
+
+    def test_variant_over_budget_refused(self):
+        async def main():
+            _, fake = fresh()
+            async with client() as c:
+                await c.post("/v1/contexts", json={"name": "v", "system": "v " * 300})
+                S.LIM.context_bytes = S._ctx_used() + 100  # no room for another effort's tokens
+                r = await c.post("/v1/chat/completions", json={**CHAT, "inferd": {"context": "v", "effort": "low"}})
+                await settle()
+            return r, fake
+        r, fake = run(main())
+        self.assertEqual((r.status_code, r.json()["error"]["code"]), (413, "context_memory_limit"))
+        self.assertEqual(list(S.contexts["v"]["variants"]), ["none"])
+        self.assertEqual(fake.saved, handles_of_live())
+
+
+class Disconnects(LimSaved):  # R07
+    def test_review_repro_asgi_disconnect_nonstream(self):
+        # repros.py nonstream_disconnect: the request then http.disconnect, generation held. Before: the handler stayed
+        # pending, the disconnect unread, the in-flight slot held and no native cancel.
+        async def main():
+            eng, fake = fresh()
+            fake.gen_gate = asyncio.Event()
+            guard = S.Guard(S.app)
+            events = asyncio.Queue()
+            events.put_nowait({"type": "http.request", "body": json.dumps(CHAT).encode(), "more_body": False})
+            events.put_nowait({"type": "http.disconnect"})
+            sent = []
+
+            async def send(message):
+                sent.append(message)
+            scope = {"type": "http", "asgi": {"version": "3.0", "spec_version": "2.3"}, "http_version": "1.1",
+                     "method": "POST", "scheme": "http", "path": "/v1/chat/completions",
+                     "raw_path": b"/v1/chat/completions", "query_string": b"",
+                     "headers": [(b"content-type", b"application/json")], "server": ("test", 80),
+                     "client": ("test", 123)}
+            t = asyncio.create_task(guard(scope, events.get, send))
+            await settle(100)
+            done = t.done()
+            await asyncio.wait_for(t, 5)
+            await settle()
+            return done, guard, fake, eng
+        done, guard, fake, eng = run(main())
+        self.assertTrue(done)
+        self.assertEqual(guard.n, 0)
+        self.assertEqual(fake.cancelled, [fake.gens[0]["id"]])
+        self.assertEqual(eng.queues, {})
+
+    def _socket_close(self, stream):
+        """A real uvicorn server on a loopback port: send a request, wait until the engine has it, close the socket."""
+        import uvicorn
+
+        async def main():
+            eng, fake = fresh()
+            fake.gen_gate = asyncio.Event()
+            guard = S.Guard(S.app)
+            server = uvicorn.Server(uvicorn.Config(guard, host="127.0.0.1", port=0, lifespan="off", log_level="error"))
+            serving = asyncio.create_task(server.serve())
+            while not server.started:
+                await asyncio.sleep(0.01)
+            port = server.servers[0].sockets[0].getsockname()[1]
+            reader, writer = await asyncio.open_connection("127.0.0.1", port)
+            body = json.dumps({**CHAT, "stream": stream}).encode()
+            writer.write(b"POST /v1/chat/completions HTTP/1.1\r\nhost: t\r\ncontent-type: application/json\r\n"
+                         b"content-length: " + str(len(body)).encode() + b"\r\n\r\n" + body)
+            await writer.drain()
+            for _ in range(500):
+                if fake.gens:
+                    break
+                await asyncio.sleep(0.01)
+            self.assertEqual(guard.n, 1)
+            writer.close()  # the client goes away mid-generation
+            for _ in range(300):
+                if fake.cancelled and guard.n == 0:
+                    break
+                await asyncio.sleep(0.01)
+            out = (list(fake.cancelled), fake.gens[0]["id"], guard.n, dict(eng.queues))
+            fake.gen_gate.set()
+            server.should_exit = True
+            await asyncio.wait_for(serving, 10)
+            return out
+        cancelled, rid, n, queues = run(main())
+        self.assertEqual(cancelled, [rid])
+        self.assertEqual((n, queues), (0, {}))
+
+    def test_socket_close_nonstream(self):
+        self._socket_close(False)
+
+    def test_socket_close_stream(self):
+        self._socket_close(True)
+
+    def test_completed_request_not_cancelled(self):
+        async def main():
+            eng, fake = fresh()
+            async with client() as c:
+                r = await c.post("/v1/chat/completions", json=CHAT)
+            await settle()
+            return r, fake
+        r, fake = run(main())
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(fake.cancelled, [])
+
+
+class SamplingContract(LimSaved):  # R03: the request's settings reach the engine and the effective path comes back
+    def chat(self, extra):
+        async def main():
+            eng, fake = fresh()
+            async with client() as c:
+                r = await c.post("/v1/chat/completions", json={**CHAT, **extra})
+            return r, (fake.gens[-1] if fake.gens else None)
+        return run(main())
+
+    def test_paths(self):
+        for extra, want_k, spec, opt in (({"temperature": 1, "top_k": 0, "top_p": 1}, None, False, False),
+                                         ({"temperature": 1, "top_k": -1, "top_p": 1}, None, False, False),
+                                         ({"temperature": 1, "top_k": 0, "top_p": 0.9}, None, True, False),
+                                         ({"temperature": 1, "top_k": 16}, 16, True, False),
+                                         ({"temperature": 1, "top_k": 20}, 20, True, False),
+                                         ({"temperature": 1, "top_k": 64}, 64, True, False),
+                                         ({"temperature": 1, "top_k": 65}, 65, False, False),
+                                         ({"temperature": 0}, None, True, False),
+                                         ({"temperature": 1, "top_k": 100, "inferd": {"spec_sampling": "truncate"}},
+                                          100, True, True)):
+            r, g = self.chat(extra)
+            self.assertEqual(r.status_code, 200, r.text)
+            info = r.json()["inferd"]["sampling"]
+            self.assertEqual((info["top_k"], info["speculative"]), (want_k, spec), extra)
+            self.assertEqual(bool(g.get("spec_truncate")), opt, extra)
+            self.assertEqual("speculative_top_k" in info, opt, extra)
+
+    def test_host_rows_reported(self):
+        async def main():
+            eng, fake = fresh()
+
+            async def answer(m):
+                fake.send({"id": m["id"], "t": [104]})
+                fake.send({"id": m["id"], "done": "stop", "p": 1, "c": 1, "cached": 0, "spec": 1, "spec_host": 3})
+            fake.handle = answer
+            async with client() as c:
+                return await c.post("/v1/chat/completions", json={**CHAT, "temperature": 1, "top_p": 0.9})
+        info = run(main()).json()["inferd"]["sampling"]
+        self.assertEqual((info["speculative"], info["host_sampled_rows"]), (True, 3))
+
+    def test_defaults_from_generation_config(self):
+        # omitted top_k / top_p come from generation_config.json when the checkpoint has one (the stub has none here)
+        old = (S.DEFAULT_TOP_K, S.DEFAULT_TOP_P)
+        S.DEFAULT_TOP_K, S.DEFAULT_TOP_P = 20, 0.95
+        try:
+            r, g = self.chat({})
+            self.assertEqual((g["top_k"], g["top_p"], g["temperature"]), (20, 0.95, 0.7))
+            self.assertTrue(r.json()["inferd"]["sampling"]["speculative"])
+            r, g = self.chat({"top_k": 0, "top_p": 1})  # explicit values win
+            self.assertEqual((g["top_k"], g["top_p"]), (0, 1.0))
+        finally:
+            S.DEFAULT_TOP_K, S.DEFAULT_TOP_P = old
+
+        r, _ = self.chat({"stream": True, "temperature": 1, "top_k": 80})
+        last = [json.loads(l[6:]) for l in r.text.splitlines() if l.startswith("data: {")][-1]
+        self.assertEqual(last["inferd"]["sampling"], {"temperature": 1.0, "top_p": 1.0, "top_k": 80,
+                                                      "speculative": False})
+        r, g = self.chat({"inferd": {"spec_sampling": "top16"}})
+        self.assertEqual((r.status_code, g), (400, None))
+
 
 
 if __name__ == "__main__":

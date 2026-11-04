@@ -143,7 +143,9 @@ memory (Mac mini M5 Pro: 4 GiB KV, ~129k tokens; Mac mini M6: 2.4 GiB, ~78k). "b
 Malformed bodies get HTTP 400 with an OpenAI-style error (wrong types, non-finite numbers, `max_tokens: 0`, session or
 context ids over 128 characters). Over-budget servers answer 503 with `Retry-After`; oversized bodies 413. At most
 `INFERD_MAX_CONTEXTS` (256) saved contexts and `INFERD_MAX_SESSIONS` (4,096, least recently used first) sessions are
-kept. In `GET /v1/cache` and the engine log, a context's engine handles are named `<id>@<effort>#<generation>`: a
+kept. A create reserves its slot before it computes, so concurrent creates cannot overshoot the limit (HTTP 400
+`context_limit`), and all contexts together may retain at most `INFERD_MAX_CONTEXT_MB` (1,024) of messages, tools and
+token ids in the front end (HTTP 413 `context_memory_limit`, also for a new effort variant that would cross it). In `GET /v1/cache` and the engine log, a context's engine handles are named `<id>@<effort>#<generation>`: a
 context that is replaced gets new handles, so a save that finishes after a delete or replace cannot attach to the
 wrong record.
 

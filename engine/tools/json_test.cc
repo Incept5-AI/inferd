@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <string>
 #include "../src/json.h"
+#include "../src/protocol.h"
 
 static int fails = 0, total = 0;
 
@@ -80,6 +81,24 @@ int main() {
   auto h = json::parse("{\"__metadata__\":{\"format\":\"mlx\"},\"w\":{\"dtype\":\"BF16\",\"shape\":[2,3],"
                        "\"data_offsets\":[0,12]}}");
   eq("header offsets", h["w"]["data_offsets"][1].u64(), (uint64_t)12);
+  // R05 (Codex review 2026-11-04): Python accepts an escaped lone surrogate, json.h does not; the engine must still
+  // end that request, so its id is recovered from the line's tail (the front end writes "id" last).
+  {
+    const std::string line = R"({"tokens": [1, 2], "session": "\ud800", "op": "gen", "id": 4242})";
+    reject(line);
+    eq("tail id of a rejected line", proto::tail_id(line), (uint64_t)4242);
+    reject(R"({"session": "\udc00x", "id": 1})");
+    reject(R"({"a": "\ud800\u0041", "id": 1})");  // high surrogate + non-low
+    accept(R"({"a": "\ud83d\ude00", "id": 1})");  // a valid pair
+    eq("compact separators", proto::tail_id(R"({"op":"cancel","id":77})"), (uint64_t)77);
+    eq("no id", proto::tail_id(R"({"op": "gen", "tokens": [1]})"), (uint64_t)0);
+    eq("id not last", proto::tail_id(R"({"id": 5, "x": 1})"), (uint64_t)0);
+    eq("id text inside a string", proto::tail_id(R"({"s": "\"id\": 9"})"), (uint64_t)0);
+    eq("truncated line", proto::tail_id(R"({"tokens": [1, 2], "id": 12)"), (uint64_t)0);
+    eq("id in the tail of a long line", proto::tail_id("{\"t\": \"" + std::string(100000, 'a') + "\", \"id\": 9}"),
+       (uint64_t)9);
+    eq("plain text", proto::plain("json: lone \"high\" surrogate\n"), std::string("json: lone ?high? surrogate?"));
+  }
   printf("json_test: %d/%d passed\n", total - fails, total);
   return fails != 0;
 }

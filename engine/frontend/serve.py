@@ -2,7 +2,7 @@
 # Handles chat templating and tokenization, streams tokens back as SSE; inferd does all model work.
 #   python serve.py --model <dir> --socket <run dir>/inferd.sock --port 8300 [--name qwen3.8-27b] (run.sh starts both)
 import argparse, array, asyncio, base64, collections, contextlib, glob, hmac, ipaddress, itertools, json, math, os, re
-import stat, sys, threading, time, uuid
+import contextvars, stat, sys, threading, time, uuid
 
 from jinja2 import TemplateError
 
@@ -18,7 +18,9 @@ per-user namespaces or quotas. By default the front end listens on 127.0.0.1 onl
 process. INFERD_API_KEY=<secret> makes every endpoint (including /health) require "Authorization: Bearer <secret>";
 it is required (the server refuses to start without one, 16+ characters) when --host is not a loopback address.
 One key is one tenant: it authenticates, it does not isolate agents from each other.
-Images: inline data: URLs only. INFERD_IMAGE_URLS=1 lets callers make the server fetch any http(s) URL (internal
+Images: inline data: URLs only, PNG, JPEG, WebP or GIF (first frame); any other format is refused unread. Images
+are decoded in a child process killed after INFERD_IMAGE_DECODE_TIMEOUT s (10; INFERD_IMAGE_DECODE=inline: in this
+process). INFERD_IMAGE_URLS=1 lets callers make the server fetch any http(s) URL (internal
 hosts and redirects included) and INFERD_IMAGE_FILES=1 lets them read any file this user can read: enable them only
 when every caller is trusted with that access.
 Limits (environment; overload answers HTTP 503 with Retry-After, oversized input 413, malformed input 400):
@@ -27,7 +29,9 @@ Limits (environment; overload answers HTTP 503 with Retry-After, oversized input
   jobs, waiting at most INFERD_PREPROCESS_WAIT s (60); INFERD_MAX_MESSAGES (10000); INFERD_MAX_PROMPT_CHARS
   (8000000) message text; INFERD_MAX_PROMPT_TOKENS (1048576); INFERD_MAX_OUTPUT_TOKENS (262144) max_tokens;
   INFERD_EVENT_QUEUE (8192) unread engine events per request before a non-reading client's request is cancelled;
-  INFERD_RETRY_AFTER (2) s; INFERD_TOKCACHE_MB (256) tokenizer cache; INFERD_MAX_CONTEXTS (256);
+  INFERD_RETRY_AFTER (2) s; INFERD_TOKCACHE_MB (256) tokenizer cache; INFERD_MAX_CONTEXTS (256) and
+  INFERD_MAX_CONTEXT_MB (1024) retained context records (messages, tools, token ids) together;
+  INFERD_EVENT_TIMEOUT (1800 s; 0 = never) without any engine event before a request is abandoned and cancelled;
   INFERD_MAX_SESSIONS (4096) session ids kept (least recently used idle ones are dropped from the engine);
   INFERD_SESSION_TTL (0 = never) seconds before an idle session is dropped.
 """
@@ -83,6 +87,8 @@ class LIM:  # service-wide budgets (Codex review R02, R12), all checked before t
     retry_after = _env_num("INFERD_RETRY_AFTER", 2, 1, 3600)
     tokcache = _env_num("INFERD_TOKCACHE_MB", 256, 0, 1 << 20) << 20
     contexts = _env_num("INFERD_MAX_CONTEXTS", 256, 1, 1 << 20)
+    context_bytes = _env_num("INFERD_MAX_CONTEXT_MB", 1024, 1, 1 << 20) << 20  # retained context records together
+    event_timeout = _env_num("INFERD_EVENT_TIMEOUT", 1800.0, 0.0, 1e9, float)  # backstop: s without an engine event
     sessions = _env_num("INFERD_MAX_SESSIONS", 4096, 1, 1 << 24)
     session_ttl = _env_num("INFERD_SESSION_TTL", 0.0, 0.0, 1e9, float)
 
@@ -90,6 +96,22 @@ tok = AutoTokenizer.from_pretrained(args.model)
 # Stop ids: generation_config.json when the checkpoint has one, else config.json (e.g. mlx-community Qwen3.5-9B).
 _cfg_path = next(p for p in (f"{args.model}/generation_config.json", f"{args.model}/config.json") if os.path.exists(p))
 gen_cfg = json.load(open(_cfg_path))
+
+
+def _gen_default(key, ok):
+    """A sampling default from the checkpoint's generation_config.json (as vLLM does), or None."""
+    if not _cfg_path.endswith("generation_config.json"):
+        return None
+    v = gen_cfg.get(key)
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) and ok(v) else None
+
+
+# Defaults for fields a request omits (Codex review 2026-11-04, R03): top_k and top_p from generation_config.json
+# (Qwen3.8: top_k 20, top_p 0.95; Gemma-4: 64, 0.95), else no limit and 1.0. Temperature stays 0.7 when omitted. With
+# top_k <= 64 the default sampled request is drawn exactly on the speculative path.
+DEFAULT_TOP_K = int(_gen_default("top_k", lambda v: v == int(v) and 0 <= v <= 1 << 20) or 0)
+SPEC_CANDIDATES = 64  # the engine's speculative candidates per row (SPEC_TOPK; src/sampling.h kSpecTopK)
+DEFAULT_TOP_P = float(_gen_default("top_p", lambda v: 0 < v <= 1) or 1.0)
 eos = gen_cfg.get("eos_token_id", gen_cfg.get("text_config", {}).get("eos_token_id", []))
 _end = [tok.convert_tokens_to_ids(t) for t in ("<|im_end|>", "<|eot|>", "<end_of_turn>", "<turn|>") if t in tok.get_vocab()]
 STOP = sorted(set(i for i in (eos if isinstance(eos, list) else [eos]) + _end if i is not None))
@@ -217,7 +239,9 @@ class Engine:
         q = await self.submit(rid, fields, op=op)
         try:
             while True:
-                ev = await q.get()
+                ev = await next_event(q, rid)
+                if ev.get("_timeout"):
+                    self.background(self.cancel_quiet(rid))
                 if "done" in ev:
                     return ev
         except BaseException:
@@ -442,6 +466,46 @@ async def _drain_done(q, timeout=30.0):
         return {"done": "cancelled", "p": 0, "c": 0, "cached": 0}
 
 
+def _abandoned(rid=None):
+    """The local terminal event for a request whose engine went quiet past INFERD_EVENT_TIMEOUT (Codex review
+    2026-11-04, R05 backstop). `_local`: the engine never ended it, so the caller cancels it there."""
+    return {"id": rid, "done": f"error: no engine event for {LIM.event_timeout:g} s (INFERD_EVENT_TIMEOUT); request "
+            "abandoned", "p": 0, "c": 0, "cached": 0, "_local": True, "_timeout": True}
+
+
+async def next_event(q, rid=None):
+    """The request's next engine event, or _abandoned() after INFERD_EVENT_TIMEOUT seconds without one."""
+    if not LIM.event_timeout:
+        return await q.get()
+    try:
+        return await asyncio.wait_for(q.get(), LIM.event_timeout)
+    except asyncio.TimeoutError:
+        return _abandoned(rid)
+
+
+# ---- Client disconnects (Codex review 2026-11-04, R07). A non-streaming request waits for the engine without reading
+# the ASGI receive channel, so a client that hung up went unnoticed until generation finished. chat() publishes the
+# request's receive here; complete() watches it while it waits and ends the request (cancelling the engine work) on
+# http.disconnect. Streams are watched by Starlette (spec 2.3: listen_for_disconnect cancels the stream; _Stream cleans
+# up).
+_client_receive = contextvars.ContextVar("inferd_client_receive", default=None)
+_GONE = {"done": "error: client disconnected", "p": 0, "c": 0, "cached": 0, "_local": True, "_gone": True}
+
+
+async def _watch_disconnect(receive, q):
+    while True:
+        try:
+            msg = await receive()
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # the server's receive channel failed: the client is as good as gone
+            msg = {"type": "http.disconnect"}
+        if msg.get("type") == "http.disconnect":
+            q.put_nowait(dict(_GONE))
+            return
+        await asyncio.sleep(0.05)  # not a disconnect (nothing else is expected once the body is read): never spin
+
+
 def _template_messages(messages):
     """OpenAI clients send tool_calls[].function.arguments as a JSON string; the template iterates a mapping."""
     out = []
@@ -592,6 +656,34 @@ contexts = {}          # id -> record (see create_context)
 _ctx_locks = {}        # id -> [asyncio.Lock, holders + waiters]: one lifecycle step per context at a time; reclaimed
 _ctx_gen = itertools.count(1)  # record generations: engine handles are "<id>@<effort>#<gen>", never reused
 _SESSION_MAX = 128     # session ids: longer ones are rejected (they used to be truncated, so distinct ids could alias)
+# Admission (Codex review 2026-11-04, R06): a create checks the limits and reserves its slot (a new id) and its text's
+# bytes in one synchronous step, before any await, so concurrent creates cannot all see room; the reservation is
+# released when the create publishes, fails or is cancelled. Bytes are an estimate of what a record retains (its
+# messages and tools as text, plus its token id lists), checked against INFERD_MAX_CONTEXT_MB again when the tokens
+# are known (publish, and each new effort variant).
+_ctx_pending = {}      # id -> reserved bytes of a create in progress
+_ctx_new = set()       # ids of creates in progress that will add a record (not replace one)
+_TOKEN_BYTES = 36      # a Python int in a list (pointer + int object), conservatively
+
+
+def _ctx_text_bytes(messages, tools):
+    return len(json.dumps([messages, tools], ensure_ascii=False, default=str)) + 512
+
+
+def _ctx_bytes(rec):
+    """Estimated retained bytes of one record: its text plus each distinct token list (variants may share one)."""
+    lists = {id(v["tokens"]): len(v["tokens"]) for v in rec["variants"].values()}
+    return rec.get("text_bytes", 0) + _TOKEN_BYTES * sum(lists.values())
+
+
+def _ctx_used(exclude=None):
+    return sum(_ctx_bytes(r) for k, r in contexts.items() if k != exclude) + \
+        sum(b for k, b in _ctx_pending.items() if k != exclude)
+
+
+def _ctx_over(what):
+    return ApiError(413, f"{what}: contexts would hold over {LIM.context_bytes / 2 ** 20:g} MiB (INFERD_MAX_CONTEXT_MB); "
+                    "delete one first", "context_memory_limit")
 
 
 class ApiError(Exception):
@@ -622,8 +714,33 @@ def _reject_constant(c):
     raise ValueError(f"{c} is not valid JSON")
 
 
+_SURROGATE = re.compile("[\ud800-\udfff]")
+
+
+def _lone_surrogate(v):
+    """-> a JSON path holding a surrogate code point (U+D800..U+DFFF), or None. Iterative: the body's depth is bounded
+    by json.loads (RecursionError), not by this walk."""
+    stack = [(v, "")]
+    while stack:
+        x, path = stack.pop()
+        if isinstance(x, str):
+            if _SURROGATE.search(x):
+                return path or "body"
+        elif isinstance(x, dict):
+            for k, y in x.items():
+                if _SURROGATE.search(k):
+                    return f"{path}.{k!a}" if path else repr(k)
+                stack.append((y, f"{path}.{k}" if path else k))
+        elif isinstance(x, list):
+            stack.extend((y, f"{path}[{i}]") for i, y in enumerate(x))
+    return None
+
+
 async def read_json(req):
-    """The request body as a JSON object (NaN / Infinity rejected; Guard has bounded the size)."""
+    """The request body as a JSON object (NaN / Infinity rejected; Guard has bounded the size). Strings must be
+    Unicode scalar values (Codex review 2026-11-04, R05): Python's decoder accepts an escaped lone surrogate ("\\ud800",
+    and raw surrogate bytes via surrogatepass) that the engine's strict parser rejects, so such a body is a 400 here,
+    before anything is forwarded."""
     raw = await req.body()
     try:
         b = json.loads(raw, parse_constant=_reject_constant)
@@ -631,6 +748,10 @@ async def read_json(req):
         raise ApiError(400, f"request body is not valid JSON: {str(e)[:200]}", "invalid_json")
     if not isinstance(b, dict):
         raise ApiError(400, "request body must be a JSON object", "invalid_json")
+    # Surrogates reach Python strings only through a \u escape or raw ED A0..BF bytes: skip the walk otherwise.
+    if (b"\\u" in raw or b"\xed" in raw) and (where := _lone_surrogate(b)) is not None:
+        raise ApiError(400, f"{where}: strings must be valid Unicode (a lone surrogate \\uD800-\\uDFFF is not)",
+                       "invalid_unicode", param=where)
     return b
 
 
@@ -761,6 +882,7 @@ def v_policy(b):
     v_int(pol, "priority", -_I32, _I32, "inferd.")  # clamped to -10..10 below (the engine clamps too)
     v_int(pol, "json_retries", -_I32, _I32, "inferd.")  # range checked by structured_chat
     v_type(pol, "constrained", bool, "true or false", "inferd.")
+    v_choice(pol, "spec_sampling", ("exact", "truncate"), "inferd.")
     return pol
 
 
@@ -945,6 +1067,10 @@ async def _save_variant(rec, effort):
     if rec["dead"]:  # deleted while saving: the deletion wins, the handle goes
         await _drop_shielded({name})
         raise Stale()
+    if contexts.get(rec["id"]) is rec and \
+            _ctx_used(rec["id"]) + _ctx_bytes(rec) + _TOKEN_BYTES * len(tokens) > LIM.context_bytes:
+        await _drop_shielded({name})
+        raise _ctx_over(f"context {rec['id']!r} effort {effort}")
     v = {"effort": effort, "engine": name, "tokens": tokens, "saved": info}
     rec["variants"][effort] = v
     return v
@@ -1003,20 +1129,39 @@ async def create_context(req: Request):
         ttl = float(b.get("ttl") or 0)
         if not engine.alive:
             raise ApiError(503, "engine disconnected", retry_after=LIM.retry_after)
+        text_bytes = _ctx_text_bytes(messages, b.get("tools"))
         async with ctx_lock(cid):
+            # Check and reserve with no await in between (R06): creates of distinct ids run concurrently.
             old = contexts.get(cid)
-            if old is None and len(contexts) >= LIM.contexts:
-                raise ApiError(400, f"{len(contexts)} contexts exist (INFERD_MAX_CONTEXTS); delete one first",
-                               "context_limit")
-            rec = {"id": cid, "gen": next(_ctx_gen), "dead": False, "messages": messages, "tools": b.get("tools"),
-                   "effort": effort, "persist": persist, "ttl": ttl, "created": int(time.time()),
-                   "last_used": time.time(), "launches": 0, "variants": {}}
+            if old is None and len(contexts) + len(_ctx_new) >= LIM.contexts:
+                raise ApiError(400, f"{len(contexts)} contexts exist and {len(_ctx_new)} are being created "
+                               "(INFERD_MAX_CONTEXTS); delete one first", "context_limit")
+            if _ctx_used(cid) + text_bytes > LIM.context_bytes:
+                raise _ctx_over(f"context {cid!r}")
+            _ctx_pending[cid] = text_bytes
+            if old is None:
+                _ctx_new.add(cid)
             try:
-                await _save_variant(rec, effort)
-            except (TemplateError, ValueError, TypeError) as e:
-                raise ApiError(400, str(e), "context_render")
-            old = contexts.get(cid)  # re-read: a delete may have unpublished it meanwhile (it drops its own handles)
-            contexts[cid] = rec
+                rec = {"id": cid, "gen": next(_ctx_gen), "dead": False, "messages": messages, "tools": b.get("tools"),
+                       "effort": effort, "persist": persist, "ttl": ttl, "created": int(time.time()),
+                       "last_used": time.time(), "launches": 0, "variants": {}, "text_bytes": text_bytes}
+                try:
+                    await _save_variant(rec, effort)
+                except (TemplateError, ValueError, TypeError) as e:
+                    raise ApiError(400, str(e), "context_render")
+                old = contexts.get(cid)  # re-read: a delete may have unpublished it meanwhile (it drops its own handles)
+                # The record's real size, against everything else retained (the old record it replaces excluded).
+                if _ctx_used(cid) + _ctx_bytes(rec) > LIM.context_bytes:
+                    await _drop_shielded(_handles(rec))
+                    raise _ctx_over(f"context {cid!r}")
+                if old is None and len(contexts) + len(_ctx_new - {cid}) >= LIM.contexts:
+                    await _drop_shielded(_handles(rec))  # the record was deleted meanwhile and others filled up
+                    raise ApiError(400, f"{len(contexts)} contexts exist (INFERD_MAX_CONTEXTS); delete one first",
+                                   "context_limit")
+                contexts[cid] = rec
+            finally:  # published, failed or cancelled: the reservation goes
+                _ctx_pending.pop(cid, None)
+                _ctx_new.discard(cid)
             if old is not None:  # replaced: the old record's handles go (none are shared: names carry the generation)
                 old["dead"] = True
                 await _drop_shielded(_handles(old))
@@ -1208,6 +1353,7 @@ async def _expire_loop():
 
 @app.post("/v1/chat/completions")
 async def chat(req: Request):
+    _client_receive.set(req.receive)  # complete() watches it for http.disconnect while it waits (R07)
     try:
         body = check_chat(await read_json(req))  # one validation boundary (Codex review R03)
     except ApiError as e:
@@ -1260,12 +1406,31 @@ async def complete(body):
 
     def given(*keys, default):  # the first field present and not null; 0 is a value, never "absent"
         return next((body[k] for k in keys if body.get(k) is not None), default)
-    top_k = int(given("top_k", default=0))
+    top_k = int(given("top_k", default=DEFAULT_TOP_K))
     gen = {**prompt, "max_tokens": int(given("max_tokens", "max_completion_tokens", default=4096)),
-           "temperature": float(given("temperature", default=0.7)), "top_p": float(given("top_p", default=1.0)),
+           "temperature": float(given("temperature", default=0.7)), "top_p": float(given("top_p", default=DEFAULT_TOP_P)),
            "top_k": max(0, top_k), "stop": [] if body.get("ignore_eos") else STOP}  # ignore_eos: vLLM's field
     if body.get("seed") is not None:
         gen["seed"] = int(body["seed"])
+    # Sampling contract (Codex review 2026-11-04, R03; src/sampling.h): top_k 0 / -1 is no limit, over the whole
+    # vocabulary, on every path. The speculative sampler sees 64 candidates per row: exact for top_k 1..64 and, with
+    # top_k off, for top_p < 1 (a row whose nucleus does not fit is sampled by the engine's host sampler: "spec_host").
+    # top_k above 64, or off with top_p 1, decodes one token per step unless the request opts into truncation to the
+    # 64 candidates ("inferd": {"spec_sampling": "truncate"}). The effective settings come back in
+    # "inferd": {"sampling": ...}.
+    if ({**body, **(body.get("inferd") or {})}).get("spec_sampling") == "truncate":
+        gen["spec_truncate"] = 1
+
+    def sampling_info(ev):
+        t, k, p = gen["temperature"], gen["top_k"], gen["top_p"]
+        info = {"temperature": t, "top_p": p, "top_k": k or None}  # None: no limit
+        if "spec" in ev:
+            info["speculative"] = bool(ev["spec"])
+            if ev["spec"] and t > 0 and (k > SPEC_CANDIDATES or (k == 0 and p >= 1)):
+                info["speculative_top_k"] = SPEC_CANDIDATES  # the opt-in truncation applied on speculative steps
+            if ev.get("spec_host"):
+                info["host_sampled_rows"] = ev["spec_host"]  # nucleus beyond the GPU's candidates: sampled exactly
+        return info
     if body.get("_grammar") is not None:  # structured output, constrained: the engine samples under the schema
         gen["json_schema"] = body["_grammar"]
         if thinking:  # the reasoning is free; the grammar starts after </think>
@@ -1356,13 +1521,13 @@ async def complete(body):
             dt, state = Detok(), {"reasoning": thinking, "buf": "", "tool": None, "pend": ""}
             sm, used = (StopMatcher(stops, keep_stop) if stops else None), 0
 
-            def chunk(delta, finish=None):
+            def chunk(delta, finish=None, **extra):
                 return "data: " + json.dumps({"id": cid, "object": "chat.completion.chunk", "created": created,
                                               "model": model, "choices": [{"index": 0, "delta": delta,
-                                                                           "finish_reason": finish}]}) + "\n\n"
+                                                                           "finish_reason": finish}], **extra}) + "\n\n"
             try:
                 while True:
-                    ev = await q.get()
+                    ev = await next_event(q, rid)
                     if "t" in ev:
                         used += len(ev["t"])
                         piece = "".join(dt.add(t) for t in ev["t"])
@@ -1414,14 +1579,14 @@ async def complete(body):
                             finish = "tool_calls" if finish == "stop" else finish
                         else:
                             yield chunk({"content": state["tool"]})
-                    yield chunk({}, finish)
+                    yield chunk({}, finish, inferd={"sampling": sampling_info(ev)})
                     if (body.get("stream_options") or {}).get("include_usage"):
                         yield "data: " + json.dumps({"id": cid, "object": "chat.completion.chunk", "created": created,
                                                      "model": model, "choices": [], "usage": usage(ev)}) + "\n\n"
                     yield "data: [DONE]\n\n"
                     return
             finally:
-                end_request("ev" in locals() and "t" not in ev)
+                end_request("ev" in locals() and "t" not in ev and not ev.get("_local"))
         return _Stream(events(), end_request)
 
     out = []
@@ -1429,9 +1594,11 @@ async def complete(body):
     # cancel at the first match; n_used = the tokens up to the one that completed it.
     sm, sdt, sst, n_used = (StopMatcher(stops) if stops else None), Detok(), {"reasoning": thinking, "buf": ""}, None
     ended = False
+    recv = _client_receive.get()
+    watch = engine.background(_watch_disconnect(recv, q)) if recv is not None else None
     try:
         while True:
-            ev = await q.get()
+            ev = await next_event(q, rid)
             if "t" in ev:
                 out += ev["t"]
                 if sm and n_used is None:
@@ -1440,14 +1607,18 @@ async def complete(body):
                         n_used = len(out)
                         await engine.cancel_quiet(rid)
             else:
-                ended = True
+                ended = not ev.get("_local")  # a timeout or a disconnect: the engine has not ended it
                 break
-    finally:  # the client went away (CancelledError) or anything else: the engine work stops too
+    finally:  # the client went away (CancelledError, http.disconnect) or anything else: the engine work stops too
+        if watch is not None:
+            watch.cancel()
         end_request(ended)
+    if ev.get("_gone"):  # nobody is listening; 499 (nginx's "client closed request") for the logs
+        return JSONResponse(_err("client disconnected", "invalid_request_error", "client_disconnected"), status_code=499)
     if n_used is not None:  # ended by a stop string (the engine's own end, if it raced the cancel, is moot)
         out, ev = out[:n_used], dict(ev, done="stop", c=n_used)
     if str(ev["done"]).startswith("error"):
-        code = 503 if ("disconnected" in ev["done"] or "too slow" in ev["done"]) else 400 if ("too long" in ev["done"] or "max_context" in ev["done"]
+        code = 504 if ev.get("_timeout") else 503 if ("disconnected" in ev["done"] or "too slow" in ev["done"]) else 400 if ("too long" in ev["done"] or "max_context" in ev["done"]
                                                                 or "json_schema" in ev["done"]
                                                                 or "bad request" in ev["done"]) else 500
         return JSONResponse({"error": {"message": ev["done"], "type": "server_error" if code != 400 else "invalid_request_error",
@@ -1473,7 +1644,7 @@ async def complete(body):
         msg["reasoning_content"] = reasoning
     return JSONResponse({"id": cid, "object": "chat.completion", "created": created, "model": model,
                          "choices": [{"index": 0, "message": msg, "finish_reason": finish}],
-                         "usage": usage(ev)})
+                         "usage": usage(ev), "inferd": {"sampling": sampling_info(ev)}})
 
 
 # Structured output (response_format): the instruction goes on the last user turn, the answer's JSON is extracted and
@@ -1526,7 +1697,7 @@ async def structured_chat(body):
                             status_code=422)
     d["usage"] = {"prompt_tokens": tot["p"], "completion_tokens": tot["c"], "total_tokens": tot["p"] + tot["c"],
                   "prompt_tokens_details": {"cached_tokens": tot["cached"]}}
-    d["inferd"] = {"json_attempts": attempt, "json_seconds": round(time.time() - t0, 3), "json_constrained": constrained}
+    d["inferd"] = {**(d.get("inferd") or {}), "json_attempts": attempt, "json_seconds": round(time.time() - t0, 3), "json_constrained": constrained}
     if constrained and spec.get("checked_only"):  # keywords validated after decoding, not enforced while decoding
         d["inferd"]["json_checked_only"] = spec["checked_only"]
     if not body.get("stream"):

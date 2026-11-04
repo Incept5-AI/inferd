@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <vector>
 #include "json.h"
+#include "sampling.h"
 
 namespace gram {
 
@@ -976,48 +977,43 @@ struct Matcher {
     return n;
   }
 
-  // Sample one token from bf16 logits under the grammar and advance past it. The contract: greedy = the argmax over
-  // the allowed tokens; sampling = the allowed tokens only, the top_k of them by logit (1,024 when top_k is 0, as the
-  // unconstrained host sampler), softmax at `temp`, then the top_p nucleus, then a draw. Sampled requests are not
-  // speculated while the grammar is active (Scheduler: the GPU's speculative sampler keeps 16 candidates, a different
-  // distribution), so this is the only sampler they see.
+  // Sample one token from bf16 logits under the grammar and advance past it. The contract (src/sampling.h, the same as
+  // the unconstrained sampler's): greedy = the argmax over the allowed tokens; sampling = the allowed tokens only, the
+  // top_k of them by logit (top_k 0: all of them), softmax at `temp`, the top_p nucleus, a draw. Sampled requests are
+  // not speculated while the grammar is active (Scheduler: the GPU's speculative sampler sees only 16 candidates per
+  // row, and masking afterwards is not exact), so this is the only sampler they see. Before 2026-11-04 "top_k 0" meant
+  // the top 1,024 allowed tokens (Codex review R03).
   int sample(const uint16_t* lg, int V, float temp, float top_p, int top_k, std::mt19937_64& rng,
              const std::vector<int>& stops) {
-    auto f = [](uint16_t h) { uint32_t u = (uint32_t)h << 16; float x; memcpy(&x, &u, 4); return x; };
+    using sampling::bf16;
     Matcher next = *this;
     int best = 0;
     float bv = -INFINITY;
-    for (int i = 0; i < V; i++) { float v = f(lg[i]); if (v > bv) { bv = v; best = i; } }
+    for (int i = 0; i < V; i++) { float v = bf16(lg[i]); if (v > bv) { bv = v; best = i; } }
     const bool greedy = temp <= 0;
     if (greedy && allows(best, stops, &next)) { *this = std::move(next); return best; }
-    // Candidates in descending logit order, widening until enough are allowed.
-    const int want = greedy ? 1 : (top_k > 0 ? std::min(top_k, V) : std::min(V, 1024));
+    // The allowed tokens in descending logit order, widening until the first one (the allowed maximum) is found.
     std::vector<std::pair<float, int>> c(V);
-    for (int i = 0; i < V; i++) c[i] = {f(lg[i]), i};
-    auto cmp = [](auto& a, auto& b) { return a.first > b.first; };
+    for (int i = 0; i < V; i++) c[i] = {bf16(lg[i]), i};
     std::vector<std::pair<float, int>> ok;
     size_t sorted = 0;
+    const int want = greedy ? 1 : top_k > 0 ? std::min(top_k, V) : V;
+    float lo = -INFINITY;  // sampled: nothing below the allowed maximum - kSpan * temp (sampling.h)
+    bool done = false;
     for (size_t want_sorted : {(size_t)std::min(V, 4096), (size_t)V}) {
-      std::partial_sort(c.begin() + sorted, c.begin() + want_sorted, c.end(), cmp);
-      for (size_t i = sorted; i < want_sorted && (int)ok.size() < want; i++)
-        if (allows(c[i].second, stops, nullptr)) ok.push_back(c[i]);
+      std::partial_sort(c.begin() + sorted, c.begin() + want_sorted, c.end(), sampling::desc);
+      for (size_t i = sorted; i < want_sorted; i++) {
+        if ((int)ok.size() >= want || c[i].first < lo) { done = true; break; }
+        if (!allows(c[i].second, stops, nullptr)) continue;
+        if (ok.empty() && !greedy) lo = c[i].first - sampling::kSpan * temp;
+        ok.push_back(c[i]);
+      }
       sorted = want_sorted;
-      if ((int)ok.size() >= want) break;
+      if (done) break;
     }
     if (ok.empty()) return stops.empty() ? best : stops[0];  // a dead end (should not happen): end the reply
     int t = ok[0].second;
-    if (!greedy) {
-      double mx = ok[0].first, sum = 0;
-      std::vector<double> pr(ok.size());
-      for (size_t i = 0; i < ok.size(); i++) sum += pr[i] = std::exp((ok[i].first - mx) / temp);
-      double cut = top_p * sum, acc = 0;
-      size_t n = 0;
-      while (n < ok.size()) { acc += pr[n++]; if (acc >= cut) break; }
-      std::uniform_real_distribution<double> u(0, acc);
-      double r = u(rng);
-      t = ok[n - 1].second;
-      for (size_t i = 0; i < n; i++) if ((r -= pr[i]) <= 0) { t = ok[i].second; break; }
-    }
+    if (!greedy) t = sampling::draw(ok, temp, top_p, 0, rng);  // ok holds the top_k (or every) allowed token
     allows(t, stops, &next);
     *this = std::move(next);
     return t;

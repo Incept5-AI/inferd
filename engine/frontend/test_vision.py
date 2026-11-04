@@ -102,6 +102,26 @@ class Limits(unittest.TestCase):
         finally:
             vision.MAX_IMAGE_PIXELS = orig
 
+    def test_formats_allowlist(self):  # Codex review 2026-11-04, R01 (decoder details: test_image_decode.py)
+        for fmt in ("PNG", "JPEG", "WEBP", "GIF"):
+            b = io.BytesIO()
+            Image.new("RGB", (40, 24), (200, 10, 10)).save(b, fmt)
+            img = vision.load_image(data_url(b.getvalue()), vision.Budget())
+            self.assertEqual((img.mode, img.size), ("RGB", (40, 24)), fmt)
+        b = io.BytesIO()
+        Image.new("RGB", (16, 16), "red").save(b, "BMP")
+        with self.assertRaisesRegex(ValueError, "unreadable"):
+            vision.load_image(data_url(b.getvalue()), vision.Budget())
+
+    def test_ocr_samples(self):  # the examples/ocr-agents documents (JPEG), as that demo sends them
+        sd = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../examples/ocr-agents/samples")
+        files = sorted(f for f in os.listdir(sd) if f.endswith(".jpg")) if os.path.isdir(sd) else []
+        for f in files:
+            with open(os.path.join(sd, f), "rb") as fh:
+                raw = fh.read()
+            img = vision.load_image("data:image/jpeg;base64," + base64.b64encode(raw).decode(), vision.Budget())
+            self.assertEqual(img.size, Image.open(io.BytesIO(raw)).size, f)
+
     def test_urls_and_files_off_by_default(self):
         os.environ.pop("INFERD_IMAGE_URLS", None), os.environ.pop("INFERD_IMAGE_FILES", None)
         with self.assertRaisesRegex(ValueError, "disabled"):

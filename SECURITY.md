@@ -18,6 +18,9 @@ inferd is built for a **trusted local user** on a single Mac:
 - Image URLs and local image files are disabled by default. Enabling them (`INFERD_IMAGE_URLS=1`,
   `INFERD_IMAGE_FILES=1`) lets requests make the server fetch URLs, including internal hosts, or read files. Do this
   only for trusted clients.
+- Inline images are decoded only as PNG, JPEG, WebP or GIF (Pillow 13.0.0), in a child process killed after
+  `INFERD_IMAGE_DECODE_TIMEOUT` seconds (10); any other format is refused before a decoder runs, whatever media type
+  the data URI claims.
 - The Neural Engine prefill split uses private Apple APIs and may stop working with an OS update. It is off unless
   `ANE_UNITS` is set.
 

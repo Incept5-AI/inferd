@@ -71,7 +71,7 @@ On the minis, `agents.py` runs N:N fleets: M6 at 8 to 64 agents (8k and 16k), M5
 | Feature | Coverage | How it was checked / what is missing |
 |---|---|---|
 | Greedy speculative decoding (DFlash2) | **Tested** | `spec_test` matches plain decode except near-ties (§2.2), plus acceptance on agent text (4–5.5 tokens/cycle). |
-| Speculative *sampling* (temperature > 0) | **Light** | One distribution check (400 samples) and the 48-test coding suite. Top-k is capped at 16 on this path. |
+| Speculative *sampling* (temperature > 0) | **Light** | One distribution check (400 samples) and the 48-test coding suite. Exact by construction since 2026-11-04 (top-k 1–64; top-p with rows beyond 64 candidates sampled on the host). `spec_sample_test` (GPU, no model) checks the top-K order and the accept/resample distribution against `src/sampling.h` by chi-square; `grammar_test` checks the host sampler (top-k 0, 16, 20, top-p cuts, unconstrained and under a grammar). |
 | Self-tuning draft block (`SPEC_AUTO`) | **Tested** | Studio and mini A/Bs. |
 | 8-bit KV (default) vs bf16 KV | **Tested** (27B) | ⚠ It breaks Gemma-4. Each new model needs its own check. |
 | Prefix cache (block trie + GDN snapshots) | **Tested** | Fleets reach 93–99% cache hits. |
@@ -116,7 +116,7 @@ cd engine
 export M=/path/to/Qwen3.8-27B-4bit
 PY=/path/to/venv/bin/python        # needs mlx and mlx_lm (see CONTRIBUTING.md)
 
-$PY tools/ref_logits.py make $M /tmp/toks.txt 4 24            # 4 sequences x 24 tokens of real text
+$PY tools/ref_logits.py make $M /tmp/toks.txt 4 24            # 4 sequences x 24 tokens (quick; see below for 2,048)
 ./build/decode_test check $M /tmp/toks.txt /tmp/eng.bin 1     # chunk 1: pure decode, token by token
 $PY tools/ref_logits.py compare $M /tmp/toks.txt /tmp/eng.bin
 ./build/decode_test check $M /tmp/toks.txt /tmp/eng.bin 24    # one chunk of 24: the prefill path
@@ -127,8 +127,14 @@ $PY tools/ref_logits.py compare $M /tmp/toks.txt /tmp/eng.bin
 
 The optional last argument is `chunk`, or `first,chunk`: for example, `24,1` prefills 24 and then decodes one at a
 time. Chunks 1, 5, 8 and 24 exercise different attention modes: decode, multi-row verify, and prefill.
-`ref_logits.py make` only builds short prompts from four built-in texts and asserts if a text runs out, so keep T in
-the tens. For long-context checks, write your own token file. The format is `B T` on the first line, then B lines of T
+`ref_logits.py make` with T <= 48 builds the historical short prompts from four built-in texts. Larger T (the
+release gate uses `4 2048` at chunks 1, 24, 256 and 1,536) gives sequence 0 the repetitive "quick brown fox" text and
+sequences 1-3 real text from the repository (`CORPUS`: docs/ARCHITECTURE.md, docs/RESULTS.md, the scheduler source),
+so 256- and 1,536-row chunks really run. `compare` exits 1 on non-finite logits, a top-1 difference (an explicit
+near-tie within one bf16 step is reported as `TIE` and passes), cos below `--cos-min` or KL above `--kl-max` on sequences
+1-3 (0.999 / 0.01 for T <= 48; 0.995 / 0.03 for longer prompts: at 2,048 tokens the Studio measured 0.9972-0.9996 and
+KL <= 0.015, with 8-bit and bf16 KV alike, the code sequence lowest), and below 0.99 / above 0.05 on sequence 0; `tools/test_ref_logits.py` proves it fails on bad
+logits. For other long-context checks, write your own token file. The format is `B T` on the first line, then B lines of T
 token ids.
 
 **What the thresholds mean.**
@@ -189,7 +195,9 @@ tokens, and an external M4 Max on macOS 26 had one. Like vLLM, the engine is not
 
 ### 2.3 Speculative sampling
 
-Run 400+ samples of a short open prompt at temperature 1 and top-k 16 (the study log used "three random animals"), once with
+`build/spec_sample_test` (no model, seconds) checks the speculative sampler against the contract by chi-square for
+top-k 16 / 20 / 64, top-p with top-k off, tied logits and unlikely drafts, and that rows beyond the 64 candidates go to
+the host; `grammar_test` checks the host sampler. Run 400+ samples of a short open prompt at temperature 1 and top-k 16 (the study log used "three random animals"), once with
 `SPEC_SAMPLE=0` and once with the default. Compare the frequency tables, which should match within noise. **Light**: it
 has been done once.
 
@@ -200,7 +208,7 @@ There's no script. To repeat the original check:
 1. Use a checkpoint that has the vision tower (mlx-community 8-bit or bf16, or lmstudio-community 4-bit). The
    mlx-community 4-bit build returns HTTP 400 for images.
 2. Draw a synthetic image, for example a red circle, a blue rectangle and the text "HELLO 42", then send it as an
-   `image_url` (data URI, http(s) URL or local path) with `temperature: 0`.
+   `image_url` (a PNG/JPEG/WebP/GIF data URI) with `temperature: 0`.
 3. Compare the reply against `mlx_vlm.generate` on the same checkpoint, image and prompt, greedy. It should match word
    for word.
 4. Repeat the request. `cached_tokens` should be > 0 and the reply identical. Change one colour: `cached_tokens` should
@@ -238,7 +246,8 @@ per turn and arguments that contain JSON strings. Structured output (`response_f
 
 ```bash
 cd engine && ./build.sh
-# 1. Correctness (§2.1): chunks 1, 5, 24; top-1 ok everywhere; cos >= 0.999 on seqs 1-3 (typically 0.9995+)
+# 1. Correctness (§2.1): chunks 1, 5, 24 (and 256, 1536 on `make ... 4 2048` after any build or GEMM change);
+#    compare must pass: top-1 everywhere, cos >= 0.999 on seqs 1-3 (typically 0.9995+)
 # 2. Decode step times at B = 1 / 16 / 64. ALWAYS run this after touching a shared kernel.
 ./build/decode_test bench $M 1,16,64 2048
 # 3. Verify blocks (rows per sequence = 4, 5, 8) at short and long context

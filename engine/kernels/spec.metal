@@ -495,47 +495,57 @@ kernel void row_top16(device const bfloat* logits [[buffer(0)]],
 // Sharded top-16 (the draft head's vocabulary is 248k wide; one threadgroup per row left ~8 threadgroups busy):
 // stage 1 grid (SH, rows): shard sh keeps the top-16 of its vocabulary slice in cpart/vpart[(row * SH + sh) * 16];
 // stage 2 (top16_merge) grid (rows): the top-16 of the SH * 16 survivors, as row_top16 writes them.
-template <typename Load>
-inline void top16_pop(Load load, int n, uint tid, uint lane, uint sg, device int* cand, device float* unary, int row,
-                      threadgroup float* bv, threadgroup int* bt, threadgroup int& winner) {
+// topk_pop<K>: the top K of n values (descending; ties: the lower thread's first). Each thread keeps a sorted local
+// top-16, then K rounds of a threadgroup argmax pop. Exact for K <= 16, and for any K <= 64 when every thread holds at
+// most 16 values (n <= 4,096): the verify path's top-64 keeps both stages within that (Qwen35::vtop_k checks it).
+template <int K, typename Load>
+inline void topk_pop(Load load, int n, uint tid, uint lane, uint sg, device int* cand, device float* unary, int row,
+                     threadgroup float* bv, threadgroup int* bt, threadgroup int& winner) {
+  threadgroup int* bi8 = bt + 8;  // bt holds 16: winners' threads, then their token ids
   float tv[TOPK];
   int ti[TOPK];
-  for (int k = 0; k < TOPK; k++) { tv[k] = -INFINITY; ti[k] = 0; }
+  for (int k = 0; k < TOPK; k++) { tv[k] = -INFINITY; ti[k] = INT_MAX; }
   for (int i = tid; i < n; i += 256) {
     float v;
     int id;
     load(i, v, id);
-    if (v <= tv[TOPK - 1]) continue;
+    if (v < tv[TOPK - 1] || (v == tv[TOPK - 1] && id >= ti[TOPK - 1])) continue;
     int k = TOPK - 1;
-    while (k > 0 && tv[k - 1] < v) { tv[k] = tv[k - 1]; ti[k] = ti[k - 1]; k--; }
+    while (k > 0 && (tv[k - 1] < v || (tv[k - 1] == v && ti[k - 1] > id))) { tv[k] = tv[k - 1]; ti[k] = ti[k - 1]; k--; }
     tv[k] = v;
     ti[k] = id;
   }
   int head = 0;
-  for (int out = 0; out < TOPK; out++) {
+  for (int out = 0; out < K; out++) {
+    // Ties go to the lower token id (src/sampling.h's order), so the candidate set at the K-th place is the contract's.
     float best = head < TOPK ? tv[head] : -INFINITY;
-    int who = tid;
+    int bid = head < TOPK ? ti[head] : INT_MAX, who = tid;
     for (ushort o = 16; o > 0; o /= 2) {
       float ov = simd_shuffle_down(best, o);
-      int ow = simd_shuffle_down(who, o);
-      if (ov > best) { best = ov; who = ow; }
+      int oi = simd_shuffle_down(bid, o), ow = simd_shuffle_down(who, o);
+      if (ov > best || (ov == best && oi < bid)) { best = ov; bid = oi; who = ow; }
     }
-    if (lane == 0) { bv[sg] = best; bt[sg] = who; }
+    if (lane == 0) { bv[sg] = best; bt[sg] = who; bi8[sg] = bid; }
     threadgroup_barrier(mem_flags::mem_threadgroup);
     if (tid == 0) {
       float b = bv[0];
-      int w = bt[0];
-      for (int s = 1; s < 8; s++) if (bv[s] > b) { b = bv[s]; w = bt[s]; }
+      int w = bt[0], i0 = bi8[0];
+      for (int s = 1; s < 8; s++) if (bv[s] > b || (bv[s] == b && bi8[s] < i0)) { b = bv[s]; w = bt[s]; i0 = bi8[s]; }
       winner = w;
     }
     threadgroup_barrier(mem_flags::mem_threadgroup);
     if ((int)tid == winner) {
-      cand[row * TOPK + out] = ti[head];
-      unary[row * TOPK + out] = tv[head];
+      cand[row * K + out] = head < TOPK ? ti[head] : 0;
+      unary[row * K + out] = head < TOPK ? tv[head] : -INFINITY;
       head++;
     }
     threadgroup_barrier(mem_flags::mem_threadgroup);
   }
+}
+template <typename Load>
+inline void top16_pop(Load load, int n, uint tid, uint lane, uint sg, device int* cand, device float* unary, int row,
+                      threadgroup float* bv, threadgroup int* bt, threadgroup int& winner) {
+  topk_pop<TOPK>(load, n, tid, lane, sg, cand, unary, row, bv, bt, winner);
 }
 // V columns per row (also the row stride), split into SH shards; partitions PS per row, this range's first P0;
 // candidate ids offset by LO (a sub-range of the vocabulary, e.g. the drafter's special-token tail).
@@ -545,7 +555,7 @@ kernel void row_top16_shard(device const bfloat* logits [[buffer(0)]], device in
                             uint2 tg [[threadgroup_position_in_grid]], uint tid [[thread_index_in_threadgroup]],
                             uint lane [[thread_index_in_simdgroup]], uint sg [[simdgroup_index_in_threadgroup]]) {
   threadgroup float bv[8];
-  threadgroup int bt[8];
+  threadgroup int bt[16];
   threadgroup int winner;
   const int sh = tg.x, row = tg.y, chunk = (p.V + p.SH - 1) / p.SH, lo = sh * chunk, n = max(0, min(p.V, lo + chunk) - lo);
   device const bfloat* l = logits + (size_t)row * p.V + lo;
@@ -558,11 +568,86 @@ kernel void top16_merge(device const int* cpart [[buffer(0)]], device const floa
                         uint tid [[thread_index_in_threadgroup]], uint lane [[thread_index_in_simdgroup]],
                         uint sg [[simdgroup_index_in_threadgroup]]) {
   threadgroup float bv[8];
-  threadgroup int bt[8];
+  threadgroup int bt[16];
   threadgroup int winner;
   const size_t o = (size_t)row * p.PS * TOPK;
   top16_pop([&](int i, thread float& v, thread int& id) { v = vpart[o + i]; id = cpart[o + i]; }, p.PS * TOPK, tid, lane,
             sg, cand, unary, row, bv, bt, winner);
+}
+
+// The verify rows' top-K for speculative sampling (Codex review 2026-11-04, R03): K = 64 covers top_k up to 64 exactly
+// (Qwen's recommended 20 included). Same two stages as above, K survivors per shard.
+template <int K>
+kernel void row_topk_shard(device const bfloat* logits [[buffer(0)]], device int* cpart [[buffer(1)]],
+                           device float* vpart [[buffer(2)]], constant Top16Args& p [[buffer(3)]],
+                           uint2 tg [[threadgroup_position_in_grid]], uint tid [[thread_index_in_threadgroup]],
+                           uint lane [[thread_index_in_simdgroup]], uint sg [[simdgroup_index_in_threadgroup]]) {
+  threadgroup float bv[8];
+  threadgroup int bt[16];
+  threadgroup int winner;
+  const int sh = tg.x, row = tg.y, chunk = (p.V + p.SH - 1) / p.SH, lo = sh * chunk, n = max(0, min(p.V, lo + chunk) - lo);
+  device const bfloat* l = logits + (size_t)row * p.V + lo;
+  topk_pop<K>([&](int i, thread float& v, thread int& id) { v = l[i]; id = p.LO + lo + i; }, n, tid, lane, sg, cpart,
+              vpart, row * p.PS + p.P0 + sh, bv, bt, winner);
+}
+template <int K>
+kernel void topk_merge(device const int* cpart [[buffer(0)]], device const float* vpart [[buffer(1)]],
+                       device int* cand [[buffer(2)]], device float* unary [[buffer(3)]],
+                       constant Top16Args& p [[buffer(4)]], uint row [[threadgroup_position_in_grid]],
+                       uint tid [[thread_index_in_threadgroup]], uint lane [[thread_index_in_simdgroup]],
+                       uint sg [[simdgroup_index_in_threadgroup]]) {
+  threadgroup float bv[8];
+  threadgroup int bt[16];
+  threadgroup int winner;
+  const size_t o = (size_t)row * p.PS * K;
+  topk_pop<K>([&](int i, thread float& v, thread int& id) { v = vpart[o + i]; id = cpart[o + i]; }, p.PS * K, tid, lane,
+              sg, cand, unary, row, bv, bt, winner);
+}
+#define TOPK_INST(K)                                                                                                   \
+  template [[host_name("row_top" #K "_shard_v")]] kernel void row_topk_shard<K>(device const bfloat*, device int*,      \
+      device float*, constant Top16Args&, uint2, uint, uint, uint);                                                      \
+  template [[host_name("top" #K "_merge_v")]] kernel void topk_merge<K>(device const int*, device const float*,       \
+      device int*, device float*, constant Top16Args&, uint, uint, uint, uint);
+TOPK_INST(16)
+TOPK_INST(64)
+
+// Per shard of each verify row: (max logit m, sum over the shard of exp((l - m) / t)) at the row's sequence's
+// temperature, for sequences sampling with top_k off (spec_accept_s needs the full softmax normaliser to place the
+// top_p cut exactly). Rows of other sequences write (-inf, 0). grid (SH, n_out), 256 threads.
+struct SampParams { float t, top_p; int top_k; uint seed; };
+kernel void verify_zpart(device const bfloat* logits [[buffer(0)]], device float2* zpart [[buffer(1)]],
+                         constant Top16Args& p [[buffer(2)]], device const SampParams* samp [[buffer(3)]],
+                         device const int* out_base [[buffer(4)]], constant int& S [[buffer(5)]],
+                         device const int* spec [[buffer(6)]],
+                         uint2 tg [[threadgroup_position_in_grid]], uint tid [[thread_index_in_threadgroup]],
+                         uint lane [[thread_index_in_simdgroup]], uint sg [[simdgroup_index_in_threadgroup]]) {
+  threadgroup float red[8];
+  const int sh = tg.x, row = tg.y;
+  int b = 0;  // the row's sequence: the last b with out_base[b] <= row
+  for (int lo = 0, hi = S - 1; lo <= hi;) { const int mid = (lo + hi) / 2; if (out_base[mid] <= row) { b = mid; lo = mid + 1; } else hi = mid - 1; }
+  const SampParams sp = samp[b];
+  const bool want = spec[b] && sp.t > 0 && sp.top_k <= 0;
+  if (!want) { if (tid == 0) zpart[(size_t)row * p.SH + sh] = float2(-INFINITY, 0); return; }
+  const int chunk = (p.V + p.SH - 1) / p.SH, lo = sh * chunk, n = max(0, min(p.V, lo + chunk) - lo);
+  device const bfloat* l = logits + (size_t)row * p.V + lo;
+  float m = -INFINITY;
+  for (int i = tid; i < n; i += 256) m = max(m, float(l[i]));
+  m = simd_max(m);
+  if (lane == 0) red[sg] = m;
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  m = red[0];
+  for (int k = 1; k < 8; k++) m = max(m, red[k]);
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  float z = 0;
+  if (m > -INFINITY) for (int i = tid; i < n; i += 256) z += exp((float(l[i]) - m) / sp.t);
+  z = simd_sum(z);
+  if (lane == 0) red[sg] = z;
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  if (tid == 0) {
+    float t = 0;
+    for (int k = 0; k < 8; k++) t += red[k];
+    zpart[(size_t)row * p.SH + sh] = float2(m, t);
+  }
 }
 
 // DFlash2 candidate selector, greedy: walk the block's draft positions p = 1..R-1; the score of candidate c is
@@ -605,26 +690,38 @@ kernel void draft_select(device const int* cand [[buffer(0)]],
   }
 }
 
-// Speculative sampling (temperature > 0), 2026-10-31. The drafter's proposal is deterministic (a point mass on d), so
-// the exact rule is: accept d with the target's probability p(d) (after temperature, top-k, top-p), otherwise emit a
-// sample from p with d removed, renormalised; if every draft is accepted, sample the bonus from the last row. p comes
-// from each verify row's top-16 logits (vcand/vun, descending), so top-k is capped at 16; top-p normally cuts well
-// inside that. Greedy sequences (t <= 0) take the argmax path exactly as spec_accept. samp[b] = {t, top_p, top_k, seed}.
-struct SampParams { float t, top_p; int top_k; uint seed; };
+// Speculative sampling (temperature > 0), 2026-10-31; exact candidate sets 2026-11-04 (Codex review R03). The drafter's
+// proposal is deterministic (a point mass on d), so the exact rule is: accept d with the target's probability p(d)
+// (after temperature, top-k, top-p: src/sampling.h), otherwise emit a sample from p with d removed, renormalised; if
+// every draft is accepted, sample the bonus from the last row. p comes from each verify row's top-K logits (vcand/vun,
+// descending; K = 64 by default, SPEC_TOPK). top_k 1..K: exact (the host admits nothing larger). top_k off: the top_p
+// cut is placed against the full softmax normaliser (verify_zpart) and is exact when it falls inside the K candidates;
+// when it does not, the row is handed to the host (host[b] = row: the host samples it from the full logits; drafts
+// before it are committed as usual) and its emit slot holds a valid placeholder id. Greedy sequences (t <= 0) take the
+// argmax path exactly as spec_accept. samp[b] = {t, top_p, top_k, seed}.
 inline float u01(uint seed, uint i) {
   uint x = seed + 0x9E3779B9u * (i + 1);
   x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16;
   return (float)(x >> 8) * (1.0f / 16777216.0f);
 }
-// Row weights w[0..n) (unnormalised, descending) after temperature, top-k and top-p; returns n.
-inline int row_dist(device const float* lv, SampParams sp, thread float* w, thread float& Z) {
-  const int k = sp.top_k > 0 ? min(sp.top_k, TOPK) : TOPK;
+constant constexpr int VKMAX = 64;
+// Row weights w[0..n) (unnormalised, descending) after temperature, top-k and top-p; returns n, or -1 when the top_p
+// cut lies beyond the K candidates (top_k off). zp: the row's SH shard partials (top_k off only).
+inline int row_dist(device const float* lv, SampParams sp, int K, device const float2* zp, int SH, thread float* w,
+                    thread float& Z) {
+  const int k = sp.top_k > 0 ? min(sp.top_k, K) : K;
   float s = 0;
   for (int j = 0; j < k; j++) { w[j] = exp((lv[j] - lv[0]) / sp.t); s += w[j]; }
+  if (sp.top_k <= 0) {  // the full normaliser, relative to the row maximum lv[0]
+    float zf = 0;
+    for (int h = 0; h < SH; h++) if (zp[h].y > 0) zf += zp[h].y * exp((zp[h].x - lv[0]) / sp.t);
+    s = max(zf, s);
+  }
   const float cut = sp.top_p * s;
   int n = 0;
   Z = 0;
   while (n < k) { Z += w[n++]; if (Z >= cut) break; }
+  if (sp.top_k <= 0 && Z < cut) return -1;
   return n;
 }
 kernel void spec_accept_s(device const int* tok [[buffer(0)]],
@@ -639,9 +736,13 @@ kernel void spec_accept_s(device const int* tok [[buffer(0)]],
                           device const SampParams* samp [[buffer(9)]],
                           device const int* vcand [[buffer(10)]],
                           device const float* vun [[buffer(11)]],
+                          constant int2& kz [[buffer(12)]],  // (K, SH)
+                          device const float2* zpart [[buffer(13)]],
+                          device int* host [[buffer(14)]],
                           uint b [[thread_position_in_grid]]) {
   if ((int)b >= S) return;
   int r0 = seq_start[b], L = seq_len[b];
+  host[b] = -1;
   if (!spec[b]) { commit[b] = L; return; }
   int ob = out_base[b], a = 0;
   const SampParams sp = samp[b];
@@ -652,10 +753,17 @@ kernel void spec_accept_s(device const int* tok [[buffer(0)]],
     emit[b * MAX_BLOCK + a] = pred[ob + a];
     return;
   }
-  float w[TOPK], Z;
+  const int K = kz.x, SH = kz.y;
+  float w[VKMAX], Z;
   for (int i = 0; i < L; i++) {
-    device const int* ids = vcand + (size_t)(ob + i) * TOPK;
-    const int n = row_dist(vun + (size_t)(ob + i) * TOPK, sp, w, Z);
+    device const int* ids = vcand + (size_t)(ob + i) * K;
+    const int n = row_dist(vun + (size_t)(ob + i) * K, sp, K, zpart + (size_t)(ob + i) * SH, SH, w, Z);
+    if (n < 0) {  // not exact within K candidates: the host samples this row from the full logits
+      emit[b * MAX_BLOCK + i] = ids[0];
+      host[b] = i;
+      commit[b] = i + 1;
+      return;
+    }
     if (i < L - 1) {
       const int d = tok[r0 + 1 + i];
       int jd = -1;

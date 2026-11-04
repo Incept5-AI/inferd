@@ -267,8 +267,11 @@ measured faster single-stream), fewer dispatches (a decode step is ~1,250 dispat
   **Difficulty:** M.
 
 ### P2-4. Speculative sampling: lift the top-k ≤ 16 cap
-- **Evidence:** `engine/README.md` and "0.1.1". The sampled path uses the GPU top-16 per verify row.
-  **Difficulty:** M.
+- **Evidence:** `engine/README.md` and "0.1.1". The sampled path uses the GPU top-16 per verify row. Since 2026-11-04
+  (Codex review R03) requests it cannot draw exactly (top-k 0 or > 16) decode one token per step on the host sampler
+  instead of being truncated silently, so the default request (temperature 0.7, top-k 0) is no longer speculated.
+  Lifting the cap means a full-vocabulary softmax (log-sum-exp per verify row) and a full-vocabulary resample on the
+  GPU. **Difficulty:** M.
 
 ### P2-5. Batch invariance (deterministic output across load)
 - **Evidence:** "DFlash2" lossless check. The engine isn't bit-level batch-invariant, and W4A8 makes speculative and

@@ -112,8 +112,8 @@ curl localhost:8300/v1/chat/completions -H 'Content-Type: application/json' \
 - Sizing per machine is in `engine/README.md`. For example, a 64 GB Mac uses `8300 16 1024 24 30 147456` with
   `SPILL_DIR=… SPILL_GIB=96`, and a 32 GB Mac uses `8300 4 1024 3 8 40960` with an SSD tier. **On the Mac Studio,
   give an explicit KV size**: auto sizing (`kv_gib` 0) has hung it with a small model.
-- Without `DRAFT`, speculation is off. Requests with `temperature` > 0 use exact speculative sampling. When
-  `temperature` is absent, the front end defaults it to 0.7, so pass `0` for greedy.
+- Without `DRAFT`, speculation is off. Requests with `temperature` > 0 use speculative sampling where it is exact: `top_k` 1–64 (the GPU sampler sees each verify row's top 64 logits), or `top_k` off with `top_p` < 1 (the nucleus is placed against the full softmax; a row whose nucleus does not fit in the 64 is sampled by the host, `inferd.sampling.host_sampled_rows`). `top_k` above 64, or off with `top_p` 1, decodes one token per step on the host sampler (the full distribution); `"inferd": {"spec_sampling": "truncate"}` opts into truncation to the 64 candidates instead. Omitted `top_k` / `top_p` come from the checkpoint's `generation_config.json` (Qwen3.8: 20 / 0.95), so the default sampled request is speculated. The response's `inferd.sampling` reports the effective settings (src/sampling.h, Codex review 2026-11-04 R03). When
+  `temperature` is absent, the front end defaults it to 0.7 (`top_k`/`top_p` from generation_config.json): pass `0` for greedy.
 - API: `/v1/chat/completions` (streaming or not, `usage.prompt_tokens_details.cached_tokens`, `reasoning_content` when
   thinking is on; `chat_template_kwargs: {"enable_thinking": false}` turns thinking off), `/v1/models` and `/health`.
   Also implemented: tool calls (`tools` / `tool_calls`, streaming and not), `stop` strings, `response_format`
@@ -129,9 +129,14 @@ Run these after every kernel or scheduler change. They take seconds to minutes. 
 ```bash
 cd engine
 export M=$MODEL D=$DRAFT
-$PY tools/ref_logits.py make $M /tmp/toks.txt 4 24
-for c in 1 5 24; do ./build/decode_test check $M /tmp/toks.txt /tmp/eng.bin $c && $PY tools/ref_logits.py compare $M /tmp/toks.txt /tmp/eng.bin; done
-#   expect: top1 ok on every sequence, cos >= 0.999 on seqs 1-3, typically 0.9995+ (seq 0 is a deliberately fragile repetitive prompt)
+$PY tools/ref_logits.py make $M /tmp/toks.txt 4 2048     # seq 0 repetitive, 1-3 real text (docs, scheduler source)
+for c in 1 24 256 1536; do ./build/decode_test check $M /tmp/toks.txt /tmp/eng.bin $c && $PY tools/ref_logits.py compare $M /tmp/toks.txt /tmp/eng.bin; done
+#   compare fails (exit 1) on non-finite logits, a top-1 difference (bf16 near-ties are reported as TIE), and on seqs 1-3
+#   cos < 0.995 or KL > 0.03 at 2,048 tokens (0.999 / 0.01 for prompts <= 48 tokens), on seq 0 (a deliberately fragile
+#   repetitive prompt) cos < 0.99 or KL > 0.05. Measured on the Studio at 2,048 tokens: cos 0.9972-0.9996, KL <= 0.015
+#   (the code sequence lowest), with 8-bit and bf16 KV alike.
+#   For a quick check after a small change, `make ... 4 24` with chunks 1 5 24 still works (it never reaches the 256+
+#   row kernels).
 ./build/decode_test bench $M 1,16,64 2048          # decode step at B = 1/16/64
 ./build/decode_test bench $M 1,8,16 2048 5         # 5-row verify blocks
 ./build/decode_test bench $M 1 8192 8              # 8-row verify block (single-stream speculation)
@@ -268,8 +273,10 @@ Each of these has already cost someone hours. Most come with a study-log post-mo
 ## Release gate
 
 Every pull request runs the host-only tests in CI (`.github/workflows/host-tests.yml`): the native JSON parser,
-grammar/sampler and SSD-tier tests under AddressSanitizer and UndefinedBehaviorSanitizer, and the front end's
-structured-output, tool-call, stop-string, streaming and benchmark-client tests. They need no GPU and no weights.
+protocol, grammar/sampler and SSD-tier tests under AddressSanitizer and UndefinedBehaviorSanitizer, and the front
+end's hardening (auth, budgets, validation, Unicode, cancellation, disconnects over a real socket, context admission),
+structured-output, tool-call, stop-string, streaming, image-decoder, logits-gate-fixture and benchmark-client tests.
+They need no GPU and no weights; `engine/requirements-test.txt` lists their Python packages.
 
 A release candidate also passes the hardware gate on each qualified Mac, from `engine/` after `./build.sh`, with no
 other model process running:
@@ -277,6 +284,11 @@ other model process running:
 ```bash
 PY=~/.venvs/inferd/bin/python tools/release_gate.sh $M $D    # host tests, logits vs mlx_lm, bench, spec = plain
 ```
+
+The gate's log starts with the machine, macOS version and build, the metallib and binary sha-256 and the model and
+drafter config hashes. Its logits step runs 4 prompts of 2,048 tokens at chunks 1, 24, 256 and 1,536 (the 256+ row
+kernels are where a wrong build target broke logits before), with the thresholds above. The bench step is skipped,
+with a note in the log, when Metal's GPU budget is under 40 GiB. Run it on every supported macOS version and build.
 
 Then the fleet gates with a server running: `conc.py --mode followup` at 16k × 8/16/32, `wall.py` N = 1–8, mixed
 arrivals and SSD pressure ([TESTING](docs/TESTING.md)). Record the commit, binary and metallib hashes, the model and

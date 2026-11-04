@@ -1,0 +1,11 @@
+# Host-only test dependencies (CI and tools/release_gate.sh; Codex review 2026-11-04, R08): the front end's ASGI stack
+# for frontend/test_hardening.py (FastAPI, uvicorn for the real-socket disconnect tests, httpx), the chat-template
+# engine, transformers (serve.py imports it; the startup checks run serve.py itself), Pillow for the image decoder tests, numpy for the logits-gate fixtures. Versions as in requirements.txt.
+# frontend/test_vision.py also needs the model stack (mlx, mlx-vlm, transformers: requirements.txt) and a Metal device.
+fastapi==0.143.0
+uvicorn==0.54.0
+httpx==0.28.1
+jinja2==3.1.6
+transformers==5.19.0
+pillow==13.0.0
+numpy==2.5.4

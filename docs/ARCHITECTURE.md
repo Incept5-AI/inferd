@@ -533,7 +533,17 @@ sequenceDiagram
 - **Speculative sampling** (`spec_accept_s`, 0.1.1): the drafter's proposal is a point mass on d, so the exact rule is:
   accept d with the target's probability p(d) after temperature, top-k and top-p, otherwise emit a sample from p with
   d removed and renormalised; if all drafts are accepted, sample the bonus from the last row. p comes from each verify
-  row's top-16 (computed on the GPU), so **top-k is capped at 16** on this path. Per-sequence `{t, top_p, top_k,
+  row's top-K, computed on the GPU (`row_top64_shard_v` + `top64_merge_v`; K = 64, `SPEC_TOPK=16` for the old set;
+  ties by token id, the host's order; a step whose sampled sequences all have top-k 1..16 uses the 16-candidate
+  kernels, ~5% cheaper at 16k x 8 sampled agents on the Studio). Since 2026-11-04 (Codex review R03) the rule is exact by construction: top-k
+  1..64 draws from the full top-k set; with top-k off and top-p < 1, `verify_zpart` sums each row's softmax normaliser
+  over the whole vocabulary (64 shards) and the nucleus is cut against it, so it is exact whenever the nucleus fits in
+  the 64 candidates; a row where it does not is handed to the host (`vhost`), which samples it from the full logits
+  under `src/sampling.h` and replaces the placeholder (counted: `spec_host` in the done event, `spec_sampling` in
+  `/v1/cache`). `Scheduler::submit` does not speculate the rest (top-k above 64, or off with top-p 1): one token per
+  step on the host sampler, unless the request opts into truncation to the 64 (`spec_truncate`; front end
+  `"inferd": {"spec_sampling": "truncate"}`). Before, the host path silently capped "no limit" at 1,024 candidates and
+  this path at 16, and the GPU broke logit ties by thread rather than by id. Per-sequence `{t, top_p, top_k,
   seed}` live in `samp`; a counter hash gives the uniforms. `SPEC_SAMPLE=0` restores plain (non-speculated) sampling
   *(study log: "0.1.1: speculative sampling (2026-10-31 night)")*.
 
@@ -614,7 +624,10 @@ client, the MIL program generator and the kernels here are our own.
 
 ## 14. Vision
 
-Images work end to end through the OpenAI API (`image_url` parts: data URI, http(s) or local path) for checkpoints that
+Images work end to end through the OpenAI API (`image_url` parts: an inline data URI; http(s) URLs and local paths
+only when enabled, `INFERD_IMAGE_URLS=1` / `INFERD_IMAGE_FILES=1`) in **PNG, JPEG, WebP or GIF** (first frame): the
+decoder identifies nothing else, whatever the data URI's media type says, and runs in a child process killed after
+`INFERD_IMAGE_DECODE_TIMEOUT` s (`frontend/image_decode.py`; Codex review 2026-11-04 R01), for checkpoints that
 carry the vision tower *(study log: "Vision (2026-10-29 night)")*:
 
 - **Front end** (`frontend/vision.py`): the Hugging Face processor renders the template and expands each image's pad
@@ -836,7 +849,8 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 | `SPEC_AUTO` | 1 | BlockTuner chooses the block per regime |
 | `SPEC_BLOCKS` | unset | fixed block by load, e.g. `8:4,16:3` |
 | `SPEC_WIDE` | 4 | most decoders that keep the full block in the fixed rule |
-| `SPEC_SAMPLE` | 1 | speculate sampled requests with exact speculative sampling |
+| `SPEC_SAMPLE` | 1 | speculate sampled requests the GPU sampler draws exactly (top_k 1-64, or off with top_p < 1) |
+| `SPEC_TOPK` | 64 | speculative sampling candidates per verify row (16 or 64) |
 | `DRAFT_BLOCK` | drafter `block_size`, ≤ 8 | largest block |
 | `DRAFT_BITS` | 4 | drafter layer linears 4- or 8-bit |
 | `DRAFT_VOCAB` | 0 | drafter vocabulary cut (e.g. 98304) |

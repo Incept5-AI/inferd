@@ -202,7 +202,8 @@ int main() {
     return out;
   };
   auto freq = [&](const char* name, const char* schema, const std::vector<std::string>& bytes,
-                  const std::vector<float>& logits, const std::vector<int>& allowed, float temp, float top_p, int top_k) {
+                  const std::vector<float>& logits, const std::vector<int>& allowed, float temp, float top_p, int top_k,
+                  int N = 200000) {
     auto v = std::make_shared<gram::Vocab>();
     v->bytes = bytes;
     v->text.assign(bytes.size(), 1);
@@ -210,7 +211,7 @@ int main() {
     auto g = std::make_shared<const gram::Grammar>(json::parse(schema));
     std::vector<uint16_t> lg;
     for (float x : logits) lg.push_back(bf(x));
-    const int V = (int)lg.size(), N = 200000;
+    const int V = (int)lg.size();
     std::vector<int> cnt(V, 0);
     std::mt19937_64 rng(7);
     for (int i = 0; i < N; i++) { gram::Matcher m(g, -1); cnt[m.sample(lg.data(), V, temp, top_p, top_k, rng, {})]++; }
@@ -252,6 +253,78 @@ int main() {
     freq("digits, top_k 3, temp 0.7", S, b, lg, al, 0.7f, 1.0f, 3);
     freq("digits, top_p 0.6", S, b, lg, al, 1.0f, 0.6f, 0);
     freq("digits, top_p 0.9, top_k 3, temp 1.3", S, b, lg, al, 1.3f, 0.9f, 3);
+  }
+
+  // ---- the unconstrained sampler (Codex review 2026-11-04, R03): the same contract (src/sampling.h), top_k 0 = no
+  // limit. Broad logits: 40 tokens near the top and a long tail, so top_k 0 / 16 / 20 and top_p cut in different places.
+  auto ufreq = [&](const char* name, const std::vector<float>& logits, float temp, float top_p, int top_k) {
+    std::vector<uint16_t> lg;
+    for (float x : logits) lg.push_back(bf(x));
+    const int V = (int)lg.size(), N = 60000;
+    std::vector<int> all(V);
+    for (int i = 0; i < V; i++) all[i] = i;
+    std::vector<int> cnt(V, 0);
+    std::mt19937_64 rng(11);
+    for (int i = 0; i < N; i++) cnt[sampling::sample(lg.data(), V, temp, top_p, top_k, rng)]++;
+    auto e = expected(lg, all, temp, top_p, top_k);
+    double chi = 0;
+    int df = -1, support = 0;
+    bool leak = false;
+    for (int t = 0; t < V; t++) {
+      if (e[t] == 0) { leak |= cnt[t] > 0; continue; }
+      support++;
+      if (N * e[t] < 5) continue;  // pooled below: chi-square needs expected counts >= 5
+      chi += (cnt[t] - N * e[t]) * (cnt[t] - N * e[t]) / (N * e[t]);
+      df++;
+    }
+    runs++;
+    if (leak || chi > df + 6 * std::sqrt(2.0 * std::max(df, 1)) + 10) {
+      fails++;
+      printf("FAIL ufreq %s: chi2 %.1f (df %d)%s\n", name, chi, df, leak ? ", mass outside the support" : "");
+    } else {
+      printf("ufreq %-33s chi2 %6.1f df %d support %d ok\n", name, chi, df, support);
+    }
+    return support;
+  };
+  {
+    std::vector<float> lg(1500);  // more than 1,024 tokens in the support
+    for (int i = 0; i < 1500; i++) lg[i] = i < 40 ? 1.0f - 0.01f * i : -2.0f - 0.001f * i;  // flat head, long tail
+    std::swap(lg[3], lg[1400]);  // the order is by logit, not by id
+    auto sup = [&](int n, int want) {
+      runs++;
+      if (n != want) { fails++; printf("FAIL support %d, want %d\n", n, want); }
+    };
+    sup(ufreq("broad, top_k 0 (no limit), t 1", lg, 1.0f, 1.0f, 0), 1500);  // 1,024 before 2026-11-04
+    sup(ufreq("broad, top_k 16", lg, 1.0f, 1.0f, 16), 16);
+    sup(ufreq("broad, top_k 20", lg, 1.0f, 1.0f, 20), 20);  // speculative steps used 16 here
+    ufreq("broad, top_k 20, t 0.6", lg, 0.6f, 1.0f, 20);
+    ufreq("broad, top_p 0.3", lg, 1.0f, 0.3f, 0);
+    ufreq("broad, top_p 0.95 (deep tail)", lg, 1.0f, 0.95f, 0);
+    ufreq("broad, top_p 0.9, top_k 20", lg, 1.0f, 0.9f, 20);
+    std::vector<float> eq(20, 0.5f);  // the review's case: 20 equally likely tokens, top_k 20, top_p 1
+    eq.resize(200, -30.0f);
+    sup(ufreq("20 equal, top_k 20", eq, 1.0f, 1.0f, 20), 20);
+  }
+  {  // the speculative gate: the GPU sampler sees K (64, or 16) candidates per row
+    struct G { float t; int k; float p; int K; bool want; } gates[] = {
+        {0, 0, 1, 64, true}, {0, 100, 1, 64, true}, {1, 0, 1, 64, false}, {1, 0, 0.95f, 64, true}, {1, 1, 1, 64, true},
+        {1, 16, 1, 64, true}, {1, 20, 0.95f, 64, true}, {1, 64, 1, 64, true}, {1, 65, 1, 64, false},
+        {0.6f, -1, 1, 64, false}, {1, 20, 1, 16, false}, {1, 16, 1, 16, true}};
+    for (auto& g : gates) {
+      runs++;
+      if (sampling::spec_exact(g.t, g.k, g.p, g.K) != g.want) {
+        fails++;
+        printf("FAIL spec_exact(%g, %d, %g, %d)\n", g.t, g.k, g.p, g.K);
+      }
+    }
+  }
+  {  // grammar + top_k 0 beyond 1,024 allowed tokens: every allowed token is in the support now
+    std::vector<std::string> b;
+    std::vector<float> lg;
+    for (int i = 0; i < 2200; i++) { b.push_back(std::to_string(i % 10)); lg.push_back(-0.0005f * i); }
+    std::vector<int> al;
+    for (int i = 0; i < 2200; i++) if (i % 10 < 5) al.push_back(i);
+    freq("digits 0-4 of 2200 (1100 allowed), top_k 0", R"({"enum":[0,1,2,3,4]})", b, lg, al, 1.0f, 1.0f, 0, 30000);
   }
 
   printf("%d/%d passed\n", runs - fails, runs);

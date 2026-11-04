@@ -15,7 +15,8 @@ Model: **Qwen3.8-27B** (mlx-community 4-bit, 8-bit or bf16) with the **incoai Qw
 - macOS 27 for the prebuilt `build/` (it refuses to start on macOS 26). On macOS 26 or 27 you can build from source with
   Xcode's Metal toolchain (`./build.sh`; if it reports "missing Metal Toolchain", run
   `xcodebuild -downloadComponent MetalToolchain` once, about 690 MB).
-- Python 3.12 with `fastapi uvicorn transformers` for the OpenAI front end, plus `mlx mlx-vlm pillow numpy` for images.
+- Python 3.12 with `fastapi uvicorn transformers` for the OpenAI front end, plus `mlx mlx-vlm pillow numpy` for images (`requirements.txt`: Pillow 13.0.0, which fixes decoder advisories in
+  12.3.0). `requirements-test.txt` is the host-test set (CI).
 - Weights: `mlx-community/Qwen3.8-27B-4bit` (text only) or `lmstudio-community` 4-bit / mlx-community 8-bit (with
   the vision tower), and `incoai/Qwen3.8-27B-DFlash2`.
 
@@ -96,10 +97,13 @@ an OpenAI-style error (`max_tokens: 0`, non-finite numbers, wrong types, a sessi
 | `INFERD_MAX_PROMPT_TOKENS` / `INFERD_MAX_OUTPUT_TOKENS` | 1048576 / 262144 | rendered prompt; `max_tokens` |
 | `INFERD_EVENT_QUEUE` | 8192 | engine events buffered for a client that stops reading its stream; beyond it the request is cancelled with an SSE error |
 | `INFERD_TOKCACHE_MB` | 256 | tokenizer cache, measured in retained bytes (strings, 4-byte token arrays, entries) |
-| `INFERD_MAX_CONTEXTS` | 256 | saved contexts |
+| `INFERD_MAX_CONTEXTS` | 256 | saved contexts (a create reserves its slot before it computes: concurrent creates cannot overshoot) |
+| `INFERD_MAX_CONTEXT_MB` | 1024 | estimated bytes all saved contexts retain in the front end (messages, tools, token ids) |
+| `INFERD_EVENT_TIMEOUT` | 1800 s (0: off) | a request with no engine event for this long is abandoned (HTTP 504 / SSE error) and cancelled |
+| `INFERD_IMAGE_DECODE` / `INFERD_IMAGE_DECODE_TIMEOUT` | `subprocess` / 10 s | images (PNG, JPEG, WebP, GIF only) decode in a child process killed at the deadline; `inline` decodes in the front end |
 | `INFERD_MAX_SESSIONS` / `INFERD_SESSION_TTL` | 4096 / 0 (off) | session ids kept; the least recently used idle ones, or those idle past the TTL, are dropped from the engine |
-| `INFERD_RETRY_AFTER` | 2 s | the `Retry-After` value | Every request is speculated: greedy ones verify the drafts exactly, sampled ones (temperature > 0) use exact
-speculative sampling (top-k is capped at 16 on that path; `SPEC_SAMPLE=0` turns it off).
+| `INFERD_RETRY_AFTER` | 2 s | the `Retry-After` value | Greedy requests are always speculated (the drafts are verified exactly). Sampled ones (temperature > 0) use
+speculative sampling where it is exact: `top_k` 1–64 (the GPU sampler sees each verify row's top 64 logits), or `top_k` off with `top_p` < 1 (the nucleus is placed against the full softmax; a row whose nucleus does not fit in the 64 is sampled by the host, `inferd.sampling.host_sampled_rows`). `top_k` above 64, or off with `top_p` 1, decodes one token per step on the host sampler (the full distribution); `"inferd": {"spec_sampling": "truncate"}` opts into truncation to the 64 candidates instead. Omitted `top_k` / `top_p` come from the checkpoint's `generation_config.json` (Qwen3.8: 20 / 0.95), so the default sampled request is speculated. The response's `inferd.sampling` reports the effective settings (src/sampling.h, Codex review 2026-11-04 R03). `SPEC_SAMPLE=0` turns speculative sampling off.
 
 ### Sizing by machine
 

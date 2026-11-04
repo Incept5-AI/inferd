@@ -38,6 +38,7 @@ clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framew
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/qa8_dbg.mm -o build/qa8_dbg  # QA8 kernel vs CPU
 clang++ -std=c++20 -O2 tools/tree_sim.cc -o build/tree_sim
 clang++ -std=c++20 -O2 tools/grammar_test.cc -o build/grammar_test  # host-only: src/grammar.h (structured output)
+clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/spec_sample_test.mm -o build/spec_sample_test  # GPU, no model: speculative sampler vs src/sampling.h
 # Host-only tests (Codex review 2026-11-02, S07/S08): strict JSON reader, safetensors header validation, SSD tier.
 # weights_test also runs every loader family on malformed-but-self-consistent checkpoints (2026-11-03, R01; it needs
 # build/core.metallib, built above) and spill_test failed writes (R05). Under ASan/UBSan: see each test's header.

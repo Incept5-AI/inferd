@@ -821,7 +821,10 @@ Notes:
   for 8 agents from 64k and ties at 16k; 16 agents want block 4 at 16k and block 8 at 128k.
 - `spec_test` reports ~1.01 tokens per cycle on short chat prompts and ~2.5 on the competition prompt; that is the
   tool, not the engine. Measure acceptance through the server.
-- Sampled requests (0.1.1) use the same drafter with exact speculative sampling (top-k capped at 16 on that path).
+- Sampled requests (0.1.1) use the same drafter with speculative sampling from each verify row's top 16. Since
+  2026-11-04 that path keeps 64 candidates and is exact for top-k 1–64 and for top-p with top-k off (rows whose nucleus
+  does not fit are sampled on the host); other settings decode one token per step unless the request opts into
+  truncation. Results recorded before then with top-k 0 or 20 ran truncated to 16 on speculative steps.
 
 ---
 
@@ -1133,6 +1136,27 @@ Gates: with QA8=0 logits byte-identical to the previous build; with QA8=1 top-1 
 (cos 0.9992–0.9998 at 256/1536); long-context KL 0.00123 vs PF8's 0.00144. Splash's M6 prefill lead drops from ~1.9x
 to ~1.2x. Open: an M6 decode run measured 4–7% slower in the QA8 arm (QA8 never runs on decode steps; probably heat),
 being re-run in the opposite order.
+
+## (s) Review fixes, 4 November (code, security and claims review R01–R08)
+
+All eight engine findings of the 4 November review are fixed (details: [docs/CHANGES-review-2026-11-04.md](CHANGES-review-2026-11-04.md)).
+Gated on the Mac Studio on cc133d1 + fixes: release gate (4 x 2,048-token prompts at chunks 1/24/256/1536, finite logits,
+top-1, cos/KL floors), 14/14 live server checks, host tests under ASan/UBSan (grammar 105, json 96, spill 39, weights 64),
+front-end suites (hardening 44, structured 31, tools 16, stream 7, image decode 9, vision 12, logits fixtures 8).
+
+Sampling now follows one contract on every path, and stays speculative for the common settings (16k follow-ups,
+temperature 0.7, top_p 0.95, Studio):
+
+| setting | before | after |
+|---|---|---|
+| top_k 20, one agent | 46.3 tok/s (not speculated) | **86.3** |
+| top_k 20, 8 agents | 173.7 | **477–483** |
+| top_k 16, 8 agents | 492 | 484–490 |
+| greedy, 1 / 8 / 32 agents | 145 / 491 / 624 | 145.7 / 507.5 / 715.9 |
+
+Requests that omit top_k/top_p take the model's generation_config.json defaults (Qwen3.8: 20 / 0.95), like vLLM. top_k
+above 64 (or top_k off with top_p 1) decodes one token per step unless the request opts into `"spec_sampling":
+"truncate"`. The greedy 32-agent gain comes from the cc133d1 base (QA8 frees the PF8 copies for KV), not from these fixes.
 
 ## Engine-level measurements
 

@@ -312,7 +312,7 @@ agent-fleet results")*. At the stock wired limit Splash does 7.3–8.1 turns/min
 | 9 | **KV-budget admission with preemption to the cache** | M6 32k × 4 deadlock (0.02 tok/s) → 12/12 turns in 121 s | "v10: KV-budget admission + preemption" |
 | 10 | **Grouped, contiguity-preserving KV allocation** | recovers the 10–22% that fragmentation cost; 128k × 4 241 → 270, 256k × 1 95 → 111 (release notes) | "v11…", "Diagnosed 2026-10-30: a full KV pool…" |
 | 11 | **BlockTuner**: draft block chosen per regime from measured step time × acceptance; tile-aware block rule | 128k × 8 263 → 289 tok/s; tile rule 16k × 8 375 → 406 | "Server A/B…", "Head-to-head…" |
-| 12 | **Exact speculative sampling on the GPU** for temperature > 0 | M5 Pro 16.9 → 42.9 tok/s single stream; 28 → 110 at 4 streams | "0.1.1: speculative sampling" |
+| 12 | **Speculative sampling on the GPU** for temperature > 0 (exact since 2026-11-04: top-k 1–64, or top-p with rows beyond 64 candidates sampled on the host) | M5 Pro 16.9 → 42.9 tok/s single stream; 28 → 110 at 4 streams | "0.1.1: speculative sampling" |
 | 13 | **Own AppleNeuralEngine client** (MIL generator, weights as per-layer re-quantized IOSurface inputs, two weight sets, rotated W8A8, residency) — design after Splash | M6 prime +23% in the server; M6 8k fleet 9.67 → 10.99 turns/min vs Splash 8.73 | "Neural Engine FFN split…", "Overnight agent-fleet results" |
 | 14 | **Content-keyed image token ids** so the prefix cache distinguishes images | same image hits 128 cached tokens; a changed image hits 0 | "Vision" |
 | 15 | **Incremental tokenization cache** in the front end | 84 ms → 0.09 ms per turn at 128k | "Front end: a turn re-tokenized…" |

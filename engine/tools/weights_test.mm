@@ -125,17 +125,25 @@ static int loader_cases() {
   const std::string pleq = R"({"quantization":{"bits":4,"group_size":64,"p.0":{"bits":4,"group_size":32},)"
                            R"("p.1":{"bits":4,"group_size":32},"p.2":{"bits":4,"group_size":32},"p.3":{"bits":4,"group_size":32}}})";
   // A small Qwen3.5-style config with one key overridden (or added): "key", "json value".
-  auto cfg = [](const std::string& key = "", const std::string& val = "") {
+  auto cfgm = [](const std::vector<std::pair<std::string, std::string>>& over) {
     std::map<std::string, std::string> c = {
         {"hidden_size", "128"}, {"intermediate_size", "256"}, {"num_hidden_layers", "4"}, {"vocab_size", "1000"},
         {"full_attention_interval", "4"}, {"num_attention_heads", "4"}, {"num_key_value_heads", "2"}, {"head_dim", "64"},
         {"rms_norm_eps", "1e-6"}, {"rope_theta", "1000000"}, {"partial_rotary_factor", "0.25"},
-        {"linear_num_key_heads", "2"}, {"linear_num_value_heads", "2"}, {"linear_key_head_dim", "64"},
+        {"linear_num_key_heads", "2"}, {"linear_num_value_heads", "2"}, {"linear_key_head_dim", "128"},
         {"linear_value_head_dim", "64"}, {"linear_conv_kernel_dim", "4"}};
-    if (!key.empty()) c[key] = val;
+    for (auto& [k, v] : over) c[k] = v;
     std::string o = "{";
     for (auto& [k, v] : c) o += (o.size() > 1 ? "," : "") + std::string("\"") + k + "\":" + v;
     return o + "}";
+  };
+  auto cfg = [&](const std::string& key = "", const std::string& val = "") {
+    return key.empty() ? cfgm({}) : cfgm({{key, val}});
+  };
+  // MoE geometry (Codex review 2026-11-04, R02): the routing kernels hold at most 512 experts.
+  auto moe_cfg = [&](const std::string& experts) {
+    return cfgm({{"num_experts", experts}, {"num_experts_per_tok", "2"}, {"moe_intermediate_size", "256"},
+                 {"shared_expert_intermediate_size", "256"}});
   };
   struct LC { const char* name; std::string config; std::vector<T> ts; const char* what; int want; };
   std::vector<LC> cases = {
@@ -193,6 +201,17 @@ static int loader_cases() {
       {"config vocab 2^31", cfg("vocab_size", "2147483648"), {{"x", "U8", {1}}}, "config", 1},
       {"config eps 0", cfg("rms_norm_eps", "0"), {{"x", "U8", {1}}}, "config", 1},
       {"config layer_types short", cfg("layer_types", "[\"linear_attention\"]"), {{"x", "U8", {1}}}, "config", 1},
+      // R02 (2026-11-04): kernel capacities. moe_513 is the review's probe config (accepted before: exit 0).
+      {"config experts 512", moe_cfg("512"), {{"x", "U8", {1}}}, "config", 0},
+      {"config experts 513 (R02 repro)", moe_cfg("513"), {{"x", "U8", {1}}}, "config", 1},
+      {"config experts 65536", moe_cfg("65536"), {{"x", "U8", {1}}}, "config", 1},
+      {"config experts 8", moe_cfg("8"), {{"x", "U8", {1}}}, "config", 0},
+      {"config conv kernel 3", cfg("linear_conv_kernel_dim", "3"), {{"x", "U8", {1}}}, "config", 1},
+      {"config conv kernel 5", cfg("linear_conv_kernel_dim", "5"), {{"x", "U8", {1}}}, "config", 1},
+      {"config linear key dim 64", cfg("linear_key_head_dim", "64"), {{"x", "U8", {1}}}, "config", 1},
+      {"config linear key dim 256", cfg("linear_key_head_dim", "256"), {{"x", "U8", {1}}}, "config", 1},
+      {"config head_dim 512", cfg("head_dim", "512"), {{"x", "U8", {1}}}, "config", 0},
+      {"config head_dim 1024", cfg("head_dim", "1024"), {{"x", "U8", {1}}}, "config", 1},
   };
   int fails = 0;
   for (auto& c : cases) {

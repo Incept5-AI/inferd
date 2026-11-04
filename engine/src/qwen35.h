@@ -78,6 +78,9 @@ constexpr int kSplitRows = 1024;
 constexpr int kSplitMaxN = 34816;  // widest output the split-K scratch is sized for (pmax)
 
 struct Qwen35Config {
+  // Kernel capacities the config is checked against (validate; Codex review 2026-11-04, R02). weights_test covers the
+  // boundaries; a kernel that changes one of these must change it here.
+  static constexpr int kMaxExperts = 512, kConvK = 4, kGdnDk = 128, kMaxHeadDim = 512;
   int hidden, inter, layers, vocab, interval = 0;
   int hq, hkv, dh, rot;
   int lhk = 0, lhv = 0, ldk = 0, ldv = 0, conv_k = 0;
@@ -118,9 +121,21 @@ struct Qwen35Config {
     if (interval) {  // GDN layers: divisors and the state geometry
       if (!in(lhk, 1, 1024) || !in(lhv, 1, 1024) || lhv % lhk || !in(ldk, 1, 1024) || !in(ldv, 1, 1024) || !in(conv_k, 2, 64))
         bad_config("linear attention geometry");
+      // What the GDN kernels are written for (Codex review 2026-11-04, R02): gdn_conv / gdn_conv_replay / the tree and
+      // prefill convs keep 3 state rows and 4 taps per channel, and gdn_step / gdn_replay / gdn_step_tree hold
+      // Dk = 32 lanes x 4 state values. Anything else reads or writes past the conv / SSM state slots.
+      if (conv_k != kConvK) bad_config("linear_conv_kernel_dim " + std::to_string(conv_k) + " (supported: 4)");
+      if (ldk != kGdnDk) bad_config("linear_key_head_dim " + std::to_string(ldk) + " (supported: 128)");
     }
     if (experts && (!in(experts, 1, 1 << 16) || !in(topk, 1, experts) || !in(moe_inter, 1, 1 << 20)))
       bad_config("MoE geometry " + std::to_string(experts) + "/" + std::to_string(topk));
+    // Routing kernels (R02): moe_route / moe_route_bf keep E / 32 values per SIMD lane in float v[16] and moe_sort
+    // counts experts in 1,024-entry threadgroup tables, so at most 512 experts (E = 513 indexed v[16]).
+    if (experts > kMaxExperts)
+      bad_config("num_experts " + std::to_string(experts) + " (the routing kernels support at most 512)");
+    // attn_prep stages one head in threadgroup float xn[512] (every attention layer, every step).
+    if (dh > kMaxHeadDim || (gemma && gdh > kMaxHeadDim))
+      bad_config("head_dim " + std::to_string(std::max(dh, gemma ? gdh : 0)) + " (attention supports at most 512)");
     if (gemma && (!in(gdh, 1, 1024) || !in(ghkv, 1, 1024) || hq % ghkv || !in(grot, 0, gdh) || grot % 2))
       bad_config("global attention geometry");
     if (qwen4) {
@@ -380,8 +395,15 @@ struct Qwen35 {
   // Speculative decoding (enable_spec): per-sequence spec flag and first logits row, per-row argmax, accept
   // results, captured hidden states [T, n_cap * hidden], and per-GDN-layer verify tapes.
   BufRef spec, out_base, pred, commit, emit, hcap;
-  BufRef samp, vcand, vun, vcpart, vvpart;  // speculative sampling: per-sequence params, verify rows' top-16
-  bool any_sample = false;
+  BufRef samp, vcand, vun, vcpart, vvpart;  // speculative sampling: per-sequence params, verify rows' top-K
+  // Verify rows' candidate count for speculative sampling (Codex review 2026-11-04, R03; SPEC_TOPK 16 or 64, default
+  // 64): top_k up to vtop_k is drawn exactly on the GPU. 64 needs every top-K shard to hold at most 4,096 logits.
+  int vtop_k = 64;
+  BufRef vzpart, vhost;  // top_k off: per-shard softmax partials; per sequence, the verify row the host must sample (-1)
+  bool any_sample = false, any_sample_full = false;
+  // This step's candidate count: 16 when every sampled sequence has top_k 1..16 (the cheaper kernels: ~5% at 16k x 8
+  // agents on the Studio, 2026-11-04), else vtop_k.
+  bool samp_wide = false;
   // Multi-row attention: sequences with >= flash_rows new rows use MLX's flash kernel over a gathered copy of
   // their KV (rflag marks their rows so attn_gqa skips them).
   BufRef rflag, kv_k, kv_v;
@@ -463,6 +485,16 @@ struct Qwen35 {
       if (gq != 6 || ly.dh != 256) use_nax = false;
     }
     if (kv8 && !use_gqa) { fprintf(stderr, "KV8 needs the attn_gqa kernels\n"); exit(1); }
+    // Without attn_gqa every attention layer decodes with attn_decode, written for Dh = 256 (32 lanes x 8, tacc[8][256]):
+    // any other head size reads past its head or leaves outputs unwritten (Codex review 2026-11-04, R02 audit).
+    if (!use_gqa)
+      for (auto& ly : L)
+        if (!ly.linear && ly.dh != 256) {
+          fprintf(stderr, "unsupported attention shape: %d query heads per KV head at head_dim %d has no attn_gqa kernel, "
+                          "and the fallback (attn_decode) needs head_dim 256%s\n", cfg.hq / ly.hkv, ly.dh,
+                  getenv("ATTN_V1") ? " (ATTN_V1 is set)" : "");
+          exit(1);
+        }
     knobs();  // again: fn_mpp depends on use_gqa
     if (ng == 0) {
     } else if (auto& dt = ck.info(P + "model.layers.0.linear_attn.A_log").dtype; dt != "BF16" && dt != "F32") {
@@ -614,6 +646,8 @@ struct Qwen35 {
     samp = g.alloc(max_seqs * 16);
     out_base = g.alloc(max_seqs * 4);
     commit = g.alloc(max_seqs * 4);
+    vhost = g.alloc(max_seqs * 4);
+    memset(vhost.ptr<int>(), 0xff, max_seqs * 4);  // -1: nothing for the host until a verify step says so
     emit = g.alloc(max_seqs * kMaxBlock * 4);
     pred = g.alloc(max_out * 4);
     tok = g.alloc(B * 4);
@@ -769,6 +803,19 @@ struct Qwen35 {
     if (cfg.experts) check_linear(ly.gate_up, p + "mlp.shared_expert.gate_up", 0, H);
     else check_linear(ly.gate_up, p + "mlp.gate_up", 0, H), check_linear(ly.down, p + "mlp.down_proj", H, ly.gate_up.N / 2);
     if (cfg.experts) check_linear(ly.down, p + "mlp.shared_expert.down_proj", H, ly.gate_up.N / 2);
+    if (cfg.experts) {  // the routed experts against the config the buffers are sized from (R02 audit): rlog holds E + 1
+      // router columns (the shared gate last), egu_out 2 x moe_inter per pick, and routed ids index the stacks
+      auto moe = [&](const MoeW& w, const char* what, int E, int N, int K) {
+        if (w.E != E || w.N != N || w.K != K) {
+          fprintf(stderr, "invalid checkpoint: %s%s is [%d, %d, %d], the config needs [%d, %d, %d]\n", p.c_str(), what, w.E,
+                  w.N, w.K, E, N, K);
+          exit(1);
+        }
+      };
+      moe(ly.router, "mlp.gate + shared_expert_gate", 1, cfg.experts + 1, H);
+      moe(ly.egu, "mlp.switch_mlp.gate_proj + up_proj", cfg.experts, 2 * cfg.moe_inter, H);
+      moe(ly.edown, "mlp.switch_mlp.down_proj", cfg.experts, H, cfg.moe_inter);
+    }
     if (cfg.qwen4 || cfg.glimmer || cfg.gemma) {
       check_linear(ly.in_proj, p + "in_proj", 0, H);
       return;
@@ -933,10 +980,19 @@ struct Qwen35 {
     tape_rows = rows > 0 ? std::min(max_tokens, max_out) : max_tokens;
     logits = g.alloc((size_t)max_out * cfg.vocab * 2);
     pred = g.alloc(max_out * 4);
-    vcand = g.alloc((size_t)max_out * 16 * 4);
-    vun = g.alloc((size_t)max_out * 16 * 4);
-    vcpart = g.alloc((size_t)max_out * kVTopShards * 16 * 4);
-    vvpart = g.alloc((size_t)max_out * kVTopShards * 16 * 4);
+    {
+      const char* e = getenv("SPEC_TOPK");
+      vtop_k = e && atoi(e) == 16 ? 16 : 64;
+      if (vtop_k == 64 && (cfg.vocab + kVTopShards - 1) / kVTopShards > 4096) {
+        fprintf(stderr, "inferd: vocabulary %d too wide for 64 exact speculative candidates; using 16\n", cfg.vocab);
+        vtop_k = 16;
+      }
+    }
+    vcand = g.alloc((size_t)max_out * vtop_k * 4);
+    vun = g.alloc((size_t)max_out * vtop_k * 4);
+    vcpart = g.alloc((size_t)max_out * kVTopShards * vtop_k * 4);
+    vvpart = g.alloc((size_t)max_out * kVTopShards * vtop_k * 4);
+    vzpart = g.alloc((size_t)max_out * kVTopShards * 8);
     hcap = g.alloc((size_t)max_tokens * layers.size() * cfg.hidden * 2);
     if (!cfg.qwen4) {  // token trees (TREE)
       for (BufRef* r : {&apos, &trow, &tpar, &tdep, &tanc}) *r = g.alloc((size_t)max_tokens * 4);
@@ -1018,7 +1074,10 @@ struct Qwen35 {
   int pf8_on = getenv("PF8") ? atoi(getenv("PF8")) : -1;  // -1: auto (the server decides by KV room; tools by machine)
   static inline bool pf8_defer = false;  // set by the server before construction: leave an auto PF8 undecided
   std::vector<QLinear*> pf8_list;
-  bool pf8_eligible(const QLinear* q) const { return (q->bits == 4 || q->bits == 8) && q->K % 512 == 0 && !q->ldk && q->N > 0; }
+  // K <= 32,768: pf8_act holds two 512-blocks per simdgroup and launches at most 32 simdgroups (R02 audit)
+  bool pf8_eligible(const QLinear* q) const {
+    return (q->bits == 4 || q->bits == 8) && q->K % 512 == 0 && q->K <= 32768 && !q->ldk && q->N > 0;
+  }
   size_t pf8_estimate() const {  // bytes pf8_prepare would allocate
     size_t b = 0;
     int mk = 0;
@@ -1884,6 +1943,8 @@ struct Qwen35 {
     attn_units = 0;
     n_out = 0;
     any_sample = false;
+    any_sample_full = false;
+    samp_wide = false;
     flash.clear();
     qsa_nsp = 0;
     qsa_maxnb = 0;
@@ -1956,6 +2017,8 @@ struct Qwen35 {
         struct { float t, p; int k; uint32_t seed; } sp{w[b].spec ? w[b].temp : 0.f, w[b].top_p, w[b].top_k, w[b].seed};
         memcpy(samp.ptr<char>() + b * 16, &sp, 16);
         any_sample |= w[b].spec && w[b].temp > 0;
+        any_sample_full |= w[b].spec && w[b].temp > 0 && w[b].top_k <= 0;
+        samp_wide |= w[b].spec && w[b].temp > 0 && !(w[b].top_k >= 1 && w[b].top_k <= 16);
       }
       out_base.ptr<int>()[b] = n_out;
       if (w[b].spec) {
@@ -2006,7 +2069,7 @@ struct Qwen35 {
     int qsa_nu = 0;
     int max_ctx = 1, attn_units = 1, nax_tiles = 1, n_out = 0, sh_tiles = 0, qsa_nsp = 0, qsa_maxnb = 0, qsa_maxn = 0;
     bool any_multi = false, any_nax = false, any_mpp = false, any_mpp32 = false, any_chunk = false, any_ext = false,
-         any_sample = false, cascade = false;
+         any_sample = false, any_sample_full = false, samp_wide = false, cascade = false;
     std::vector<FlashSeq> flash;
   };
   BatchState save_batch() const {
@@ -2016,7 +2079,7 @@ struct Qwen35 {
     b.qsa_nsp = qsa_nsp; b.qsa_maxnb = qsa_maxnb; b.qsa_maxn = qsa_maxn;
     b.max_ctx = max_ctx; b.attn_units = attn_units; b.nax_tiles = nax_tiles; b.n_out = n_out; b.sh_tiles = sh_tiles;
     b.any_multi = any_multi; b.any_nax = any_nax; b.any_mpp = any_mpp; b.any_mpp32 = any_mpp32;
-    b.any_chunk = any_chunk; b.any_ext = any_ext; b.any_sample = any_sample; b.cascade = cascade;
+    b.any_chunk = any_chunk; b.any_ext = any_ext; b.any_sample = any_sample; b.any_sample_full = any_sample_full; b.samp_wide = samp_wide; b.cascade = cascade;
     b.flash = flash;
     return b;
   }
@@ -2028,7 +2091,7 @@ struct Qwen35 {
     qsa_nsp = b.qsa_nsp; qsa_maxnb = b.qsa_maxnb; qsa_maxn = b.qsa_maxn;
     max_ctx = b.max_ctx; attn_units = b.attn_units; nax_tiles = b.nax_tiles; n_out = b.n_out; sh_tiles = b.sh_tiles;
     any_multi = b.any_multi; any_nax = b.any_nax; any_mpp = b.any_mpp; any_mpp32 = b.any_mpp32;
-    any_chunk = b.any_chunk; any_ext = b.any_ext; any_sample = b.any_sample; cascade = b.cascade;
+    any_chunk = b.any_chunk; any_ext = b.any_ext; any_sample = b.any_sample; any_sample_full = b.any_sample_full; samp_wide = b.samp_wide; cascade = b.cascade;
     flash = b.flash;
   }
   // Buffers for a batch of up to `seqs` single-row sequences (no PLE ids, no cascade).
@@ -2730,14 +2793,22 @@ struct Qwen35 {
       // Argmax every output row, accept greedily, then replay each GDN layer over the committed rows.
       e.k("row_argmax").buf(0, logits).buf(1, pred).args(2, cfg.vocab);
       e.groups(S3(n_out), S3(1024));
-      if (any_sample) {  // speculative sampling: each verify row's top-16, then accept/resample per sequence
+      if (any_sample) {  // speculative sampling: each verify row's top-K, then accept/resample per sequence
         struct { int V, SH, PS, P0, LO; } ta{cfg.vocab, kVTopShards, kVTopShards, 0, 0};
-        e.k("row_top16_shard").buf(0, logits).buf(1, vcpart).buf(2, vvpart).args(3, ta);
+        const bool k64 = vtop_k == 64 && samp_wide;  // 16 candidates suffice when every top_k is 1..16
+        e.k(k64 ? "row_top64_shard_v" : "row_top16_shard_v").buf(0, logits).buf(1, vcpart).buf(2, vvpart).args(3, ta);
         e.groups(S3(kVTopShards, n_out), S3(256));
-        e.k("top16_merge").buf(0, vcpart).buf(1, vvpart).buf(2, vcand).buf(3, vun).args(4, ta);
+        e.k(k64 ? "top64_merge_v" : "top16_merge_v").buf(0, vcpart).buf(1, vvpart).buf(2, vcand).buf(3, vun).args(4, ta);
         e.groups(S3(n_out), S3(256));
+        if (any_sample_full) {  // a sequence samples with top_k off: the full softmax normaliser per row
+          e.k("verify_zpart").buf(0, logits).buf(1, vzpart).args(2, ta).buf(3, samp).buf(4, out_base).args(5, S)
+              .buf(6, spec);
+          e.groups(S3(kVTopShards, n_out), S3(256));
+        }
+        struct { int K, SH; } kz{k64 ? 64 : 16, any_sample_full ? kVTopShards : 0};
         e.k("spec_accept_s").buf(0, tok).buf(1, pred).buf(2, seq_start).buf(3, seq_len).buf(4, out_base).buf(5, spec)
-            .buf(6, commit).buf(7, emit).args(8, S).buf(9, samp).buf(10, vcand).buf(11, vun);
+            .buf(6, commit).buf(7, emit).args(8, S).buf(9, samp).buf(10, vcand).buf(11, vun).args(12, kz)
+            .buf(13, vzpart).buf(14, vhost);
       } else {
         e.k("spec_accept").buf(0, tok).buf(1, pred).buf(2, seq_start).buf(3, seq_len).buf(4, out_base).buf(5, spec)
             .buf(6, commit).buf(7, emit).args(8, S);

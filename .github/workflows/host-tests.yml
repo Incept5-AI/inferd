@@ -1,6 +1,8 @@
-# Host-only tests (no GPU, no model weights): the native JSON parser, grammar/sampler, SSD tier and the front end's
-# structured output, tool calls, stop strings, streaming and the benchmark SSE client. GPU and model gates are run on
-# real Macs with engine/tools/release_gate.sh (CONTRIBUTING.md, "Release gate").
+# Host-only tests (no GPU, no model weights): the native JSON parser and protocol helpers, grammar/sampler, SSD tier and
+# the front end's hardening suite (auth, budgets, validation, Unicode, cancellation, disconnects over a real socket,
+# context admission), structured output, tool calls, stop strings, streaming, the image decoder, the logits-gate
+# fixtures and the benchmark SSE client. GPU and model gates are run on real Macs with engine/tools/release_gate.sh
+# (CONTRIBUTING.md, "Release gate").
 name: host-tests
 on:
   push:
@@ -26,10 +28,15 @@ jobs:
       - name: Front-end tests
         working-directory: engine/frontend
         run: |
-          python -m pip install --quiet jinja2
+          python -m pip install --quiet -r ../requirements-test.txt
+          python test_hardening.py
           python test_structured.py
           python test_tools.py
           python test_stream.py
+          python test_image_decode.py
+      - name: Logits gate fixtures
+        working-directory: engine
+        run: python tools/test_ref_logits.py
       - name: Benchmark client tests
         working-directory: bench
         run: python test_sse_client.py

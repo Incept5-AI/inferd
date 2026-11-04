@@ -16,10 +16,13 @@ from transformers import AutoProcessor
 
 from mlx_vlm.models.qwen3_5 import config as qcfg, language as qlang, vision as qvis
 
+import image_decode  # this directory (serve.py puts it on sys.path)
+
 
 MAX_IMAGE_BYTES = 32 << 20
 MAX_IMAGE_PIXELS = 64_000_000
-Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS  # decompression-bomb guard (PIL only raises above 2x this; we check below)
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS  # decompression-bomb guard (PIL only raises above 2x this; image_decode checks)
+IMAGE_FORMATS = image_decode.FORMATS  # PNG, JPEG, WebP, GIF: nothing else is identified or decoded
 
 
 def _env_int(name, default):
@@ -94,16 +97,19 @@ def load_image(url, budget=None):
     if len(data) > limit:
         raise ValueError(f"image larger than {limit >> 20} MiB" if limit == MAX_IMAGE_BYTES else
                          f"images exceed the per-request budget of {budget.max_bytes >> 20} MiB")
+    # Decoded only as PNG / JPEG / WebP / GIF, in a killable child process by default (image_decode.py; Codex review
+    # 2026-11-04, R01): the data: URL's media type does not restrict the decoder, the allowlist does.
+    remaining = None if budget is None else budget.max_pixels - budget.pixels
     try:
-        img = Image.open(io.BytesIO(data))  # lazy: only the header is parsed here
-        w, h = img.size
-    except Exception as e:
-        raise ValueError(f"unreadable image: {e}") from None
-    if w * h > MAX_IMAGE_PIXELS:
-        raise ValueError(f"image has {w * h:,} pixels (limit {MAX_IMAGE_PIXELS:,})")
+        img = image_decode.decode(data, MAX_IMAGE_PIXELS, remaining)
+    except image_decode.DecodeError as e:
+        if e.kind == "budget":
+            raise ValueError(f"images exceed the per-request budget of {budget.max_pixels:,} pixels") from None
+        raise ValueError(str(e)) from None
+    w, h = img.size
     if budget is not None:
         budget.add(len(data), w * h)
-    return img.convert("RGB")
+    return img
 
 
 def image_keys(digest, n, vocab):

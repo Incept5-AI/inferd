@@ -21,13 +21,18 @@
 #include "mtp.h"
 #include "copydraft.h"
 #include "grammar.h"
+#include "sampling.h"
 
 struct Request {
   uint64_t id;
   std::vector<int> prompt;
   int max_tokens = 256;
   float temperature = 0, top_p = 1;
-  int top_k = 0;
+  int top_k = 0;  // 0: no limit (src/sampling.h: the one contract for every sampler)
+  // Opt-in approximation (Codex review 2026-11-04, R03): speculate a sampled request the GPU sampler cannot draw
+  // exactly (top_k above its K = 64 candidates, or top_k off with top_p 1) by truncating each speculative step to the
+  // top K (before 2026-11-04 every sampled request was truncated to 16, silently).
+  bool spec_truncate = false;
   std::vector<int> stop_ids;
   uint64_t seed = 0;
   bool has_seed = false;
@@ -191,6 +196,8 @@ struct Scheduler {
     int generated = 0;
     int bypassed = 0;  // admissions that went past this waiting request (ADMIT_LOOKAHEAD aging)
     bool spec_ok = false;                      // greedy and a drafter is loaded: decode by draft + verify
+    bool spec_at_submit = false;               // spec_ok as admitted (reported in the done event: "spec")
+    int spec_host_rows = 0;                    // speculative rows sampled on the host (nucleus beyond K; "spec_host")
     std::vector<Drafter::CtxRow> pend;         // last step's committed rows, to enter into the drafter context
     std::mt19937_64 rng;
     std::vector<int> ext_idx;  // per prompt position: image feature row, or -1 (empty for text-only prompts)
@@ -234,6 +241,9 @@ struct Scheduler {
     return r;
   }
   uint64_t stat_cycles = 0, stat_committed = 0, stat_preempted = 0;
+  // Speculative sampling (R03): rows committed by sampled sequences, rows of those the host sampled (nucleus beyond the
+  // GPU's K candidates), sampled requests not speculated because the GPU sampler cannot draw them exactly.
+  uint64_t stat_spec_sampled_rows = 0, stat_spec_host_rows = 0, stat_spec_refused = 0;
   uint64_t stat_grammar_fix = 0, stat_grammar_rollback = 0;  // structured output: replaced block tokens, re-prefills
   // COPY_DRAFT (MTP path, greedy sequences; 0 off): context-copy chains of up to COPY_K drafts (n-gram COPY_NG) replace
   // the MTP head's drafts when longer than them and (COPY_CHECK) their first token is the MTP head's own d1.
@@ -578,10 +588,20 @@ struct Scheduler {
       }
       s.req.max_tokens = std::min(s.req.max_tokens, room);
     }
-    // Sampled requests are speculated too (exact speculative sampling on the GPU, spec_accept_s) unless SPEC_SAMPLE=0.
+    // Sampled requests are speculated too (speculative sampling on the GPU, spec_accept_s) unless SPEC_SAMPLE=0, but only
+    // where that sampler draws the requested distribution exactly (src/sampling.h spec_exact: top_k 1..K, or top_k
+    // off with top_p < 1, rows outside the K candidates sampled here; Codex review 2026-11-04, R03). Other sampled
+    // requests decode one token per step on the host sampler, unless they opted into truncation (spec_truncate).
     static const bool spec_sample = !getenv("SPEC_SAMPLE") || atoi(getenv("SPEC_SAMPLE"));
-    s.spec_ok = (d || mtp) && (s.req.temperature <= 0 || spec_sample) &&
+    if ((d || mtp) && s.req.temperature > 0 &&
+        !sampling::spec_exact(s.req.temperature, s.req.top_k, s.req.top_p, m.vtop_k) && !s.req.spec_truncate)
+      stat_spec_refused++;
+    s.spec_ok = (d || mtp) &&
+                (s.req.temperature <= 0 ||
+                 (spec_sample && (sampling::spec_exact(s.req.temperature, s.req.top_k, s.req.top_p, m.vtop_k) ||
+                                  s.req.spec_truncate))) &&
                 !(s.req.grammar && s.req.grammar->active && s.req.temperature > 0);  // see Request::grammar
+    s.spec_at_submit = s.spec_ok;
     if (debug) fprintf(stderr, "[%.3f s] ", std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
     if (debug)
       fprintf(stderr, "submit id%llu: %zu prompt tokens, temperature %.2f, spec %d\n", (unsigned long long)s.req.id,
@@ -1242,6 +1262,10 @@ struct Scheduler {
              m.n_blocks, n_free, act.size(), trie, trie_only, pinned, KV_BLOCK, bm, m.n_slots, free_slots.size(),
              snapshot_count, sess_snaps, sessions.size(), running.size(), waiting.size(), (unsigned long long)stat_preempted);
     std::string o = b;
+    snprintf(b, sizeof b, ",\"spec_sampling\":{\"candidates\":%d,\"rows\":%llu,\"host_rows\":%llu,\"not_speculated\":%llu}",
+             m.vtop_k, (unsigned long long)stat_spec_sampled_rows, (unsigned long long)stat_spec_host_rows,
+             (unsigned long long)stat_spec_refused);
+    o += b;
     if (spill) {
       snprintf(b, sizeof b, ",\"ssd\":{\"entries\":%zu,\"gib\":%.2f,\"quota_gib\":%.1f,\"spilled\":%llu,\"restored\":%llu,"
                "\"spill_s\":%.2f,\"restore_s\":%.2f}", spill->entries.size(), spill->used / 1073741824.0,
@@ -1256,41 +1280,23 @@ struct Scheduler {
   }
 
 
-  int sample(const uint16_t* lg, Seq& s) {
+  int sample(const uint16_t* lg, Seq& s) {  // src/sampling.h: the one contract (top_k 0 = the whole vocabulary)
     const int V = m.cfg.vocab;
     if (s.req.grammar)
       return s.req.grammar->sample(lg, V, s.req.temperature, s.req.top_p, s.req.top_k, s.rng, s.req.stop_ids);
-    auto f = [](uint16_t h) { uint32_t u = (uint32_t)h << 16; float x; memcpy(&x, &u, 4); return x; };
-    if (s.req.temperature <= 0) {
-      int best = 0;
-      float bv = -INFINITY;
-      for (int i = 0; i < V; i++) {
-        float v = f(lg[i]);
-        if (v > bv) { bv = v; best = i; }
-      }
-      return best;
-    }
-    int k = s.req.top_k > 0 ? std::min(s.req.top_k, V) : std::min(V, 1024);
-    std::vector<std::pair<float, int>> c(V);
-    for (int i = 0; i < V; i++) c[i] = {f(lg[i]), i};
-    std::partial_sort(c.begin(), c.begin() + k, c.end(), [](auto& a, auto& b) { return a.first > b.first; });
-    c.resize(k);
-    double mx = c[0].first, sum = 0;
-    std::vector<double> pr(k);
-    for (int i = 0; i < k; i++) sum += pr[i] = std::exp((c[i].first - mx) / s.req.temperature);
-    double cut = s.req.top_p * sum, acc = 0;
-    int n = 0;
-    while (n < k) { acc += pr[n++]; if (acc >= cut) break; }
-    std::uniform_real_distribution<double> u(0, acc);
-    double r = u(s.rng);
-    for (int i = 0; i < n; i++) { if ((r -= pr[i]) <= 0) return c[i].second; }
-    return c[n - 1].second;
+    return sampling::sample(lg, V, s.req.temperature, s.req.top_p, s.req.top_k, s.rng);
   }
 
   void finish(size_t i, const std::string& reason) {
     Seq& s = running[i];
     if (s.req.prefill_only && reason == "stop") ctx_finish(s, -1);  // a context save: register / pin, then its event
-    else emit(Event{s.req.id, {}, true, reason, (int)s.req.prompt.size(), s.generated, s.cached});
+    else {  // "spec": whether the request was admitted to speculative decoding (sampling contract, R03)
+      Event ev{s.req.id, {}, true, reason, (int)s.req.prompt.size(), s.generated, s.cached};
+      if (!s.req.prefill_only)
+        ev.extra = std::string(s.spec_at_submit ? ",\"spec\":1" : ",\"spec\":0") +
+                   (s.spec_host_rows ? ",\"spec_host\":" + std::to_string(s.spec_host_rows) : "");
+      emit(ev);
+    }
     // A turn that ends on a block boundary hands its slot to the trie as the snapshot there (no copy): the next turn
     // resumes at the end of this one's output. Only when every computed position holds a delivered token (a stop token
     // inside an accepted block leaves state past it).
@@ -1514,7 +1520,8 @@ struct Scheduler {
       if (spec && s.req.temperature > 0) {
         sw.temp = s.req.temperature;
         sw.top_p = s.req.top_p;
-        sw.top_k = s.req.top_k;
+        // truncation opt-in: the K candidates stand in for "no limit" (or a larger top_k)
+        sw.top_k = s.req.spec_truncate && (s.req.top_k <= 0 || s.req.top_k > m.vtop_k) ? m.vtop_k : s.req.top_k;
         sw.seed = (uint32_t)s.rng();
       }
       sw.mrope = s.req.mrope.data();
@@ -1773,6 +1780,18 @@ struct Scheduler {
           for (int k = 0; k < counts[j]; k++) fprintf(stderr, " %d", m.tok.ptr<int>()[r0 + k]);
           fprintf(stderr, "\n");
         }
+        if (s.req.temperature > 0 && m.vhost.ptr<int>()[j] >= 0) {
+          // The row's nucleus lay beyond the GPU's K candidates (top_k off): its token is sampled here, from the full
+          // logits, under the same contract (exact). The emitted placeholder is replaced; MTP folded from it, so not.
+          const int row = m.vhost.ptr<int>()[j];
+          m.emit.ptr<int>()[j * kMaxBlock + row] =
+              sampling::sample(m.logits.ptr<uint16_t>() + (size_t)(m.out_base.ptr<int>()[j] + row) * m.cfg.vocab,
+                               m.cfg.vocab, s.req.temperature, s.req.top_p, s.req.top_k, s.rng);
+          s.mtp_fold = false;
+          s.spec_host_rows++;
+          stat_spec_host_rows++;
+        }
+        if (s.req.temperature > 0) stat_spec_sampled_rows += c;
         if (s.req.grammar) {  // structured output: the committed tokens must pass the grammar (src/grammar.h)
           const int* e = m.emit.ptr<int>() + j * kMaxBlock;
           const bool sampled = s.req.temperature > 0;

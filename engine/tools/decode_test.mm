@@ -1,4 +1,5 @@
 // decode_test check <model_dir> <tokens.txt> <out.bin> [chunk]
+// decode_test budget                                   Metal's GPU working-set budget (GiB), for release_gate.sh
 //   tokens.txt: "B T" then B lines of T token ids. All B sequences advance together in ragged steps of up to
 //   `chunk` tokens each (1 = pure decode; larger exercises prefill). Writes the final logits, float32 [B, vocab].
 // decode_test bench <model_dir> <B list, e.g. 1,8,16,32,64> <context L> [rows]
@@ -36,10 +37,14 @@ static double run(Gpu& g, Qwen35& m, int T, int S) {
 
 int main(int argc, char** argv) {
   setvbuf(stdout, nullptr, _IONBF, 0);
-  if (argc < 4) { fprintf(stderr, "usage: see header\n"); return 1; }
+  if (argc < 4 && !(argc == 2 && std::string(argv[1]) == "budget")) { fprintf(stderr, "usage: see header\n"); return 1; }
   std::string mode = argv[1];
   @autoreleasepool {
     Gpu g("build/core.metallib");
+    if (mode == "budget") {  // decode_test budget: Metal's GPU working-set budget in GiB (release_gate.sh)
+      printf("%.1f\n", g.dev.recommendedMaxWorkingSetSize / 1073741824.0);
+      return 0;
+    }
     double t0 = now();
     Checkpoint ck(argv[2]);
     if (mode == "check") {

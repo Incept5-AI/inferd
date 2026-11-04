@@ -94,6 +94,7 @@ struct AneFfn {
     rmax = (rmax_ + rstep - 1) / rstep * rstep;
     for (int r = rmin; r <= rmax; r += rstep) fn_rows.push_back(r);
     if (H % SEG) { fprintf(stderr, "ANE: hidden %d is not a multiple of %d\n", H, SEG); exit(1); }
+    if (H > 2 * SEG) { fprintf(stderr, "ANE: hidden %d is over %d (ane_req_rot stages 2 x %d)\n", H, 2 * SEG, SEG); exit(1); }
     for (int k = 0; k < H / SEG; k++) {
       xs.emplace_back(g, SEG, rmax, a8 ? 1 : 2);
       if (a8) tx.emplace_back(g, 1, rmax, 2);
