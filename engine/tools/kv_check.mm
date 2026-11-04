@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     for (auto& r : toks) for (auto& v : r) f >> v;
     const int maxb = (T + KV_BLOCK - 1) / KV_BLOCK;
     Qwen35 m(g, ck, B * std::max(chunk, R), B, B, B * maxb, maxb);
-    printf("loaded in %.1f s (KV %s)\n", now() - t0, m.kv8 ? "8-bit" : "bf16");
+    printf("loaded in %.1f s (KV %s)\n", now() - t0, m.kv4 ? "4-bit" : m.kv8 ? "8-bit" : "bf16");
     std::vector<std::vector<int>> blocks(B);
     for (int b = 0; b < B; b++) {
       m.reset_slot(b);

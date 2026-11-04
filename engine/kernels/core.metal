@@ -837,9 +837,49 @@ constant constexpr int BLK = 32;
 // kh * ns + slot, absmax / 127 over the head's Dh values. The same element offsets address either precision.
 constant bool kv8_fc [[function_constant(20)]];
 constant bool kv8 = is_function_constant_defined(kv8_fc) && kv8_fc;
+// 4-bit KV (function constant 21, with 20 also set: every scale path is KV8's): two signed nibbles a byte, the even
+// element in the low nibble (Metal's int4b_format order), one float scale per (kv head, slot), absmax / 7 of the
+// Hadamard-rotated head (KV4_ROT, below). Element offsets are KV8's; the byte is offset / 2.
+constant bool kv4_fc [[function_constant(21)]];
+constant bool kv4 = is_function_constant_defined(kv4_fc) && kv4_fc;
+// KV4 rotations (function constants 22: K and the queries, 23: V and the attention output): a 256-point Hadamard
+// transform before quantizing spreads a head's outlier channels over all dims, so one per-token scale fits. Scores
+// are unchanged (q and k rotate alike); a rotated V makes the attention output rotated, and the combine / gate
+// kernels rotate it back (the transform is its own inverse) before the gate.
+constant bool kv4_rk_fc [[function_constant(22)]];
+constant bool kv4_rv_fc [[function_constant(23)]];
+constant bool kv4_rk = kv4 && is_function_constant_defined(kv4_rk_fc) && kv4_rk_fc;
+constant bool kv4_rv = kv4 && is_function_constant_defined(kv4_rv_fc) && kv4_rv_fc;
+inline float4 kv4_unpack(uint w) {  // 4 nibbles (low first) of a 16-bit word, sign-extended
+  return float4(float(int(w << 28) >> 28), float(int(w << 24) >> 28), float(int(w << 20) >> 28), float(int(w << 16) >> 28));
+}
 inline float4 kv_load4(device const bfloat* base, size_t off) {
+  if (kv4) return kv4_unpack(uint(*(device const ushort*)((device const uchar*)base + (off >> 1))));
   if (kv8) return float4(*(device const char4*)((device const char*)base + off));
   return float4(*(device const bfloat4*)(base + off));
+}
+inline float kv_load1(device const bfloat* base, size_t off) {
+  if (kv4) {
+    const int b = int(((device const uchar*)base)[off >> 1]);
+    return float((off & 1) ? (b << 24) >> 28 : (b << 28) >> 28);
+  }
+  if (kv8) return float(((device const char*)base)[off]);
+  return float(base[off]);
+}
+// In-place 256-point (any power of two up to the threadgroup size) orthonormal Hadamard transform of x[0, n), one
+// element per thread tid < n; every thread of the threadgroup must call it (barriers).
+inline float tg_hadamard(threadgroup float* x, float v, uint tid, int n) {
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  if (tid < (uint)n) x[tid] = v;
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  for (int h = 1; h < n; h <<= 1) {
+    float a = 0, b = 0;
+    if (tid < (uint)n) { a = x[tid]; b = x[tid ^ h]; }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < (uint)n) x[tid] = (tid & h) ? b - a : a + b;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+  }
+  return tid < (uint)n ? x[tid] * rsqrt(float(n)) : 0.f;
 }
 
 // q/k RMSNorm + RoPE on the first `rot` dims (non-traditional halves), write k/v into the cache,
@@ -886,6 +926,8 @@ kernel void attn_prep(device const bfloat* proj [[buffer(0)]],
     float ang = float(rpos[b * 3 + i % 3]) * freq, c = cos(ang), s = sin(ang);
     val = tid < (uint)rpair ? xn[tid] * c - xn[tid + rpair] * s : xn[tid] * c + xn[tid - rpair] * s;
   }
+  // KV4 rotation of q and k (uniform per threadgroup: every thread takes part)
+  if (kv4_rk) val = tg_hadamard(xn, val, tid, p.Dh);
   if (isq) {
     q_out[((size_t)b * p.Hq + h) * p.Dh + tid] = bfloat(val);
   } else {
@@ -897,7 +939,24 @@ kernel void attn_prep(device const bfloat* proj [[buffer(0)]],
       float vr = rsqrt(tg_sum(vf * vf, scratch, tid, ntg) / p.Dh + p.eps);
       v = bfloat(vf * vr);
     }
-    if (kv8) {
+    if (kv4) {
+      float kq = val, vq = float(v);
+      if (kv4_rv) vq = tg_hadamard(xn, vq, tid, p.Dh);
+      float ka = tg_max(fabs(kq), scratch, tid, ntg), va = tg_max(fabs(vq), scratch, tid, ntg);
+      // clipped scales (0.9 x absmax / 7): rotated heads are near-Gaussian, and clipping the rare extremes lowers the
+      // error of everything else (fake-quant on the 27B, 8k: KL 0.0097 -> 0.0075 vs bf16 KV; 0.8: 0.0095)
+      float ksc = max(ka, 1e-20f) * (0.9f / 7.f), vsc = max(va, 1e-20f) * (0.9f / 7.f);
+      const int kq4 = int(clamp(rint(kq / ksc), -7.f, 7.f)), vq4 = int(clamp(rint(vq / vsc), -7.f, 7.f));
+      const int kh4 = simd_shuffle_down(kq4, (ushort)1), vh4 = simd_shuffle_down(vq4, (ushort)1);
+      if (!(tid & 1)) {  // the even element's thread writes the byte: low nibble even, high nibble odd
+        ((device uchar*)Kc)[o >> 1] = uchar((kq4 & 15) | ((kh4 & 15) << 4));
+        ((device uchar*)Vc)[o >> 1] = uchar((vq4 & 15) | ((vh4 & 15) << 4));
+      }
+      if (tid == 0) {
+        Ks[si] = ksc;
+        Vs[si] = vsc;
+      }
+    } else if (kv8) {
       float kq = float(bfloat(val)), vq = float(v);
       float ka = tg_max(fabs(kq), scratch, tid, ntg), va = tg_max(fabs(vq), scratch, tid, ntg);
       float ksc = max(ka, 1e-20f) / 127.f, vsc = max(va, 1e-20f) / 127.f;
@@ -1298,7 +1357,13 @@ kernel void attn_combine(device const float* part [[buffer(0)]],
     den += pp[z * stride + p.Dh + 1] * f;
   }
   const float gate = p.gated ? float(proj[(size_t)t * p.proj_stride + h * 2 * p.Dh + p.Dh + tid]) : INFINITY;
-  float o = float(bfloat(num / den));
+  float o;
+  if (kv4_rv) {  // KV4 rotated V: rotate the output back
+    threadgroup float hb[512];
+    o = float(bfloat(tg_hadamard(hb, num / den, tid, p.Dh)));
+  } else {
+    o = float(bfloat(num / den));
+  }
   out[((size_t)t * p.Hq + h) * p.Dh + tid] = bfloat(o * (1.f / (1.f + exp(-gate))));
 }
 
@@ -1319,9 +1384,9 @@ kernel void kv_gather(device const bfloat* Kc [[buffer(0)]],
   int blk = block_table[p.seq * p.max_blocks + ps / BLK];
   const size_t si = (size_t)(i / p.Dh) * p.ns + (size_t)blk * BLK + ps % BLK;
   size_t src = si * p.Dh + i % p.Dh, dst = (size_t)ps * p.HD + i;
-  if (kv8) {
-    Kt[dst] = bfloat(float(((device const char*)Kc)[src]) * Ks[si]);
-    Vt[dst] = bfloat(float(((device const char*)Vc)[src]) * Vs[si]);
+  if (kv8) {  // (and kv4: kv_load1 reads the nibble)
+    Kt[dst] = bfloat(kv_load1(Kc, src) * Ks[si]);
+    Vt[dst] = bfloat(kv_load1(Vc, src) * Vs[si]);
   } else {
     Kt[dst] = Kc[src];
     Vt[dst] = Vc[src];
@@ -1329,12 +1394,24 @@ kernel void kv_gather(device const bfloat* Kc [[buffer(0)]],
 }
 
 // out[t, h*Dh + d] *= sigmoid(gate) for rows [row0, row0 + n). grid (Hq * Dh, n).
-struct GateArgs { int Hq, Dh, row0, proj_stride; };
+struct GateArgs { int Hq, Dh, row0, proj_stride, gated; };
+// KV4 rotated V (kv4_rv): the flash output is rotated; each 256-thread threadgroup is one head (Dh = 256) of one row
+// and rotates it back first. Ungated layers (p.gated 0) only rotate.
 kernel void attn_gate(device bfloat* out [[buffer(0)]],
                       device const bfloat* proj [[buffer(1)]],
                       constant GateArgs& p [[buffer(2)]],
-                      uint2 gid [[thread_position_in_grid]]) {
+                      uint2 gid [[thread_position_in_grid]],
+                      uint tid [[thread_index_in_threadgroup]]) {
   int i = gid.x, t = p.row0 + gid.y;
+  if (kv4_rv) {
+    threadgroup float hb[256];
+    size_t o = (size_t)t * p.Hq * p.Dh + i;
+    float x = tg_hadamard(hb, float(out[o]), tid, 256);
+    int h = i / p.Dh, d = i % p.Dh;
+    float gate = p.gated ? float(proj[(size_t)t * p.proj_stride + h * 2 * p.Dh + p.Dh + d]) : INFINITY;
+    out[o] = bfloat(float(bfloat(x)) * (1.f / (1.f + exp(-gate))));
+    return;
+  }
   if (i >= p.Hq * p.Dh) return;
   int h = i / p.Dh, d = i % p.Dh;
   float gate = proj[(size_t)t * p.proj_stride + h * 2 * p.Dh + p.Dh + d];

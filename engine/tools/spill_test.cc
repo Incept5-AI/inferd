@@ -28,6 +28,9 @@ struct Qwen35 {
   std::vector<Buf> kc, vc, ks, vs, conv_state, ssm_state;
   static constexpr int NS = 8 * KV_BLOCK;  // 8 blocks
   size_t kv_elem() const { return 2; }
+  bool kv4 = false;
+  int kv4_rot = 0;
+  size_t kv_bytes(size_t elems) const { return elems * kv_elem(); }
   size_t kv_ns() const { return NS; }
   Qwen35() {
     for (int l = 0; l < 2; l++) {
@@ -52,6 +55,7 @@ struct Qwen35 {
 struct Drafter {
   int ring = 1, Hkv = 1, D = 1, nl = 0;
   std::vector<Buf> kr, vr;
+  size_t slot_ring_bytes() const { return (size_t)ring * Hkv * D * 2; }
 };
 #define SPILL_HOST_TEST
 #include "../src/spill.h"

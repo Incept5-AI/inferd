@@ -14,6 +14,31 @@ struct GqaArgs { int T, Hq, Hkv, Dh, max_blocks, splits, chunk, proj_stride; flo
 struct GdnArgs { int S, Hk, Hv, Dk, Dv, conv_dim, proj_stride; float eps; int verify, sig; };
 struct ReplayArgs { int conv_dim, Hk, Hv, Dk, Dv; };
 constant constexpr int BLK = 32, MAX_BLOCK = 16;
+// KV4 (core.metal): two signed nibbles a byte, even element low; 23 = rotated V (the output is rotated back here).
+constant bool kv4_rv_fc [[function_constant(23)]];
+constant bool tr_kv4_rv = is_function_constant_defined(kv4_rv_fc) && kv4_rv_fc;
+template <bool KV8, bool KV4>
+inline float tr_kv(device const void* base, size_t off) {
+  if (KV4) {
+    const int b = int(((device const uchar*)base)[off >> 1]);
+    return float((off & 1) ? (b << 24) >> 28 : (b << 28) >> 28);
+  }
+  if (KV8) return float(((device const char*)base)[off]);
+  return float(((device const bfloat*)base)[off]);
+}
+inline float tr_hadamard(threadgroup float* x, float v, uint tid, int n) {
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  if (tid < (uint)n) x[tid] = v;
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  for (int h = 1; h < n; h <<= 1) {
+    float a = 0, b = 0;
+    if (tid < (uint)n) { a = x[tid]; b = x[tid ^ h]; }
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (tid < (uint)n) x[tid] = (tid & h) ? b - a : a + b;
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+  }
+  return tid < (uint)n ? x[tid] * rsqrt(float(n)) : 0.f;
+}
 
 inline float tr_tg_sum(float v, threadgroup float* scratch, uint tid, uint ntg) {
   v = simd_sum(v);
@@ -29,7 +54,7 @@ inline float tr_tg_sum(float v, threadgroup float* scratch, uint tid, uint ntg) 
 // The tree part of attention: row t, query head h over its ancestors' (and its own) keys. Writes one partial
 // (numerator [Dh], max, denominator) per (row, head) in the main partials' format at tpart[tpi[t]]. One simdgroup per
 // (head, row), Dh / 32 dims a lane. grid: threadgroups (Hq, ceil(T / 4)), 128 threads (4 rows).
-template <bool KV8>
+template <bool KV8, bool KV4 = false>
 kernel void attn_tree(device const bfloat* q [[buffer(0)]], device const void* Kc [[buffer(1)]],
                       device const void* Vc [[buffer(2)]], device const int* block_table [[buffer(3)]],
                       device const int* pos [[buffer(4)]], device const int* tseq [[buffer(5)]],
@@ -57,7 +82,7 @@ kernel void attn_tree(device const bfloat* q [[buffer(0)]], device const void* K
     float dot = 0;
     if (KV8) {
       const float ksc = Ks[si];
-      for (int k = 0; k < DL; k++) dot += qd[k] * float(((device const char*)Kc)[o + k]);
+      for (int k = 0; k < DL; k++) dot += qd[k] * tr_kv<KV8, KV4>(Kc, o + k);
       dot *= ksc;
     } else {
       for (int k = 0; k < DL; k++) dot += qd[k] * float(((device const bfloat*)Kc)[o + k]);
@@ -66,7 +91,7 @@ kernel void attn_tree(device const bfloat* q [[buffer(0)]], device const void* K
     const float Mn = max(M, s), f = exp(M - Mn), e = exp(s - Mn);
     const float vsc = KV8 ? Vs[si] : 1.f;
     for (int k = 0; k < DL; k++) {
-      const float v = KV8 ? float(((device const char*)Vc)[o + k]) * vsc : float(((device const bfloat*)Vc)[o + k]);
+      const float v = tr_kv<KV8, KV4>(Vc, o + k) * vsc;
       num[k] = num[k] * f + e * v;
     }
     den = den * f + e;
@@ -80,6 +105,9 @@ kernel void attn_tree(device const bfloat* q [[buffer(0)]], device const void* K
   }
 }
 template [[host_name("attn_tree")]] kernel void attn_tree<false>(device const bfloat*, device const void*, device const void*,
+    device const int*, device const int*, device const int*, device float*, constant GqaArgs&, device const int*,
+    device const uint*, device const float*, device const float*, device const int*, uint2, uint, uint);
+template [[host_name("attn_tree_kv4")]] kernel void attn_tree<true, true>(device const bfloat*, device const void*, device const void*,
     device const int*, device const int*, device const int*, device float*, constant GqaArgs&, device const int*,
     device const uint*, device const float*, device const float*, device const int*, uint2, uint, uint);
 template [[host_name("attn_tree_kv8")]] kernel void attn_tree<true>(device const bfloat*, device const void*, device const void*,
@@ -115,7 +143,13 @@ kernel void attn_combine_tree(device const float* part [[buffer(0)]], device con
     den += tp[p.Dh + 1] * f;
   }
   const float gate = p.gated ? float(proj[(size_t)t * p.proj_stride + h * 2 * p.Dh + p.Dh + tid]) : INFINITY;
-  float o = float(bfloat(num / den));
+  float o;
+  if (tr_kv4_rv) {
+    threadgroup float hb[512];
+    o = float(bfloat(tr_hadamard(hb, num / den, tid, p.Dh)));
+  } else {
+    o = float(bfloat(num / den));
+  }
   out[((size_t)t * p.Hq + h) * p.Dh + tid] = bfloat(o * (1.f / (1.f + exp(-gate))));
 }
 
@@ -313,7 +347,7 @@ kernel void gdn_replay_tree(device const bfloat* conv_out [[buffer(0)]], device 
 // Path nodes ascend with i_j >= j, so walking j upward reads every source before anything overwrites it.
 // grid threads (Dh, Hkv, number of tree sequences).
 struct CompactArgs { int Dh, ns, max_blocks; };
-template <bool KV8>
+template <bool KV8, bool KV4 = false>
 kernel void kv_compact(device void* Kc [[buffer(0)]], device void* Vc [[buffer(1)]], device float* Ks [[buffer(2)]],
                        device float* Vs [[buffer(3)]], device const int* block_table [[buffer(4)]],
                        device const int* pos [[buffer(5)]], device const int* seq_start [[buffer(6)]],
@@ -327,7 +361,13 @@ kernel void kv_compact(device void* Kc [[buffer(0)]], device void* Vc [[buffer(1
     const int src = tpath[b * MAX_BLOCK + j];
     if (src == j) continue;
     const size_t a = si_of(pos[t0 + src]), z = si_of(pos[t0 + j]);
-    if (KV8) {
+    if (KV4) {  // Dh / 2 bytes a slot: threads d < Dh / 2 move one byte each
+      if (d < p.Dh / 2) {
+        ((device uchar*)Kc)[z * p.Dh / 2 + d] = ((device const uchar*)Kc)[a * p.Dh / 2 + d];
+        ((device uchar*)Vc)[z * p.Dh / 2 + d] = ((device const uchar*)Vc)[a * p.Dh / 2 + d];
+      }
+      if (d == 0) { Ks[z] = Ks[a]; Vs[z] = Vs[a]; }
+    } else if (KV8) {
       ((device char*)Kc)[z * p.Dh + d] = ((device const char*)Kc)[a * p.Dh + d];
       ((device char*)Vc)[z * p.Dh + d] = ((device const char*)Vc)[a * p.Dh + d];
       if (d == 0) { Ks[z] = Ks[a]; Vs[z] = Vs[a]; }
@@ -338,6 +378,9 @@ kernel void kv_compact(device void* Kc [[buffer(0)]], device void* Vc [[buffer(1
   }
 }
 template [[host_name("kv_compact")]] kernel void kv_compact<false>(device void*, device void*, device float*, device float*,
+    device const int*, device const int*, device const int*, device const int*, device const int*, device const int*,
+    constant CompactArgs&, uint3);
+template [[host_name("kv_compact_kv4")]] kernel void kv_compact<true, true>(device void*, device void*, device float*, device float*,
     device const int*, device const int*, device const int*, device const int*, device const int*, device const int*,
     constant CompactArgs&, uint3);
 template [[host_name("kv_compact_kv8")]] kernel void kv_compact<true>(device void*, device void*, device float*, device float*,

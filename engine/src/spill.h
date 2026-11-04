@@ -161,6 +161,7 @@ struct SpillTier {
     char geo[200];
     snprintf(geo, sizeof geo, "kv8 %d block %zu state %zu kv_block %d planes format 2 (checksummed) w4a8 %s", (int)m.kv8,
              block_bytes(), state_bytes(), KV_BLOCK, getenv("W4A8") ? getenv("W4A8") : "default");
+    if (m.kv4) snprintf(geo + strlen(geo), sizeof geo - strlen(geo), " kv4 rot %d", m.kv4_rot);  // (KV8 manifests unchanged)
     const std::string manifest = identity + "\n" + geo + "\n";
     if (persist && slurp(dir + "/MANIFEST") == manifest) {
       recover();
@@ -277,11 +278,11 @@ struct SpillTier {
   }
   static constexpr uint64_t kSeed = 1469598103934665603ull;
 
-  size_t kv_bytes() const { return (size_t)KV_BLOCK * m.cfg.hkv * m.cfg.dh * m.kv_elem(); }
+  size_t kv_bytes() const { return m.kv_bytes((size_t)KV_BLOCK * m.cfg.hkv * m.cfg.dh); }
   size_t sc_bytes() const { return m.kv8 ? (size_t)KV_BLOCK * m.cfg.hkv * 4 : 0; }
   size_t conv_bytes() const { return (size_t)(m.cfg.conv_k - 1) * m.cfg.conv_dim() * 2; }
   size_t ssm_bytes() const { return (size_t)m.cfg.lhv * m.cfg.ldv * m.cfg.ldk * 4; }
-  size_t ring_bytes() const { return d ? (size_t)d->ring * d->Hkv * d->D * 2 : 0; }
+  size_t ring_bytes() const { return d ? d->slot_ring_bytes() : 0; }
   size_t block_bytes() const { return m.kc.size() * 2 * (kv_bytes() + sc_bytes()); }
   size_t state_bytes() const { return m.conv_state.size() * (conv_bytes() + ssm_bytes()) + (d ? d->nl * 2 * ring_bytes() : 0); }
 

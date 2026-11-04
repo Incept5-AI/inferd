@@ -50,7 +50,7 @@ struct MlxGemmParams {
   int64_t batch_stride_a, batch_stride_b, batch_stride_d;
   int swizzle_log, gemm_k_iterations_aligned, batch_ndim;
 };
-struct GateArgs { int Hq, Dh, row0, proj_stride; };
+struct GateArgs { int Hq, Dh, row0, proj_stride, gated; };
 // MLX steel AttnParams (third_party/mlx/.../steel/attn/params.h)
 struct MlxAttnParams {
   int B, H, D, qL, kL, gqa_factor;
@@ -231,10 +231,19 @@ struct Qwen35Config {
   int max_hd() const { int m = 0; for (int l = 0; l < layers; l++) if (!is_linear(l)) m = std::max(m, layer_dh(l) * layer_hkv(l)); return m; }
   int max_dh() const { return gemma ? std::max(dh, gdh) : dh; }
   // KV pool bytes per 32-token block over every attention layer (int8 values + a float scale per head, or bf16)
-  size_t kv_block_bytes(bool kv8) const {
+  // 4-bit KV (KV4=1, with KV8): Qwen3.5-family dense attention with 256-dim heads only (the rotations are 256-point,
+  // the NAX tile loads assume it); not Flash-Next (QSA planes, MTP), Gemma-4 or Glimmer.
+  bool kv4_ok() const { return !qwen4 && !gemma && !glimmer && mtp == 0 && dh == 256; }
+  bool kv4_wanted(bool kv8) const {
+    const char* e = getenv("KV4");
+    if (!e || !atoi(e)) return false;
+    if (!kv8 || !kv4_ok()) { fprintf(stderr, "KV4=1 needs KV8 and a Qwen3.5-family model with 256-dim heads: ignored\n"); return false; }
+    return true;
+  }
+  size_t kv_block_bytes(bool kv8, bool kv4 = false) const {
     size_t b = 0;
     for (int l = 0; l < layers; l++)
-      if (!is_linear(l)) b += (size_t)KV_BLOCK * layer_hkv(l) * (kv8 ? layer_dh(l) + 4 : layer_dh(l) * 2) * 2;
+      if (!is_linear(l)) b += (size_t)KV_BLOCK * layer_hkv(l) * (kv4 ? layer_dh(l) / 2 + 4 : kv8 ? layer_dh(l) + 4 : layer_dh(l) * 2) * 2;
     b += (size_t)mtp * KV_BLOCK * hkv * (kv8 ? dh + 4 : dh * 2) * 2;  // the MTP layer (same shape as the target's)
     b += (size_t)qsa_planes(kv8) * KV_BLOCK * hkv * (kv8 ? dh + 4 : dh * 2) * 2;  // QSA index keys (extra KV planes)
     return b;
@@ -403,13 +412,28 @@ struct Qwen35 {
   // default since 2026-10-31 (KV8=0: bf16). Gemma-4 defaults to bf16: its attention scale of 1 on normed q/k makes
   // int8 key error flip predictions (KL 1.96 vs 0.06 on a repetition prompt, 2026-11-01).
   bool kv8 = getenv("KV8") ? atoi(getenv("KV8")) != 0 : !cfg.gemma;
+  // 4-bit KV (KV4=1, opt-in; kernels/core.metal): signed nibbles with KV8's per-(position, kv head) scales, after a
+  // 256-point Hadamard rotation of K (with the queries) and V (the output is rotated back): KV4_ROT bit 1 K, bit 2 V
+  // (default 3). Twice the tokens per GiB of KV8. Every attention path reads it (attn_mpp / attn_shared through
+  // S = Q K^T with the int4 K pages as the right operand: the tensor ops take int4 only there).
+  bool kv4 = cfg.kv4_wanted(kv8);
+  int kv4_rot = getenv("KV4_ROT") ? atoi(getenv("KV4_ROT")) : 3;
   std::vector<BufRef> ks, vs;
   size_t kv_elem() const { return kv8 ? 1 : 2; }
+  size_t kv_bytes(size_t elems) const { return kv4 ? elems / 2 : elems * kv_elem(); }  // bytes of `elems` K or V values
   // KV layout: per layer, one plane per kv head, [Hkv][ns][Dh] (scales [Hkv][ns]); slot = block * KV_BLOCK + t.
   int kv_ns() const { return n_blocks * KV_BLOCK; }
   // 8-bit attention (with KV8): int8 queries x int8 keys on the integer path for verify blocks (ATTN_IQ=0 off).
-  bool attn_iq = !getenv("ATTN_IQ") || atoi(getenv("ATTN_IQ"));
-  id<MTLComputePipelineState> kvk(const char* name) { return g.pso_fc(name, {{20, kv8}}); }
+  // With KV4 the default is bf16 queries (ATTN_IQ=1 forces int8): int8 queries on 4-bit keys took the fox prompt's
+  // 8-row verify logits from cos 0.9981 to 0.9896 vs mlx_lm (KV8: 0.9988 either way).
+  bool attn_iq = getenv("ATTN_IQ") ? atoi(getenv("ATTN_IQ")) != 0 : !kv4;
+  id<MTLComputePipelineState> kvk(const char* name) {
+    if (kv4) return g.pso_fc(name, {{20, kv8}, {21, true}, {22, (kv4_rot & 1) != 0}, {23, (kv4_rot & 2) != 0}});
+    return g.pso_fc(name, {{20, kv8}});
+  }
+  // Kernels that only change for a rotated KV4 V (they rotate the attention output back): plain otherwise.
+  // (They declare the KV4 function constants, so they are always built specialised; none set = the plain kernel.)
+  id<MTLComputePipelineState> rvk(const char* name) { return kv4 && (kv4_rot & 2) ? kvk(name) : g.pso_fc(name, {}); }
 
   Qwen35(Gpu& g, const Checkpoint& ck, int max_tokens, int max_seqs, int n_slots, int n_blocks, int max_blocks)
       : g(g), cfg(ck.config), max_tokens(max_tokens), max_seqs(max_seqs), n_slots(n_slots), n_blocks(n_blocks),
@@ -811,15 +835,15 @@ struct Qwen35 {
     kc.clear(); vc.clear(); ks.clear(); vs.clear();
     for (auto& ly : L) {
       if (ly.linear) continue;
-      kc.push_back(g.alloc((size_t)n_blocks * KV_BLOCK * ly.hkv * ly.dh * kv_elem()));
-      vc.push_back(g.alloc((size_t)n_blocks * KV_BLOCK * ly.hkv * ly.dh * kv_elem()));
+      kc.push_back(g.alloc(kv_bytes((size_t)n_blocks * KV_BLOCK * ly.hkv * ly.dh)));
+      vc.push_back(g.alloc(kv_bytes((size_t)n_blocks * KV_BLOCK * ly.hkv * ly.dh)));
       ks.push_back(g.alloc(kv8 ? (size_t)n_blocks * KV_BLOCK * ly.hkv * 4 : 16));
       vs.push_back(g.alloc(kv8 ? (size_t)n_blocks * KV_BLOCK * ly.hkv * 4 : 16));
     }
     if (has_mtp) {  // the MTP layer's pool: same block ids and geometry, index mtp_ly.idx
       const Layer& ly = mtp_ly;
-      kc.push_back(g.alloc((size_t)n_blocks * KV_BLOCK * ly.hkv * ly.dh * kv_elem()));
-      vc.push_back(g.alloc((size_t)n_blocks * KV_BLOCK * ly.hkv * ly.dh * kv_elem()));
+      kc.push_back(g.alloc(kv_bytes((size_t)n_blocks * KV_BLOCK * ly.hkv * ly.dh)));
+      vc.push_back(g.alloc(kv_bytes((size_t)n_blocks * KV_BLOCK * ly.hkv * ly.dh)));
       ks.push_back(g.alloc(kv8 ? (size_t)n_blocks * KV_BLOCK * ly.hkv * 4 : 16));
       vs.push_back(g.alloc(kv8 ? (size_t)n_blocks * KV_BLOCK * ly.hkv * 4 : 16));
     }
@@ -2082,9 +2106,10 @@ struct Qwen35 {
     size_t qoff = (size_t)f.row0 * cfg.hq * ly.dh * 2;
     e.k(pso).buf(0, qbuf.at(qoff)).buf(1, kv_k).buf(2, kv_v).buf(3, act.at(qoff)).args(4, ap);
     e.groups(S3(ap.NQ, cfg.hq, 1), d128 ? S3(32, 4, 1) : d512 ? S3(32, 4, 4) : S3(32, 4, 2));
-    if (!ly.gated) return;
-    GateArgs gt{cfg.hq, ly.dh, f.row0, ly.proj};
-    e.k("attn_gate").buf(0, act).buf(1, proj).args(2, gt);
+    const bool rv = kv4 && (kv4_rot & 2);  // KV4 rotated V: attn_gate rotates the output back (gated or not)
+    if (!ly.gated && !rv) return;
+    GateArgs gt{cfg.hq, ly.dh, f.row0, ly.proj, ly.gated ? 1 : 0};
+    e.k(rvk("attn_gate")).buf(0, act).buf(1, proj).args(2, gt);
     e.threads(S3(cfg.hq * ly.dh, f.n), S3(256));
   }
 
@@ -2422,27 +2447,30 @@ struct Qwen35 {
         for (int r : {48, 32}) {
           if (cfg.qwen4 || (r == 48 ? !any_mpp : !any_mpp32)) continue;
           const bool iq = kv8 && attn_iq;
-          e.k(iq ? (r == 48 ? "q_pack_i8_48" : "q_pack_i8_32") : (r == 48 ? "q_pack48" : "q_pack32")).buf(0, qbuf)
+          // KV4: row-major query packs (_rm), Q is the left operand of S = Q K^T there
+          e.k((std::string(iq ? (r == 48 ? "q_pack_i8_48" : "q_pack_i8_32") : (r == 48 ? "q_pack48" : "q_pack32")) +
+               (kv4 ? "_rm" : "")).c_str()).buf(0, qbuf)
               .buf(1, qpack).buf(2, seq_start).buf(3, seq_len).args(4, qa).buf(5, qscale);
           e.groups(S3(ly.hkv * r, S), S3(256));
-          std::string nm = r == 48 ? (kv8 ? "attn_mpp8_kv8" : "attn_mpp8") : (kv8 ? "attn_mpp8_kv8_r32" : "attn_mpp8_r32");
+          const char* kvn = kv4 ? "_kv4" : kv8 ? "_kv8" : "";
+          std::string nm = std::string("attn_mpp8") + kvn + (r == 48 ? "" : "_r32");
           e.k((iq ? nm + "_iq" : nm).c_str()).buf(0, qpack).buf(1, kc[ly.idx]).buf(2, vc[ly.idx])
               .buf(3, block_table).buf(4, pos).buf(5, seq_start).buf(6, attn_part).args(7, qa).buf(8, rflag)
               .buf(9, seq_len).buf(10, ks[ly.idx]).buf(11, vs[ly.idx]).buf(12, kbeg).buf(13, qscale);
           e.groups(S3(ly.hkv, S, splits), S3(256));
         }
         if (any_chunk) {
-          e.k("q_pack_sh").buf(0, qbuf).buf(1, qpack_sh).buf(2, sh_rows_t).buf(3, sh_rows_j).args(4, qa);
+          e.k(kv4 ? "q_pack_sh_rm" : "q_pack_sh").buf(0, qbuf).buf(1, qpack_sh).buf(2, sh_rows_t).buf(3, sh_rows_j).args(4, qa);
           e.groups(S3(ly.hkv * 48, sh_tiles), S3(256));
-          e.k(kv8 ? "attn_shared_kv8" : "attn_shared").buf(0, qpack_sh).buf(1, kc[ly.idx]).buf(2, vc[ly.idx])
+          e.k(kv4 ? "attn_shared_kv4" : kv8 ? "attn_shared_kv8" : "attn_shared").buf(0, qpack_sh).buf(1, kc[ly.idx]).buf(2, vc[ly.idx])
               .buf(3, block_table).buf(4, pos).buf(5, sh_tinfo).buf(6, attn_part).args(7, qa).buf(8, sh_rows_t)
               .buf(9, sh_rows_j).buf(10, ks[ly.idx]).buf(11, vs[ly.idx]).buf(12, kbeg).buf(13, qscale);
           e.groups(S3(ly.hkv, sh_tiles, splits), S3(256));
         }
         if (casc) {
-          e.k("q_pack_sh").buf(0, qbuf).buf(1, qpack_sh).buf(2, sh_rows_t).buf(3, sh_rows_j).args(4, qa);
+          e.k(kv4 ? "q_pack_sh_rm" : "q_pack_sh").buf(0, qbuf).buf(1, qpack_sh).buf(2, sh_rows_t).buf(3, sh_rows_j).args(4, qa);
           e.groups(S3(ly.hkv * 48, sh_tiles), S3(256));
-          e.k(kv8 ? "attn_shared_kv8" : "attn_shared").buf(0, qpack_sh).buf(1, kc[ly.idx]).buf(2, vc[ly.idx])
+          e.k(kv4 ? "attn_shared_kv4" : kv8 ? "attn_shared_kv8" : "attn_shared").buf(0, qpack_sh).buf(1, kc[ly.idx]).buf(2, vc[ly.idx])
               .buf(3, block_table).buf(4, pos).buf(5, sh_tinfo).buf(6, attn_part).args(7, qa).buf(8, sh_rows_t)
               .buf(9, sh_rows_j).buf(10, ks[ly.idx]).buf(11, vs[ly.idx]).buf(12, kbeg).buf(13, qscale);
           e.groups(S3(ly.hkv, sh_tiles, sh_splits), S3(256));
@@ -2522,14 +2550,14 @@ struct Qwen35 {
           e.groups(S3(ly.hkv, qsa_nsp, splits), S3(128));
         }
         if (n_tree && !(tree_skip & 1)) {
-          e.k(kv8 ? "attn_tree_kv8" : "attn_tree").buf(0, qbuf).buf(1, kc[ly.idx]).buf(2, vc[ly.idx]).buf(3, block_table)
+          e.k(kv4 ? "attn_tree_kv4" : kv8 ? "attn_tree_kv8" : "attn_tree").buf(0, qbuf).buf(1, kc[ly.idx]).buf(2, vc[ly.idx]).buf(3, block_table)
               .buf(4, this->pos).buf(5, tseq).buf(6, tpart).args(7, qa).buf(8, trow).buf(9, tanc).buf(10, ks[ly.idx])
               .buf(11, vs[ly.idx]).buf(12, tpi);
           e.groups(S3(cfg.hq, (T + 3) / 4), S3(128));
-          e.k("attn_combine_tree").buf(0, attn_part).buf(1, proj).buf(2, act).args(3, qa).buf(4, rflag).buf(5, shrow)
+          e.k(rvk("attn_combine_tree")).buf(0, attn_part).buf(1, proj).buf(2, act).args(3, qa).buf(4, rflag).buf(5, shrow)
               .buf(6, tpart).buf(7, trow).buf(8, tpi);
         } else {
-          e.k("attn_combine").buf(0, attn_part).buf(1, proj).buf(2, act).args(3, qa).buf(4, rflag).buf(5, shrow);
+          e.k(rvk("attn_combine")).buf(0, attn_part).buf(1, proj).buf(2, act).args(3, qa).buf(4, rflag).buf(5, shrow);
         }
         e.groups(S3(cfg.hq, T), S3(ly.dh));
         for (auto& f : flash) encode_flash(e, ly, f);
@@ -2756,7 +2784,7 @@ struct Qwen35 {
         e.threads(S3(32, cfg.ldv, n_tree * cfg.lhv), S3(32, 4, 1));
       } else {
         ca.Dh = ly.dh;
-        e.k(kv8 ? "kv_compact_kv8" : "kv_compact").buf(0, kc[ly.idx]).buf(1, vc[ly.idx]).buf(2, ks[ly.idx])
+        e.k(kv4 ? "kv_compact_kv4" : kv8 ? "kv_compact_kv8" : "kv_compact").buf(0, kc[ly.idx]).buf(1, vc[ly.idx]).buf(2, ks[ly.idx])
             .buf(3, vs[ly.idx]).buf(4, block_table).buf(5, pos).buf(6, seq_start).buf(7, commit).buf(8, tpath)
             .buf(9, tseqs).args(10, ca);
         e.threads(S3(ly.dh, ly.hkv, n_tree), S3(std::min(ly.dh, 256)));

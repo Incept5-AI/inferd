@@ -14,6 +14,28 @@ using namespace mlx::steel;
 // 8-bit KV (function constant 20, as in core.metal): int8 K/V with a float scale per (position, kv head).
 constant bool kv8_fc [[function_constant(20)]];
 constant bool kv8 = is_function_constant_defined(kv8_fc) && kv8_fc;
+// 4-bit KV (function constant 21, with 20: KV8's scales): two signed nibbles a byte, even element low (core.metal).
+constant bool kv4_fc [[function_constant(21)]];
+constant bool kv4 = is_function_constant_defined(kv4_fc) && kv4_fc;
+
+// Fill a NAX tile from 4-bit KV: element (row, col) at nibble row * ld + col of `base` (a byte pointer to element 0).
+// A thread's fragment holds 4 consecutive columns of two rows (BaseNAXFrag::get_coord), i.e. one 16-bit word each.
+template <typename Tile>
+METAL_FUNC void load_kv4(thread Tile& t, const device uchar* base, int ld) {
+  const short2 sc = Tile::NAXFrag_t::get_coord();
+  for (short r = 0; r < Tile::kTileRows; r++)
+    for (short c = 0; c < Tile::kTileCols; c++) {
+      thread auto& f = t.frag_at(r, c);
+      for (short i = 0; i < 2; i++) {
+        const int row = r * 16 + sc.y + i * 8, col = c * 16 + sc.x;
+        const uint w = uint(*(const device ushort*)(base + ((size_t)row * ld + col) / 2));
+        f[i * 4 + 0] = bfloat(float(int(w << 28) >> 28));
+        f[i * 4 + 1] = bfloat(float(int(w << 24) >> 28));
+        f[i * 4 + 2] = bfloat(float(int(w << 20) >> 28));
+        f[i * 4 + 3] = bfloat(float(int(w << 16) >> 28));
+      }
+    }
+}
 
 struct GqaArgs { int T, Hq, Hkv, Dh, max_blocks, splits, chunk, proj_stride; float scale; int qtiles, own_splits, ns, win, gated; };
 
@@ -96,7 +118,9 @@ template <int WM, int WN, int BK = 32, int X = 0, bool VPRE = false>
     for (short ik = 0; ik < TK; ik += 2) {
       for (short id = 0; id < TDh; id++) {
         NAXTile<T, 2, 1> Ktile;  // two 16-key subtiles, ik and ik + 1 (same page: PG = 32 = 2 x kU)
-        if (kv8)
+        if (kv4)
+          load_kv4(Ktile, (const device uchar*)Kc + (kvoff(ik) + id * kU) / 2, ld);
+        else if (kv8)
           Ktile.load((const device char*)Kc + kvoff(ik) + id * kU, ld);
         else
           Ktile.load(Kc + kvoff(ik) + id * kU, ld);
@@ -110,7 +134,9 @@ template <int WM, int WN, int BK = 32, int X = 0, bool VPRE = false>
     if (VPRE)
       for (short id = 0; id < TDh; id += 2)
         for (short ik = 0; ik < TK; ik++) {
-          if (kv8)
+          if (kv4)
+            load_kv4(Vpre[id / 2][ik], (const device uchar*)Vc + (kvoff(ik) + id * kU) / 2, ld);
+          else if (kv8)
             Vpre[id / 2][ik].load((const device char*)Vc + kvoff(ik) + id * kU, ld);
           else
             Vpre[id / 2][ik].load(Vc + kvoff(ik) + id * kU, ld);
@@ -191,7 +217,9 @@ template <int WM, int WN, int BK = 32, int X = 0, bool VPRE = false>
     for (short id = 0; id < TDh; id += 2) {
       for (short ik = 0; ik < TK; ik++) {
         NAXTile<T, 1, 2> Vtile;
-        if (kv8)
+        if (kv4)
+          load_kv4(Vtile, (const device uchar*)Vc + (kvoff(ik) + id * kU) / 2, ld);
+        else if (kv8)
           Vtile.load((const device char*)Vc + kvoff(ik) + id * kU, ld);
         else
           Vtile.load(Vc + kvoff(ik) + id * kU, ld);

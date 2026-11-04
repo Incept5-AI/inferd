@@ -1091,6 +1091,32 @@ TensorFold leads at 4–8 agents on the M5 Pro's 4k cells (8 × 4k 269–273 vs 
 44.5 / 54.0 / 53.3 vs TensorFold 40.7 / 20.4 / 7.7 (4-bit) and 44.0 / 42.8 / 45.8 vs 19.3 / 8.6 / 3.0 (8-bit).
 27B long context on the M5 Pro (one agent, cold prompt + 512 out): 32k 68 s, 64k 149–152 s.
 
+## (o) 32 GB Mac mini M6: 4-bit KV (opt-in) and 8-bit drafter rings, 4 November
+
+Qwen3.8-27B 4-bit + DFlash2, `conc.py --mode followup` (512-token replies), server `16 1024 0 8 32768` with the SSD tier,
+same box (mini-m6-2) for every arm. Total tok/s (worst first token, s):
+
+| arm (KV pool) | 4k x1 | x4 | x8 | x16 | 16k x1 | x4 | x8 | x16 |
+|---|---|---|---|---|---|---|---|---|
+| v0.2.0 (8-bit, 2.4 GiB, 78k tokens) | 27.2 | 73.5 | 95.5 | 112.3 (9.1) | 24.9 | 67.8 | 66.6 (34.7) | 69.0 (97.3) |
+| `RING8` (now default; 8-bit, 2.9 GiB, 92k) | 28.0 | 76.2 | 97.8 | 112.6 (9.3) | 25.8 | 67.7 | 64.7 (38.7) | 66.2 (102.1) |
+| `KV4=1` + `RING8` (4-bit, 2.9 GiB, 182k) | 26.9 | 73.5 | 98.5 | 114.5 (8.9) | 32.3 | 68.4 | **92.6 (4.1)** | **88.2 (61.1)** |
+| v0.2.0 with 2 snapshot slots (8-bit, 3.5 GiB, 113k) | 27.6 | 74.8 | 95.1 | 113.9 (8.6) | 31.9 | 67.2 | 63.1 (40.8) | 74.8 (81.9) |
+
+`RING8` stores the drafter's context rings in 8 bits: drafts only (the output stays exact), acceptance unchanged, the
+drafter 2.8 -> 2.3 GiB on the M6 (4.4 -> 3.1 on a 64 GB M5 Pro, follow-ups level). `KV4` keeps eight 16k agents
+resident at once (one wave instead of two). It is not lossless, so it is off by default. Accuracy (kv_check vs
+mlx_lm, two real texts, 256 teacher-forced positions; mean KL nats / top-1):
+
+| | 8k decode | 32k decode | 8k verify (4 rows) | 32k verify |
+|---|---|---|---|---|
+| 8-bit KV | 0.00136 / 99.2% | 0.00144 / 98.0% | 0.00174 / 98.4% | 0.00160 / 99.2% |
+| 4-bit KV | 0.00771 / 98.4% | 0.00737 / 95.7% | 0.00696 / 96.9% | 0.00817 / 97.7% |
+
+Logits gate (decode_test check, M6): KV4 off byte-identical to the previous build; KV4 on top-1 ok at chunks 1/24 and
+on one of two 1,536-token sequences at chunks 256/1536 (the other flips). Step time KV4 = KV8 within 1% (4k/16k,
+1-8 sequences, 1-8 rows).
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

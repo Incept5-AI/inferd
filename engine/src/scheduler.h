@@ -1102,7 +1102,7 @@ struct Scheduler {
     char b[256];
     snprintf(b, sizeof b, ",\"tokens\":%zu,\"cached\":%d,\"pinned\":%s,\"gpu\":%s,\"ssd\":%s,\"kv_mib\":%.1f}", c.tokens.size(),
              c.cached, c.pinned ? "true" : "false", gpu ? "true" : "false", ssd ? "true" : "false",
-             depth * (double)m.cfg.kv_block_bytes(m.kv8) / 1048576.0);
+             depth * (double)m.cfg.kv_block_bytes(m.kv8, m.kv4) / 1048576.0);
     return "{\"name\":" + jstr(name) + b;
   }
   // A context save finished (or was already cached): register it under its name, pin it, write it to the SSD tier.
@@ -1234,7 +1234,7 @@ struct Scheduler {
     }
     std::unordered_set<int> act;
     for (auto& r : running) act.insert(r.blocks.begin(), r.blocks.end());
-    const double bm = m.cfg.kv_block_bytes(m.kv8) / 1048576.0;
+    const double bm = m.cfg.kv_block_bytes(m.kv8, m.kv4) / 1048576.0;
     char b[768];
     snprintf(b, sizeof b, "{\"kv_blocks\":%d,\"kv_free\":%zu,\"kv_running\":%zu,\"kv_cached\":%ld,\"kv_cached_only\":%ld,"
              "\"kv_pinned\":%ld,\"block_tokens\":%d,\"block_mib\":%.3f,\"slots\":%d,\"free_slots\":%zu,\"snapshots\":%d,"

@@ -34,7 +34,14 @@ struct Drafter {
   // [tail_lo, vocab) through views of the target's lm_head. 0.06% of code tokens and 0.18% of English ones lie in
   // between (they can only be rejected drafts; verification is unchanged). DRAFT_VOCAB=0 scores the full vocabulary.
   int dv = 0, tail_lo = 0;
-  size_t mem_total = 0, mem_rings = 0;  // bytes allocated by the drafter (weights, context rings, scratch) and its rings
+  size_t mem_total = 0, mem_rings = 0;
+  // 8-bit context rings (RING8, default on since 2026-11-04; kernels/spec.metal): int8 K/V + a float scale per
+  // (position, kv head), about half the bytes per state slot. Affects only the drafts (verification keeps the output
+  // exact): acceptance unchanged (laptop spec_test 12.34 / 6.52 vs 6.56 tokens per cycle), M6 drafter 2.8 -> 2.3 GiB
+  // (+0.5 GiB of KV), M5 Pro 4.4 -> 3.1. RING8=0: bf16 rings.
+  bool ring8 = !getenv("RING8") || atoi(getenv("RING8"));
+  size_t slot_ring_bytes() const { return (size_t)ring * Hkv * (ring8 ? D + 4 : D * 2); }  // one slot of one layer's K (or V) ring
+  id<MTLComputePipelineState> rk(const char* name) { return g.pso_fc(name, {{30, ring8}}); }  // bytes allocated by the drafter (weights, context rings, scratch) and its rings
   // Inputs for the two phases
   BufRef c_rows[2], c_pos[2], c_tseq[2], c_slot[2], b_tok, b_pos, b_tseq, b_start, b_len, b_spec, b_slot, b_vstart;
 
@@ -97,8 +104,8 @@ struct Drafter {
       ly.down = load_qlinear_bf16_q8(g, ck, {p + "mlp.down_proj.weight"}, qb);
       tgt.flip({&ly.kp_attn, &ly.kp_mlp, &ly.qkv, &ly.o, &ly.gate_up, &ly.down});
       layers.push_back(ly);
-      kr.push_back(g.alloc((size_t)tgt.n_slots * ring * Hkv * D * 2));
-      vr.push_back(g.alloc((size_t)tgt.n_slots * ring * Hkv * D * 2));
+      kr.push_back(g.alloc((size_t)tgt.n_slots * slot_ring_bytes()));
+      vr.push_back(g.alloc((size_t)tgt.n_slots * slot_ring_bytes()));
     }
     // Block rows: the scheduler's cap on verify rows when the caller set one (Scheduler::spec_rows_cap: 128 for 16
     // sequences instead of 16 x 16), else every sequence at the widest block.
@@ -152,7 +159,7 @@ struct Drafter {
     b_slot = g.alloc(tgt.max_seqs * 4);
     b_vstart = g.alloc(tgt.max_seqs * 4);
     mem_total = g.dev.currentAllocatedSize - mem0;
-    mem_rings = (size_t)nl * 2 * tgt.n_slots * ring * Hkv * D * 2;
+    mem_rings = (size_t)nl * 2 * tgt.n_slots * slot_ring_bytes();
   }
 
   // Context append: rows of the target's hidden capture (tgt.hcap) to enter into each sequence's ring, with
@@ -182,7 +189,7 @@ struct Drafter {
       // offset computed q rows as k/v and drafted junk.)
       QLinear kvw = rows_of(layers[l].qkv, Hq * D, 2 * Hkv * D);
       tgt.gemm(e, cxn, kvw, kv, n, 0);
-      e.k("draft_qk").buf(0, kv).buf(1, layers[l].q_norm).buf(2, layers[l].k_norm).buf(3, q).buf(4, kr[l]).buf(5, vr[l])
+      e.k(rk("draft_qk")).buf(0, kv).buf(1, layers[l].q_norm).buf(2, layers[l].k_norm).buf(3, q).buf(4, kr[l]).buf(5, vr[l])
           .buf(6, cp).buf(7, ct).buf(8, cs).args(9, da);
       e.groups(S3(Hkv, n), S3(D));
     }
@@ -237,7 +244,7 @@ struct Drafter {
       tgt.gemm(e, h, ly.kp_attn, kp, T, 0);
       dyn_conv(e, h, ly.base_attn, 0, h2, BufRef(), T, G);
       tgt.gemm(e, h2, ly.qkv, qkv, T, 0);
-      e.k("draft_qk").buf(0, qkv).buf(1, ly.q_norm).buf(2, ly.k_norm).buf(3, q).buf(4, kr[l]).buf(5, vr[l])
+      e.k(rk("draft_qk")).buf(0, qkv).buf(1, ly.q_norm).buf(2, ly.k_norm).buf(3, q).buf(4, kr[l]).buf(5, vr[l])
           .buf(6, b_pos).buf(7, b_tseq).buf(8, b_slot).args(9, da);
       e.groups(S3(Hq + Hkv, T), S3(D));
       // Rows per instance: 5, 8 (as 2 x 4 across threadgroups unless DRAFT_ATTN_ONE), 12 (3 x 4), 16 (4 x 4). Every
@@ -247,7 +254,7 @@ struct Drafter {
       const int ng = dr == 5 || (dr == 8 && !grouped) ? 1 : dr / 4;
       const char* ak = dr == 5 ? "draft_attn5" : dr == 8 ? (grouped ? "draft_attn8g" : "draft_attn8") :
                        dr == 12 ? "draft_attn12g" : "draft_attn16g";
-      e.k(ak).buf(0, q).buf(1, kr[l]).buf(2, vr[l])
+      e.k(rk(ak)).buf(0, q).buf(1, kr[l]).buf(2, vr[l])
           .buf(3, b_pos).buf(4, b_start).buf(5, b_len).buf(6, b_slot).buf(7, part).args(8, aa);
       e.groups(S3(Hkv, S, splits * ng), S3(32));
       const char* ck = dr == 5 ? "draft_attn_combine5" : dr == 8 ? "draft_attn_combine8" :
@@ -324,7 +331,7 @@ struct Drafter {
   }
 
   void encode_zero_slot(id<MTLBlitCommandEncoder> b, int s) {
-    size_t sz = (size_t)ring * Hkv * D * 2;
+    size_t sz = slot_ring_bytes();
     for (int l = 0; l < nl; l++) {
       [b fillBuffer:kr[l].buf range:NSMakeRange(s * sz, sz) value:0];
       [b fillBuffer:vr[l].buf range:NSMakeRange(s * sz, sz) value:0];
@@ -332,7 +339,7 @@ struct Drafter {
   }
 
   void encode_copy_slot(id<MTLBlitCommandEncoder> b, int src, int dst) {
-    size_t sz = (size_t)ring * Hkv * D * 2;
+    size_t sz = slot_ring_bytes();
     for (int l = 0; l < nl; l++) {
       [b copyFromBuffer:kr[l].buf sourceOffset:src * sz toBuffer:kr[l].buf destinationOffset:dst * sz size:sz];
       [b copyFromBuffer:vr[l].buf sourceOffset:src * sz toBuffer:vr[l].buf destinationOffset:dst * sz size:sz];

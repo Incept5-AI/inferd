@@ -19,7 +19,9 @@ struct GqaArgs { int T, Hq, Hkv, Dh, max_blocks, splits, chunk, proj_stride; flo
 
 // Pack each multi-row sequence's queries per kv head (i = r * 6 + j: token row r, head j of the group), zero past
 // the sequence's rows. grid: threadgroups (Hkv * 48, S), 256 threads.
-template <int R>
+// RM (KV4): row-major qp[(b * Hkv + kh)][48][d] instead, the LEFT operand of S = Q K^T (the tensor ops take int4 only as
+// the right operand, so 4-bit K is the transposed right operand there).
+template <int R, bool RM = false>
 kernel void q_pack(device const bfloat* q [[buffer(0)]], device bfloat* qp [[buffer(1)]],
                    device const int* seq_start [[buffer(2)]], device const int* seq_len [[buffer(3)]],
                    constant GqaArgs& p [[buffer(4)]], uint2 tg [[threadgroup_position_in_grid]],
@@ -28,12 +30,12 @@ kernel void q_pack(device const bfloat* q [[buffer(0)]], device bfloat* qp [[buf
   const int r0 = seq_start[b], n = min(seq_len[b], R / 6);
   // Transposed: qp[(b * Hkv + kh)][d][48], the right operand of S^T = K Q^T (K is the left operand in its
   // natural row-per-key layout; as a transposed right operand it streamed at ~40% of the bandwidth P V reaches).
-  qp[(((size_t)b * p.Hkv + kh) * 256 + d) * R + i] =
-      r < n ? q[((size_t)(r0 + r) * p.Hq + kh * 6 + j) * 256 + d] : bfloat(0);
+  const size_t o = RM ? (((size_t)b * p.Hkv + kh) * R + i) * 256 + d : (((size_t)b * p.Hkv + kh) * 256 + d) * R + i;
+  qp[o] = r < n ? q[((size_t)(r0 + r) * p.Hq + kh * 6 + j) * 256 + d] : bfloat(0);
 }
 // IQ (8-bit attention, with KV8): the same packing as int8 with one scale per packed row (absmax / 127 over D),
 // qs[(b * Hkv + kh) * R + i]. S^T = K8 Q8^T then runs on the integer path and is rescaled by key and query scale.
-template <int R>
+template <int R, bool RM = false>
 kernel void q_pack_i8(device const bfloat* q [[buffer(0)]], device int8_t* qp [[buffer(1)]],
                       device const int* seq_start [[buffer(2)]], device const int* seq_len [[buffer(3)]],
                       constant GqaArgs& p [[buffer(4)]], device float* qs [[buffer(5)]],
@@ -49,13 +51,22 @@ kernel void q_pack_i8(device const bfloat* q [[buffer(0)]], device int8_t* qp [[
   float a = 0;
   for (int k = 0; k < 8; k++) a = max(a, mx[k]);
   const float sc = a > 0 ? a / 127.f : 0.f;
-  qp[(((size_t)b * p.Hkv + kh) * 256 + d) * R + i] = int8_t(sc > 0 ? clamp(rint(v / sc), -127.f, 127.f) : 0.f);
+  const size_t o = RM ? (((size_t)b * p.Hkv + kh) * R + i) * 256 + d : (((size_t)b * p.Hkv + kh) * 256 + d) * R + i;
+  qp[o] = int8_t(sc > 0 ? clamp(rint(v / sc), -127.f, 127.f) : 0.f);
   if (d == 0) qs[((size_t)b * p.Hkv + kh) * R + i] = sc;
 }
 template [[host_name("q_pack_i8_48")]] kernel void q_pack_i8<48>(device const bfloat*, device int8_t*, device const int*,
     device const int*, constant GqaArgs&, device float*, uint2, uint, uint, uint);
 template [[host_name("q_pack_i8_32")]] kernel void q_pack_i8<32>(device const bfloat*, device int8_t*, device const int*,
     device const int*, constant GqaArgs&, device float*, uint2, uint, uint, uint);
+template [[host_name("q_pack_i8_48_rm")]] kernel void q_pack_i8<48, true>(device const bfloat*, device int8_t*, device const int*,
+    device const int*, constant GqaArgs&, device float*, uint2, uint, uint, uint);
+template [[host_name("q_pack_i8_32_rm")]] kernel void q_pack_i8<32, true>(device const bfloat*, device int8_t*, device const int*,
+    device const int*, constant GqaArgs&, device float*, uint2, uint, uint, uint);
+template [[host_name("q_pack48_rm")]] kernel void q_pack<48, true>(device const bfloat*, device bfloat*, device const int*,
+    device const int*, constant GqaArgs&, uint2, uint);
+template [[host_name("q_pack32_rm")]] kernel void q_pack<32, true>(device const bfloat*, device bfloat*, device const int*,
+    device const int*, constant GqaArgs&, uint2, uint);
 template [[host_name("q_pack48")]] kernel void q_pack<48>(device const bfloat*, device bfloat*, device const int*,
     device const int*, constant GqaArgs&, uint2, uint);
 template [[host_name("q_pack32")]] kernel void q_pack<32>(device const bfloat*, device bfloat*, device const int*,
@@ -68,7 +79,10 @@ template [[host_name("q_pack32")]] kernel void q_pack<32>(device const bfloat*, 
 // none) and head in the group; a row sees keys [0, min(C, its position + 1)); partials go to slots own_splits + z.
 // Two uses: cascade (rows of several sequences sharing a prefix of C keys) and chunk tiles (mode 6: 8 rows x 6
 // heads of one sequence's prefill chunk, C = the tile's last position + 1).
-template <int NSG, bool KV8, int R = 48, bool SH = false, bool IQ = false>  // R: packed rows, 48 (8 rows x 6 heads or an SH tile), 32 (<= 5 rows)
+// KV4 (with KV8's scales): 4-bit K/V pages as int4b_format tensors. S = Q K^T with Q row-major (q_pack*_rm /
+// q_pack_sh_rm) as the left operand and the K pages as the transposed right operand (int4 is right-only), stored into
+// Ssh key-major element by element; P V takes the 4-bit V pages directly.
+template <int NSG, bool KV8, int R = 48, bool SH = false, bool IQ = false, bool KV4 = false>  // R: packed rows, 48 (8 rows x 6 heads or an SH tile), 32 (<= 5 rows)
 kernel void attn_mpp(device const void* qp [[buffer(0)]], device const void* Kc [[buffer(1)]],
                      device const void* Vc [[buffer(2)]], device const int* block_table [[buffer(3)]],
                      device const int* pos [[buffer(4)]], device const int* seq_start [[buffer(5)]],
@@ -122,7 +136,8 @@ kernel void attn_mpp(device const void* qp [[buffer(0)]], device const void* Kc 
   // at ~40% of the bandwidth P V reaches), Q is packed transposed [D][48] by q_pack.
   using QE = metal::conditional_t<IQ, int8_t, bfloat>;
   using ACC = metal::conditional_t<IQ, int32_t, float>;
-  auto tQ = tensor<device QE, DT2, tensor_inline>((device QE*)qp + ((size_t)b * p.Hkv + kh) * R * D, DT2(R, D));
+  auto tQ = tensor<device QE, DT2, tensor_inline>((device QE*)qp + ((size_t)b * p.Hkv + kh) * R * D,
+                                                 KV4 ? DT2(D, R) : DT2(R, D));  // KV4: [R][D] (left), else [D][R]
   if constexpr (IQ) {
     if (tid < R) qsh[tid] = qsc[((size_t)b * p.Hkv + kh) * R + tid];
   }
@@ -133,13 +148,15 @@ kernel void attn_mpp(device const void* qp [[buffer(0)]], device const void* Kc 
   constexpr auto dpv = matmul2d_descriptor(R, D, PG, false, false, false, matmul2d_descriptor::mode::multiply_accumulate);
   matmul2d<dpv, execution_simdgroups<NSG>> pv;
 
-  using KVT = metal::conditional_t<KV8, int8_t, bfloat>;
+  using KVT = metal::conditional_t<KV4, int4b_format, metal::conditional_t<KV8, int8_t, bfloat>>;
+  using KVP = metal::conditional_t<KV4, uchar, KVT>;  // int4b_format tensors take a byte pointer
+  constexpr int KVD = KV4 ? 2 : 1;                     // elements per pointer unit
   auto kpages = [&](int blk, int n) {  // n contiguous 32-token pages of kv head kh, dims (D, n * PG), row stride ld
-    return tensor<device KVT, DT2, tensor_inline>((device KVT*)Kc + ((size_t)kh * p.ns + (size_t)blk * PG) * D,
+    return tensor<device KVT, DT2, tensor_inline>((device KVP*)Kc + ((size_t)kh * p.ns + (size_t)blk * PG) * D / KVD,
                                                   DT2(D, n * PG), array<int32_t, 2>{1, ld});
   };
   auto vpage = [&](int blk) {
-    return tensor<device KVT, DT2, tensor_inline>((device KVT*)Vc + ((size_t)kh * p.ns + (size_t)blk * PG) * D,
+    return tensor<device KVT, DT2, tensor_inline>((device KVP*)Vc + ((size_t)kh * p.ns + (size_t)blk * PG) * D / KVD,
                                                   DT2(D, PG), array<int32_t, 2>{1, ld});
   };
   auto ppage = [&](int buf, int half_) {
@@ -153,6 +170,20 @@ kernel void attn_mpp(device const void* qp [[buffer(0)]], device const void* Kc 
   for (uint16_t i = 0; i < O.get_capacity(); ++i) O[i] = 0;
   auto s2 = qk2.template get_destination_cooperative_tensor<KT, QT, ACC>();
   auto s0 = qk.template get_destination_cooperative_tensor<KT, QT, ACC>();
+  // KV4: S = Q K^T (rows x keys); its destination index is (key, row), written into Ssh[key][row] by hand.
+  constexpr auto dqk4 = matmul2d_descriptor(R, PG, D, false, true, false);
+  matmul2d<dqk4, execution_simdgroups<NSG>> qk4;
+  constexpr auto dqk42 = matmul2d_descriptor(R, BK, D, false, true, false);
+  matmul2d<dqk42, execution_simdgroups<NSG>> qk42;
+  auto s4 = qk4.template get_destination_cooperative_tensor<QT, KT, ACC>();
+  auto s42 = qk42.template get_destination_cooperative_tensor<QT, KT, ACC>();
+  auto store_s = [&](thread auto& st, int k0) {
+    for (uint16_t i = 0; i < st.get_capacity(); ++i)
+      if (st.is_valid_element(i)) {
+        auto ix = st.get_multidimensional_index(i);
+        Ssh[k0 + ix[0]][ix[1]] = st[i];
+      }
+  };
   // Ssh as the destination: element (packed row, key) at key * RS + row.
   auto sdst = [&](int k0, int n) {
     return tensor<threadgroup ACC, DT2, tensor_inline>(&Ssh[k0][0], DT2(R, n), array<int32_t, 2>{1, RS});
@@ -197,7 +228,19 @@ kernel void attn_mpp(device const void* qp [[buffer(0)]], device const void* Kc 
       if (base >= p1) break;
       // S^T for the half's 64 keys: one 64x48x256 matmul when its two pages are physically contiguous (the
       // allocator hands out ascending runs), else one per page; the result goes straight to Ssh.
-      if (base + BK <= p1 && bt[2 * h + 1] == bt[2 * h] + 1) {
+      if constexpr (KV4) {
+        if (base + BK <= p1 && bt[2 * h + 1] == bt[2 * h] + 1) {
+          auto k2 = kpages(bt[2 * h], 2);
+          qk42.run(tQ, k2, s42);
+          store_s(s42, 0);
+        } else {
+          auto ka = kpages(bt[2 * h], 1), kb = kpages(bt[2 * h + 1], 1);
+          qk4.run(tQ, ka, s4);
+          store_s(s4, 0);
+          qk4.run(tQ, kb, s4);
+          store_s(s4, PG);
+        }
+      } else if (base + BK <= p1 && bt[2 * h + 1] == bt[2 * h] + 1) {
         auto k2 = kpages(bt[2 * h], 2);
         auto d2 = sdst(0, BK);
         qk2.run(k2, tQ, s2);
@@ -283,6 +326,11 @@ kernel void attn_mpp(device const void* qp [[buffer(0)]], device const void* Kc 
   }
 }
 
+#define ATTN_MPP4(R, NAME, SH, IQ)                                                                              \
+  template [[host_name(NAME)]] kernel void attn_mpp<8, true, R, SH, IQ, true>(device const void*, device const void*, \
+      device const void*, device const int*, device const int*, device const int*, device float*, constant GqaArgs&, \
+      device const int*, device const int*, device const float*, device const float*, device const int*,          \
+      device const float*, uint3, uint, uint);
 #define ATTN_MPP(KV8, R, NAME, SH, IQ)                                                                          \
   template [[host_name(NAME)]] kernel void attn_mpp<8, KV8, R, SH, IQ>(device const void*, device const void*,     \
       device const void*, device const int*, device const int*, device const int*, device float*, constant GqaArgs&, \
@@ -292,15 +340,24 @@ ATTN_MPP(false, 48, "attn_mpp8", false, false) ATTN_MPP(true, 48, "attn_mpp8_kv8
 ATTN_MPP(false, 32, "attn_mpp8_r32", false, false) ATTN_MPP(true, 32, "attn_mpp8_kv8_r32", false, false)
 ATTN_MPP(true, 48, "attn_mpp8_kv8_iq", false, true) ATTN_MPP(true, 32, "attn_mpp8_kv8_r32_iq", false, true)
 ATTN_MPP(false, 48, "attn_shared", true, false) ATTN_MPP(true, 48, "attn_shared_kv8", true, false)
+ATTN_MPP4(48, "attn_mpp8_kv4", false, false) ATTN_MPP4(32, "attn_mpp8_kv4_r32", false, false)
+ATTN_MPP4(48, "attn_mpp8_kv4_iq", false, true) ATTN_MPP4(32, "attn_mpp8_kv4_r32_iq", false, true)
+ATTN_MPP4(48, "attn_shared_kv4", true, false)
 
 // Pack the cascade tiles' queries: qp[(tile * Hkv + kh)][d][48] from token row rows_t[tile * 48 + i] (-1: zero) and
 // head rows_j (within the kv head's group). grid: threadgroups (Hkv * 48, tiles), 256 threads. (48-row tiles: a
 // 64-row one needs 33 KB of threadgroup memory, over the 32 KB limit.)
+// RM (q_pack_sh_rm, KV4): row-major qp[(tile * Hkv + kh)][48][d] (see q_pack).
+template <bool RM>
 kernel void q_pack_sh(device const bfloat* q [[buffer(0)]], device bfloat* qp [[buffer(1)]],
                       device const int* rows_t [[buffer(2)]], device const int* rows_j [[buffer(3)]],
                       constant GqaArgs& p [[buffer(4)]], uint2 tg [[threadgroup_position_in_grid]],
                       uint d [[thread_index_in_threadgroup]]) {
   const int kh = tg.x / 48, i = tg.x % 48, tile = tg.y, t = rows_t[tile * 48 + i];
-  qp[(((size_t)tile * p.Hkv + kh) * 256 + d) * 48 + i] =
-      t >= 0 ? q[((size_t)t * p.Hq + kh * 6 + rows_j[tile * 48 + i]) * 256 + d] : bfloat(0);
+  const size_t o = RM ? (((size_t)tile * p.Hkv + kh) * 48 + i) * 256 + d : (((size_t)tile * p.Hkv + kh) * 256 + d) * 48 + i;
+  qp[o] = t >= 0 ? q[((size_t)t * p.Hq + kh * 6 + rows_j[tile * 48 + i]) * 256 + d] : bfloat(0);
 }
+template [[host_name("q_pack_sh")]] kernel void q_pack_sh<false>(device const bfloat*, device bfloat*, device const int*,
+    device const int*, constant GqaArgs&, uint2, uint);
+template [[host_name("q_pack_sh_rm")]] kernel void q_pack_sh<true>(device const bfloat*, device bfloat*, device const int*,
+    device const int*, constant GqaArgs&, uint2, uint);

@@ -13,6 +13,23 @@ inline float sp_tg_sum(float v, threadgroup float* scratch, uint tid, uint ntg) 
   return t;
 }
 
+inline float sp_tg_max(float v, threadgroup float* scratch, uint tid, uint ntg) {
+  v = simd_max(v);
+  uint sg = tid / 32, lane = tid % 32, nsg = (ntg + 31) / 32;
+  if (lane == 0) scratch[sg] = v;
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  float t = lane < nsg ? scratch[lane] : 0.f;
+  t = simd_max(t);
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  return t;
+}
+
+// 8-bit drafter context rings (function constant 30, RING8): a slot's ring region holds int8 K (or V) values
+// [ring][Hkv][D] and then float scales [ring][Hkv] (absmax / 127 per position and kv head), so a slot stays one
+// contiguous region for the slot copies, clears and the SSD tier. Drafting only: verification keeps the output exact.
+constant bool ring8_fc [[function_constant(30)]];
+constant bool ring8 = is_function_constant_defined(ring8_fc) && ring8_fc;
+
 // ---------------------------------------------------------------------------------------------
 // Target side.
 
@@ -247,6 +264,20 @@ kernel void draft_qk(device const bfloat* in [[buffer(0)]],
   float val = (int)tid < half_d ? xn[tid] * c - xn[tid + half_d] * s : xn[tid] * c + xn[tid - half_d] * s;
   if (isq) {
     q_out[((size_t)t * p.Hq + h) * p.D + tid] = bfloat(val);
+  } else if (ring8) {
+    const size_t sb = (size_t)p.ring * p.Hkv * (p.D + 4), pi = (size_t)(ps % p.ring) * p.Hkv + kh;
+    const size_t base = (size_t)slot[tseq[t]] * sb;
+    const float kq = float(bfloat(val)), vq = float(row[nq * p.D + p.Hkv * p.D + kh * p.D + tid]);
+    const float ka = sp_tg_max(fabs(kq), scratch, tid, ntg), va = sp_tg_max(fabs(vq), scratch, tid, ntg);
+    const float ksc = max(ka, 1e-20f) / 127.f, vsc = max(va, 1e-20f) / 127.f;
+    device char* K8 = (device char*)Kr + base;
+    device char* V8 = (device char*)Vr + base;
+    K8[pi * p.D + tid] = char(clamp(rint(kq / ksc), -127.f, 127.f));
+    V8[pi * p.D + tid] = char(clamp(rint(vq / vsc), -127.f, 127.f));
+    if (tid == 0) {
+      ((device float*)(K8 + (size_t)p.ring * p.Hkv * p.D))[pi] = ksc;
+      ((device float*)(V8 + (size_t)p.ring * p.Hkv * p.D))[pi] = vsc;
+    }
   } else {
     size_t o = (((size_t)slot[tseq[t]] * p.ring + ps % p.ring) * p.Hkv + kh) * p.D + tid;
     Kr[o] = bfloat(val);
@@ -298,12 +329,27 @@ kernel void draft_attn(device const bfloat* q [[buffer(0)]],
   const size_t rs = (size_t)p.Hkv * DD;
   device const bfloat* kbase = Kr + ((size_t)slot[b] * p.ring * p.Hkv + kh) * DD;
   device const bfloat* vbase = Vr + ((size_t)slot[b] * p.ring * p.Hkv + kh) * DD;
+  // RING8: int8 values and the per-(position, kv head) scales of this slot's region (see draft_qk)
+  const size_t sb8 = (size_t)p.ring * p.Hkv * (DD + 4);
+  device const char* k8 = (device const char*)Kr + (size_t)slot[b] * sb8 + kh * DD;
+  device const char* v8 = (device const char*)Vr + (size_t)slot[b] * sb8 + kh * DD;
+  device const float* ks8 = (device const float*)((device const char*)Kr + (size_t)slot[b] * sb8 + (size_t)p.ring * p.Hkv * DD) + kh;
+  device const float* vs8 = (device const float*)((device const char*)Vr + (size_t)slot[b] * sb8 + (size_t)p.ring * p.Hkv * DD) + kh;
   for (int base = p0; base < p1; base += 32) {
     int key = base + lane;
     bool inr = key < p1;
     float sc[NQ];
     for (int v = 0; v < NQ; v++) sc[v] = 0;
-    if (inr) {
+    if (inr && ring8) {
+      device const char4* kr = (device const char4*)(k8 + (size_t)(key % p.ring) * rs);
+      for (int d4 = 0; d4 < DD / 4; d4++) {
+        float4 k4 = float4(kr[d4]);
+        for (int v = 0; v < NQ; v++)
+          sc[v] += k4.x * qs[v][4 * d4] + k4.y * qs[v][4 * d4 + 1] + k4.z * qs[v][4 * d4 + 2] + k4.w * qs[v][4 * d4 + 3];
+      }
+      const float ksc = ks8[(size_t)(key % p.ring) * p.Hkv];
+      for (int v = 0; v < NQ; v++) sc[v] *= ksc;
+    } else if (inr) {
       device const bfloat4* kr = (device const bfloat4*)(kbase + (size_t)(key % p.ring) * rs);
       for (int d4 = 0; d4 < DD / 4; d4++) {
         float4 k4 = float4(kr[d4]);
@@ -326,10 +372,17 @@ kernel void draft_attn(device const bfloat* q [[buffer(0)]],
     }
     int n = min(32, p1 - base);
     for (int r = 0; r < n; r++) {
-      device const bfloat4* vr = (device const bfloat4*)(vbase + (size_t)((base + r) % p.ring) * rs + lane * DPL);
-      float4 v4 = float4(vr[0]);
+      const size_t rp = (size_t)((base + r) % p.ring);
+      float4 v4;
+      float vsc = 1.f;
+      if (ring8) {
+        v4 = float4(*(device const char4*)(v8 + rp * rs + lane * DPL));
+        vsc = vs8[rp * p.Hkv];
+      } else {
+        v4 = float4(*(device const bfloat4*)(vbase + rp * rs + lane * DPL));
+      }
       for (int v = 0; v < NQ; v++) {
-        float w = simd_shuffle(e[v], (ushort)r);
+        float w = simd_shuffle(e[v], (ushort)r) * vsc;
         acc[v][0] += w * v4.x; acc[v][1] += w * v4.y; acc[v][2] += w * v4.z; acc[v][3] += w * v4.w;
       }
     }

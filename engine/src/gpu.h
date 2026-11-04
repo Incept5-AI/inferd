@@ -102,6 +102,8 @@ struct Gpu {
     id<MTLBuffer> b = [dev newBufferWithLength:std::max<size_t>(bytes, 16) options:MTLResourceStorageModeShared];
     if (!b) { fprintf(stderr, "alloc %zu bytes failed\n", bytes); exit(1); }
     if (getenv("ALLOC_LOG") && bytes >= (1ull << 30)) fprintf(stderr, "alloc %.2f GiB\n", bytes / 1073741824.0);
+    if (getenv("ALLOC_LOG_MIB") && bytes >= (size_t)atof(getenv("ALLOC_LOG_MIB")) * (1 << 20))
+      fprintf(stderr, "alloc %.1f MiB (total %.2f GiB)\n", bytes / 1048576.0, dev.currentAllocatedSize / 1073741824.0);
     if (resident) { [resident addAllocation:b]; [resident commit]; }
     return b;
   }

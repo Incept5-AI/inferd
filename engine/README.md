@@ -107,7 +107,7 @@ speculative sampling (top-k is capped at 16 on that path; `SPEC_SAMPLE=0` turns 
 |---|---|---|---|
 | M5 Ultra, 256 GB | `8300 64 2048 140 96 262144` | optional | 4.5M tokens of KV: 32 agents × 128k stay resident |
 | M5 Max / M5 Pro, 64 GB | `8300 16 1024 24 30 147456` | `SPILL_DIR=… SPILL_GIB=96` | ~770k tokens resident |
-| M6, 32 GB | `8300 16 1024 0 8 32768` | `SPILL_DIR=… SPILL_GIB=64` | auto KV: 2.4 GiB (~78k tokens) beside the drafter; agents beyond that queue and swap via SSD |
+| M6, 32 GB | `8300 16 1024 0 8 32768` | `SPILL_DIR=… SPILL_GIB=64` | auto KV: 2.9 GiB (~92k tokens) beside the drafter; agents beyond that queue and swap via SSD. `KV4=1` doubles it (182k: eight 16k agents resident) at a small accuracy cost |
 
 **The drafter on small machines:** keep it on. On the 32 GB M6 (27B 4-bit, 2 Nov 2026) it gives 39 vs 9.5 tok/s
 for one stream and 92 vs 41 / 89 vs 64 total tok/s for 8 / 16 agents with 8k contexts, although it leaves 2.4 GiB of
@@ -121,7 +121,12 @@ decodes (when a step ends on a block boundary, at most every 64 tokens, and at i
 agent's next turn resumes near the end of its previous answer; snapshots made redundant by a newer one on the same
 chain are evicted first. Pure-attention models (Muse Glimmer, Gemma-4) need no snapshots for their cached prefixes.
 
-KV is 8-bit by default (`KV8=0` for bf16, which halves the pool). A request whose context does not fit waits; when
+KV is 8-bit by default (`KV8=0` for bf16, which halves the pool). `KV4=1` stores it in 4 bits (Qwen3.5-family models
+with 256-dim heads: the 27B, 9B, 35B-A3B), twice the tokens again: K and V are Hadamard-rotated per head before
+quantizing (the queries rotate alike; the output is rotated back), one scale per token and head. It is not lossless:
+on the 27B at 8k-32k it adds ~0.006 nats of KL against mlx_lm (8-bit KV: ~0.0014) and moves top-1 agreement from
+98-99% to 96-98%, so it stays off unless the pool is what limits you (a 32 GB Mac with 16k agents: on the M6, `KV4=1` takes 8 agents at 16k from 66.6 to 92.6 tok/s and their worst
+first token from 35 s to 4 s, all resident; 4 November 2026). A request whose context does not fit waits; when
 the pool runs dry mid-turn the newest sequence is preempted and resumes from its cached prefix (RAM or SSD).
 
 ## What is different here
@@ -159,7 +164,8 @@ The full comparison is in [docs/RESULTS.md](../docs/RESULTS.md).
 
 ## Tuning knobs (environment)
 
-`KV8` (default 1), `ATTN_IQ` (int8 queries, 1), `SPEC_AUTO` (self-tuning block, 1), `DRAFT_BLOCK` (8),
+`KV8` (default 1), `KV4` (4-bit KV, opt-in, 0: twice the tokens of 8-bit KV at a measured accuracy cost, see above),
+`RING8` (8-bit drafter context rings: drafts only, the output stays exact; 1, 0 = bf16), `ATTN_IQ` (int8 queries, 1; 0 under `KV4`), `SPEC_AUTO` (self-tuning block, 1), `DRAFT_BLOCK` (8),
 `SPEC_BLOCKS` (fixed block by load, e.g. `8:4,16:3`), `ADMIT_RESERVE` (generated tokens budgeted per admitted turn,
 512), `SPILL_DIR`/`SPILL_GIB`, `W4A8` (1), `INFERD_DEBUG` (per-step logs and the tuner table), `SPILL_DEBUG`,
 `SPEC_ROWS` (verify rows to size the drafter and GDN tapes for; default from the block policy, 0 = the old

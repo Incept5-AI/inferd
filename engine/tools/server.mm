@@ -253,7 +253,8 @@ int main(int argc, char** argv) {
     Checkpoint ck(argv[1]);
     Qwen35Config cfg(ck.config);
     bool kv8 = getenv("KV8") ? atoi(getenv("KV8")) != 0 : !cfg.gemma;  // must match Qwen35::kv8: int8 values + a float scale
-    size_t block_bytes = cfg.kv_block_bytes(kv8);
+    const bool kv4 = cfg.kv4_wanted(kv8);  // must match Qwen35::kv4 (KV4=1): signed nibbles + KV8's scales
+    size_t block_bytes = cfg.kv_block_bytes(kv8, kv4);
     // kv_gib <= 0: size the pool from what the model, drafter, state slots and scratch leave of Metal's working-set
     // budget (recommendedMaxWorkingSetSize, the stock GPU limit), less a margin (KV_MARGIN_GIB, 1.5), as Splash does.
     const bool auto_kv = kv_gib <= 0;
@@ -291,8 +292,9 @@ int main(int argc, char** argv) {
       // auto sizing counts it (Codex review F03; it was allocated later by the Scheduler, on top of the budget).
       const size_t before_spec = g.dev.currentAllocatedSize;
       m.enable_spec(drafter->target_layers, drafter->block, m.spec_rows);
-      printf("inferd: drafter memory: %.2f GiB own (context rings %.2f for %d slots), %.2f GiB verify scratch (GDN tapes "
+      printf("inferd: drafter memory: %.2f GiB own (context rings %.2f for %d slots%s), %.2f GiB verify scratch (GDN tapes "
              "%.2f for %d rows; %d output rows)\n", drafter->mem_total / gib, drafter->mem_rings / gib, m.n_slots,
+             drafter->ring8 ? ", 8-bit" : "",
              (g.dev.currentAllocatedSize - before_spec) / gib, m.mem_tapes / gib, m.tape_rows, m.max_out);
     }
     const double budget = g.dev.recommendedMaxWorkingSetSize / gib;
@@ -355,7 +357,7 @@ int main(int argc, char** argv) {
     printf("inferd: memory: GPU budget %.1f GiB; model + state + scratch %.1f, drafter %.1f, PF8 %.1f, KV %.1f%s -> %.1f allocated\n",
            budget, after_model - pf8_in_model, used - after_model - (m.pf8_bytes / gib - pf8_in_model), m.pf8_bytes / gib, n_blocks * (double)block_bytes / gib, auto_kv ? " (auto)" : "",
            g.dev.currentAllocatedSize / gib);
-    printf("inferd: %s KV, %d KV blocks (%.0f GiB, %.1fM tokens), %d slots (%.1f GiB state), max ctx %d\n", kv8 ? "8-bit" : "bf16", n_blocks,
+    printf("inferd: %s KV, %d KV blocks (%.0f GiB, %.1fM tokens), %d slots (%.1f GiB state), max ctx %d\n", kv4 ? "4-bit" : kv8 ? "8-bit" : "bf16", n_blocks,
            n_blocks * (double)block_bytes / (1ull << 30), n_blocks * (double)KV_BLOCK / 1e6, m.n_slots,
            m.n_slots * (double)m.slot_bytes() / (1ull << 30), max_ctx);
     printf("inferd: PF8: %s, copies %.2f GiB%s, KV %.1f GiB\n", pf8_why.c_str(), (m.pf8_on > 0 ? m.pf8_bytes : m.pf8_estimate()) / gib,
