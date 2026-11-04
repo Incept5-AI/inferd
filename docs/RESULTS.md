@@ -545,6 +545,10 @@ link is to the report that embeds them. In-flight count was not recorded for the
 
 ---
 
+**Same-day comparison behind the website's coding figure (2 November):** inferd default 43.7 (42.5 / 43.5 / 45.0) vs
+Splash 1.5.0 41.8 (39.5 / 41.5 / 44.5), level within run-to-run noise; raw result files and the ablation arms:
+[results/quality-2026-11-02/](../results/quality-2026-11-02/README.md).
+
 ## (e) Other models
 
 Smoke ports, **not tuned, no drafters** (speculation off), all matching mlx_lm's logits (top-1 agreement, cosine ≥
@@ -1066,6 +1070,9 @@ oMLX is faster for one user (first token, Flash-Next) and at 8–16k prefill: it
 packed 4-bit weights directly (no 22.7 GiB int8 copy like inferd's PF8). That kernel is being adapted for inferd
 (32–64 GB Macs, where PF8 does not fit). Their back-to-back long-prompt fix (90.7 → 13.1 s) did not reproduce as a
 collapse on the Studio: 0.7.3 was already 6.6 s, 0.7.4 5.7–6.0 s, inferd 9.1 s flat.
+
+**Flash-Next with 16 and 32 agents released together (Studio, 4 November, single trial):** raw rows and logs in
+[results/wall1632-2026-11-04/](../results/wall1632-2026-11-04/README.md) (the website's 16/32-agent card).
 
 ## (q) Benchmark queues on five minis, 4 November (Qwen3.5-9B 4-/8-bit, Qwen3.8-27B)
 

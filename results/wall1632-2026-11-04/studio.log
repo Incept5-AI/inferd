@@ -1,0 +1,18 @@
+11:02:20 ##### start; TF tensorfold-native 1.2.2; inferd ~/inference/engine-4a1c66a
+11:03:21 == inferd fn-inferd-4a1c66a
+  N trial  prompt   gen  TTFT med  TTFT max  window win tok/s   A_e2e  wall s err
+  8     0 14329.0 6400.0      18.7      29.4    96.9     497.0   389.5   131.5   0
+ 16     0 14329.0 6400.0      33.7      59.8   125.5     698.8   490.3   208.8   0
+ 32     0 14328.0 6400.0      64.1     131.6   162.3     990.6   612.0   334.6   0
+11:17:59 == tf fn-tf122-n8 (--parallel 8)
+  N trial  prompt   gen  TTFT med  TTFT max  window win tok/s   A_e2e  wall s err
+  8     0 14327.5 6400.0      14.7      26.3   104.0     359.9   309.6   165.4   0
+11:22:58 == tf fn-tf122-n16 (--parallel 16)
+  N trial  prompt   gen  TTFT med  TTFT max  window win tok/s   A_e2e  wall s err
+ 16     0 14329.0 6400.0      28.0      53.0   310.9     325.0   279.9   365.9   0
+11:32:06 == tf fn-tf122-n32 (--parallel 32)
+11:33:54 tf --parallel 32 failed: info: prompt cache: 16.0 GiB from 54.4 GiB free under the load limit (122.8 GiB in use once loaded, 256 GiB of RAM, 2 GiB kept for prompt buffers); 16 GiB by default: --prompt-cache-gib takes more, up to what is free tensorfold: the native Flash Next batching engine cannot open (OverMemoryLimit): the sessions and the given prompt cache do not fit under the load limit (70% of RAM, or FLASHNEXT_LOAD_LIMIT_GB) past the loaded model; fewer streams, a smaller --context or --prompt-cache-gib, or a higher FLASHNEXT_LOAD_LIMIT_GB 
+11:35:02 == tf fn-tf122-n32 (--parallel 16)
+  N trial  prompt   gen  TTFT med  TTFT max  window win tok/s   A_e2e  wall s err
+ 32     0 14329.0 6400.0     209.0     417.5     0.0       0.0    84.4  2427.6   0
+12:17:33 ##### done

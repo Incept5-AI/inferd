@@ -1,0 +1,174 @@
+v1: 48 of 48 tests to run · 16 workers · qwen3.8-27b · thinking · effort medium · max_tokens 32768
+  [  1/48] log_parser             python     1.0  pass
+  [  2/48] json_deep_merge        python     1.0  pass
+  [  3/48] csv_analysis           python     1.0  pass
+  [  4/48] json_deep_merge        typescript 1.0  pass
+  [  5/48] csv_analysis           java       1.0  pass
+  [  6/48] log_parser             java       1.0  pass
+  [  7/48] log_parser             typescript 1.0  pass
+  [  8/48] http_client            python     1.0  pass
+  [  9/48] csv_analysis           typescript 1.0  pass
+  [ 10/48] log_parser             swift      1.0  pass
+  [ 11/48] csv_analysis           rust       1.0  pass
+  [ 12/48] dijkstra_graph         python     1.0  pass
+  [ 13/48] http_client            swift      1.0  pass
+  [ 14/48] csv_analysis           swift      0.0  output
+  [ 15/48] dijkstra_graph         typescript 1.0  pass
+  [ 16/48] json_deep_merge        swift      0.0  output
+  [ 17/48] dijkstra_graph         swift      1.0  pass
+  [ 18/48] log_parser             rust       0.5  pass
+  [ 19/48] csv_analysis           c          1.0  pass
+  [ 20/48] http_client            typescript 1.0  pass
+  [ 21/48] dijkstra_graph         java       1.0  pass
+  [ 22/48] json_deep_merge        java       1.0  pass
+  [ 23/48] system_info            python     1.0  pass
+  [ 24/48] json_deep_merge        rust       1.0  pass
+  [ 25/48] system_info            java       1.0  pass
+  [ 26/48] json_deep_merge        c          1.0  pass
+  [ 27/48] file_tree_analysis     python     1.0  pass
+  [ 28/48] system_info            typescript 1.0  pass
+  [ 29/48] system_info            swift      1.0  pass
+  [ 30/48] http_client            java       1.0  pass
+  [ 31/48] system_info            rust       1.0  pass
+  [ 32/48] system_info            c          1.0  pass
+  [ 33/48] matrix_ops             python     1.0  pass
+  [ 34/48] matrix_ops             typescript 1.0  pass
+  [ 35/48] file_tree_analysis     java       1.0  pass
+  [ 36/48] file_tree_analysis     typescript 1.0  pass
+  [ 37/48] matrix_ops             java       1.0  pass
+  [ 38/48] log_parser             c          0.5  pass
+  [ 39/48] http_client            rust       0.5  pass
+  [ 40/48] file_tree_analysis     swift      0.5  pass
+  [ 41/48] matrix_ops             rust       1.0  pass
+  [ 42/48] file_tree_analysis     rust       0.5  pass
+  [ 43/48] dijkstra_graph         c          1.0  pass
+  [ 44/48] matrix_ops             swift      0.5  pass
+  [ 45/48] http_client            c          0.0  run
+  [ 46/48] dijkstra_graph         rust       0.5  pass
+  [ 47/48] file_tree_analysis     c          1.0  pass
+  [ 48/48] matrix_ops             c          1.0  pass
+
+lm4-r1: 41.5/48  first-try 38  any 45  hit-cap 0  looped 0  errors 0  5 min
+  Python        8.0/8
+  Java          8.0/8
+  Swift         5.0/8
+  TypeScript    8.0/8
+  C             6.5/8
+  Rust          6.0/8
+→ ~/inference/results/quality/v1-lm4-r1.json
+v1: 48 of 48 tests to run · 16 workers · qwen3.8-27b · thinking · effort medium · max_tokens 32768
+  [  1/48] json_deep_merge        python     1.0  pass
+  [  2/48] csv_analysis           python     1.0  pass
+  [  3/48] log_parser             python     1.0  pass
+  [  4/48] log_parser             java       1.0  pass
+  [  5/48] csv_analysis           java       1.0  pass
+  [  6/48] log_parser             typescript 1.0  pass
+  [  7/48] http_client            python     1.0  pass
+  [  8/48] json_deep_merge        typescript 1.0  pass
+  [  9/48] csv_analysis           swift      0.5  pass
+  [ 10/48] csv_analysis           typescript 1.0  pass
+  [ 11/48] csv_analysis           c          1.0  pass
+  [ 12/48] csv_analysis           rust       1.0  pass
+  [ 13/48] http_client            swift      1.0  pass
+  [ 14/48] http_client            typescript 1.0  pass
+  [ 15/48] dijkstra_graph         python     1.0  pass
+  [ 16/48] log_parser             rust       1.0  pass
+  [ 17/48] log_parser             swift      1.0  pass
+  [ 18/48] http_client            java       1.0  pass
+  [ 19/48] dijkstra_graph         swift      1.0  pass
+  [ 20/48] file_tree_analysis     python     1.0  pass
+  [ 21/48] dijkstra_graph         typescript 1.0  pass
+  [ 22/48] json_deep_merge        java       1.0  pass
+  [ 23/48] system_info            python     1.0  pass
+  [ 24/48] json_deep_merge        swift      1.0  pass
+  [ 25/48] json_deep_merge        c          1.0  pass
+  [ 26/48] log_parser             c          0.0  output
+  [ 27/48] system_info            typescript 1.0  pass
+  [ 28/48] system_info            java       1.0  pass
+  [ 29/48] http_client            c          1.0  pass
+  [ 30/48] dijkstra_graph         java       1.0  pass
+  [ 31/48] system_info            rust       1.0  pass
+  [ 32/48] system_info            swift      1.0  pass
+  [ 33/48] json_deep_merge        rust       1.0  pass
+  [ 34/48] matrix_ops             python     1.0  pass
+  [ 35/48] file_tree_analysis     typescript 1.0  pass
+  [ 36/48] matrix_ops             java       1.0  pass
+  [ 37/48] system_info            c          1.0  pass
+  [ 38/48] matrix_ops             swift      1.0  pass
+  [ 39/48] dijkstra_graph         rust       0.5  pass
+  [ 40/48] file_tree_analysis     rust       0.5  pass
+  [ 41/48] file_tree_analysis     java       1.0  pass
+  [ 42/48] matrix_ops             typescript 1.0  pass
+  [ 43/48] matrix_ops             rust       1.0  pass
+  [ 44/48] matrix_ops             c          1.0  pass
+  [ 45/48] file_tree_analysis     swift      0.5  pass
+  [ 46/48] http_client            rust       1.0  pass
+  [ 47/48] file_tree_analysis     c          1.0  pass
+  [ 48/48] dijkstra_graph         c          0.5  pass
+
+lm4-r2: 44.5/48  first-try 42  any 47  hit-cap 0  looped 0  errors 0  4 min
+  Python        8.0/8
+  Java          8.0/8
+  Swift         7.0/8
+  TypeScript    8.0/8
+  C             6.5/8
+  Rust          7.0/8
+→ ~/inference/results/quality/v1-lm4-r2.json
+v1: 48 of 48 tests to run · 16 workers · qwen3.8-27b · thinking · effort medium · max_tokens 32768
+  [  1/48] json_deep_merge        python     1.0  pass
+  [  2/48] csv_analysis           python     1.0  pass
+  [  3/48] log_parser             python     1.0  pass
+  [  4/48] csv_analysis           swift      1.0  pass
+  [  5/48] json_deep_merge        typescript 1.0  pass
+  [  6/48] log_parser             java       1.0  pass
+  [  7/48] log_parser             swift      1.0  pass
+  [  8/48] csv_analysis           typescript 1.0  pass
+  [  9/48] csv_analysis           java       0.5  pass
+  [ 10/48] log_parser             typescript 1.0  pass
+  [ 11/48] http_client            python     1.0  pass
+  [ 12/48] http_client            typescript 1.0  pass
+  [ 13/48] dijkstra_graph         python     1.0  pass
+  [ 14/48] log_parser             rust       1.0  pass
+  [ 15/48] dijkstra_graph         swift      1.0  pass
+  [ 16/48] http_client            swift      1.0  pass
+  [ 17/48] http_client            java       1.0  pass
+  [ 18/48] dijkstra_graph         typescript 1.0  pass
+  [ 19/48] csv_analysis           rust       0.5  pass
+  [ 20/48] json_deep_merge        java       1.0  pass
+  [ 21/48] file_tree_analysis     python     1.0  pass
+  [ 22/48] system_info            python     1.0  pass
+  [ 23/48] dijkstra_graph         java       0.5  pass
+  [ 24/48] system_info            java       1.0  pass
+  [ 25/48] csv_analysis           c          1.0  pass
+  [ 26/48] file_tree_analysis     java       0.5  pass
+  [ 27/48] http_client            rust       1.0  pass
+  [ 28/48] system_info            swift      1.0  pass
+  [ 29/48] json_deep_merge        swift      0.0  output
+  [ 30/48] file_tree_analysis     typescript 1.0  pass
+  [ 31/48] system_info            c          1.0  pass
+  [ 32/48] file_tree_analysis     rust       1.0  pass
+  [ 33/48] system_info            typescript 1.0  pass
+  [ 34/48] json_deep_merge        rust       0.5  pass
+  [ 35/48] system_info            rust       1.0  pass
+  [ 36/48] dijkstra_graph         rust       0.5  pass
+  [ 37/48] matrix_ops             typescript 1.0  pass
+  [ 38/48] matrix_ops             java       1.0  pass
+  [ 39/48] dijkstra_graph         c          1.0  pass
+  [ 40/48] matrix_ops             swift      1.0  pass
+  [ 41/48] matrix_ops             python     1.0  pass
+  [ 42/48] file_tree_analysis     swift      0.0  output
+  [ 43/48] matrix_ops             c          1.0  pass
+  [ 44/48] matrix_ops             rust       0.5  pass
+  [ 45/48] file_tree_analysis     c          1.0  pass
+  [ 46/48] json_deep_merge        c          0.5  pass
+  [ 47/48] http_client            c          0.5  pass
+  [ 48/48] log_parser             c          0.5  pass
+
+lm4-r3: 41.0/48  first-try 36  any 46  hit-cap 0  looped 0  errors 0  6 min
+  Python        8.0/8
+  Java          6.5/8
+  Swift         6.0/8
+  TypeScript    8.0/8
+  C             6.5/8
+  Rust          6.0/8
+→ ~/inference/results/quality/v1-lm4-r3.json
