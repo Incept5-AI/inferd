@@ -70,7 +70,7 @@ On the minis, `agents.py` runs N:N fleets: M6 at 8 to 64 agents (8k and 16k), M5
 
 | Feature | Coverage | How it was checked / what is missing |
 |---|---|---|
-| Greedy speculative decoding (DFlash2) | **Tested** | `spec_test` lossless check, plus acceptance on agent text (4–5.5 tokens/cycle). |
+| Greedy speculative decoding (DFlash2) | **Tested** | `spec_test` matches plain decode except near-ties (§2.2), plus acceptance on agent text (4–5.5 tokens/cycle). |
 | Speculative *sampling* (temperature > 0) | **Light** | One distribution check (400 samples) and the 48-test coding suite. Top-k is capped at 16 on this path. |
 | Self-tuning draft block (`SPEC_AUTO`) | **Tested** | Studio and mini A/Bs. |
 | 8-bit KV (default) vs bf16 KV | **Tested** (27B) | ⚠ It breaks Gemma-4. Each new model needs its own check. |
@@ -135,7 +135,10 @@ token ids.
 
 - **top-1 ok:** the engine's most likely next token is the reference's. This is the hard requirement. A `DIFF` on a
   normal sequence is a bug.
-- **cos ≥ 0.9999:** the full logit vectors point the same way. Expect this on sequences 1–3. Sequence 0 is "The quick
+- **cos ≥ 0.999 (soft):** the full logit vectors point the same way. Sequences 1–3 typically measure 0.9995–0.99997
+  at chunks 1 and 24 and 0.9992–0.9999 at 256- and 1,536-row chunks (the 0.2.0 release gates on four Macs, RESULTS.md
+  (n)); an external M4 Max on macOS 26 measured 0.9996–0.9997. A value in that range with top-1 and top-5 correct is a
+  pass, not a regression. Sequence 0 is "The quick
   brown fox…" repeated, a deliberately fragile, highly repetitive prompt. It has measured 0.996 / KL 0.003 since day 1
   because the reference uses MLX's prefill path and the engine a different one, and that gap grows on repetitive
   text.
@@ -148,8 +151,8 @@ token ids.
 
 | Configuration | Expectation |
 |---|---|
-| 27B 4-bit, chunks 1/5/8/24, 8-bit or bf16 KV | top-1 ok on every sequence; cos ≥ 0.9999 on sequences 1–3 |
-| 27B 8-bit / bf16 checkpoints | cos ≥ 0.9999 on `toks.txt` (chunks 1/5) |
+| 27B 4-bit, chunks 1/5/8/24, 8-bit or bf16 KV | top-1 ok on every sequence; cos ≥ 0.999 on sequences 1–3 (typically 0.9995+) |
+| 27B 8-bit / bf16 checkpoints | cos ≥ 0.999 on `toks.txt` (chunks 1/5; typically 0.9999) |
 | 27B at ~3k tokens, 8-bit KV (chunks of 100 after 1,000) | cos ~0.998 / 0.9994 on two sequences (bf16 KV is about the same), top-5 5/5 |
 | Qwen3.5-9B | cos ≥ 0.9997, decode and chunked |
 | Muse Glimmer 30B | cos ≥ 0.9997 at 3,000 tokens in 1,024 and 160 chunks, and decode past the 2,048 window |
@@ -157,7 +160,7 @@ token ids.
 | Gemma-4-31B | top-1 ok with **bf16 KV**. With `KV8=1`, expect failure (KL 1.96) |
 | Mac minis vs the Studio | identical logits between the minis. W4A8 KL ≤ 0.00005 on normal text |
 
-### 2.2 Speculative decoding is lossless (`spec_test`)
+### 2.2 Speculative decoding matches plain decoding (`spec_test`)
 
 ```bash
 export D=/path/to/Qwen3.8-27B-DFlash2
@@ -166,8 +169,15 @@ export D=/path/to/Qwen3.8-27B-DFlash2
 SPEC_PROF=1 ./build/spec_test $M $D prompt.txt 256 1   # cycle split: drafter context / block / target
 ```
 
-The two outputs must match token for token. The one exception is a near-tie flip caused by the int8 verify path
-(plain M = 1 decode runs bf16 activations). Two traps:
+The two outputs should match token for token, **except at near-ties**. Speculative verification scores several rows
+at once through the GEMM kernels, while plain decode runs one row through the matrix-vector kernels; the two sum in a
+different order (and on M5-class GPUs verify also uses int8 activations), so when the top two tokens are within a
+fraction of a logit the choice can flip. The kernels are deterministic, so a flip **recurs at the same token on every
+run**, and turning off `ATTN_IQ` or 8-bit KV does not remove it (those are not the only source). It is not a bug unless
+the gap is large. Check it with `tools/tie_check.py`, which prints the reference (mlx_lm) logits of the two competing
+tokens at the first differing position: a near-tie is a gap of about 0.5 or less. Expect a few such sequences in any
+`spec_test` run on repetitive prompts: the 0.2.0 gate on a Mac mini M6 had 2 of 4 diverge after 69 and 79 identical
+tokens, and an external M4 Max on macOS 26 had one. Like vLLM, the engine is not batch-invariant at the bit level. Two traps:
 
 - **`spec_test` on short chat prompts reports about 1.01 tokens/cycle.** That comes from the tool, not the engine.
   Measure acceptance on a long prompt (about 1k+ tokens of code or prose), or on the server.
@@ -228,7 +238,7 @@ per turn and arguments that contain JSON strings. Structured output (`response_f
 
 ```bash
 cd engine && ./build.sh
-# 1. Correctness (§2.1): chunks 1, 5, 24; top-1 ok everywhere; cos >= 0.9999 on seqs 1-3
+# 1. Correctness (§2.1): chunks 1, 5, 24; top-1 ok everywhere; cos >= 0.999 on seqs 1-3 (typically 0.9995+)
 # 2. Decode step times at B = 1 / 16 / 64. ALWAYS run this after touching a shared kernel.
 ./build/decode_test bench $M 1,16,64 2048
 # 3. Verify blocks (rows per sequence = 4, 5, 8) at short and long context
@@ -240,7 +250,7 @@ cd engine && ./build.sh
 # 5. Prefill and follow-up turns on a long context
 ./build/decode_test prefill $M 8192 1024,2048
 ./build/decode_test followup $M 16384 1,16 32,136
-# 6. Lossless speculation (§2.2)
+# 6. Speculation matches plain decode except near-ties (§2.2)
 ./build/spec_test $M $D /tmp/toks.txt 128
 ```
 

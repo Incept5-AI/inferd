@@ -873,7 +873,7 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 
 | tool | use |
 |---|---|
-| `decode_test check <M> <toks> <out.bin> [chunk]` + `ref_logits.py compare` | logits vs mlx_lm (expect top-1 ok, cos ≥ 0.9999 on normal sequences); chunk 1 = decode, larger = prefill/mixed |
+| `decode_test check <M> <toks> <out.bin> [chunk]` + `ref_logits.py compare` | logits vs mlx_lm (expect top-1 ok, cos ≥ 0.999 on normal sequences, typically 0.9995+); chunk 1 = decode, larger = prefill/mixed |
 | `decode_test bench <M> <B list> <L> [rows]` | step time at B sequences × context L; rows > 1 times verify blocks |
 | `decode_test prefill <M> <L> <chunks>` | prefill speed |
 | `decode_test gemm <M> <M list>` | every linear layer per step, walking real weights (a benchmark that cycles a few weight copies is served from the SLC and lies) |

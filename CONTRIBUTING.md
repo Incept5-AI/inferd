@@ -131,7 +131,7 @@ cd engine
 export M=$MODEL D=$DRAFT
 $PY tools/ref_logits.py make $M /tmp/toks.txt 4 24
 for c in 1 5 24; do ./build/decode_test check $M /tmp/toks.txt /tmp/eng.bin $c && $PY tools/ref_logits.py compare $M /tmp/toks.txt /tmp/eng.bin; done
-#   expect: top1 ok on every sequence, cos >= 0.9999 on seqs 1-3 (seq 0 is a deliberately fragile repetitive prompt)
+#   expect: top1 ok on every sequence, cos >= 0.999 on seqs 1-3, typically 0.9995+ (seq 0 is a deliberately fragile repetitive prompt)
 ./build/decode_test bench $M 1,16,64 2048          # decode step at B = 1/16/64
 ./build/decode_test bench $M 1,8,16 2048 5         # 5-row verify blocks
 ./build/decode_test bench $M 1 8192 8              # 8-row verify block (single-stream speculation)

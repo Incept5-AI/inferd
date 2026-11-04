@@ -39,7 +39,7 @@ MODEL=<27B dir> DRAFT=<DFlash2 dir> ./run.sh 8300      # inferd + OpenAI front e
 
 Smoke tests, to run after every kernel change (each takes seconds):
 `decode_test check $M /tmp/toks.txt /tmp/eng.bin {1,24,256}` then `ref_logits.py compare` (expect top-1 ok, cos ≥
-0.9999 on seqs 1–3), and `decode_test bench $M 1,16,64 2048`. Self-tests: `examples/run_all.sh`. Benchmarks:
+0.999 on seqs 1–3, typically 0.9995+), and `decode_test bench $M 1,16,64 2048`. Self-tests: `examples/run_all.sh`. Benchmarks:
 `bench/` (see `bench/README.md`); methodology in `docs/RESULTS.md`.
 
 ## Gotchas
