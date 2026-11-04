@@ -1,0 +1,11 @@
+up on 127.0.0.1:8320 (inferd pid 12326, front end pid 12382, socket <tmp>)
+inferd: DFlash2 drafter loaded (block 16)
+inferd: drafter memory: 8.14 GiB own (context rings 6.30 for 160 slots), 1.52 GiB verify scratch (GDN tapes 1.12 for 576 rows; 576 output rows)
+inferd: memory: GPU budget 222.7 GiB; model + state + scratch 39.0, drafter 9.7, PF8 0.0, KV 140.0 -> 188.7 allocated
+inferd: 8-bit KV, 141154 KV blocks (140 GiB, 4.5M tokens), 160 slots (22.9 GiB state), max ctx 262144
+inferd: PF8: off (auto: the copies would shrink the KV pool; KV room after copies -6.5 GiB, need 520.0 for 64 x 262144 tokens), copies 22.74 GiB (not made), KV 140.0 GiB
+inferd: SSD tier in <models>/spill-rel020/inferd-spill (64 GiB, 1.0 MiB per block + 187 MiB state per context)
+inferd: warm-up: 637 + 24-token prompts, 8 tokens each (12 steps; PF8 off, DFlash2 verify), 55 pipelines created (8 ms), 3.73 s (WARMUP=0 disables)
+inferd: listening on <tmp>
+inferd: vocabulary for structured output: 248077 tokens
+run.sh: stopped 2 process(es) on port 8320
