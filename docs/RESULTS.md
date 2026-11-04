@@ -1205,6 +1205,13 @@ Greedy speculative output equals plain decoding on 3 of 6 test prompts; the othe
 
 Slowest first token at 32 agents: 2.19–2.35 s → 1.63–1.71 s. 0 errors in every cell.
 
+**c5b1e48 vs 9dd55ad on the 27B (Studio):** `decode_test check` output byte-identical at chunks 1/24/256/1536 (4 x
+2,048 tokens); 16k follow-ups 1/8/32 agents 152–159 / 497–498 / 727 vs 157–159 / 488–496 / 721 tok/s (2 trials each).
+
+**QA8 and decode on the M6** (27B + DFlash2, follow-ups, QA8 on / off / on again, same session): 4k x 1/4/8 agents
+27.0–29.3 / 72.9–73.7 / 98.5–100.0 vs 26.9 / 79.5 / 97.1; 16k x 1/4/8 25.2–25.3 / 67.2–68.7 / 64.9–66.1 vs
+25.6 / 65.9 / 64.4 tok/s. Level within run-to-run noise: QA8 speeds up prompt reading without costing decode.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
