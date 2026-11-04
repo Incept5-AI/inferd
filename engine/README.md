@@ -12,7 +12,9 @@ Model: **Qwen3.8-27B** (mlx-community 4-bit, 8-bit or bf16) with the **incoai Qw
 - An M5-class or newer GPU (the kernels use the Metal 4 tensor units). M4-family GPUs work but are only lightly
   tested (Mac mini M4 Pro, 2026-11-01). Tested on M5 Ultra (Mac Studio), M5 Max
   (MacBook Pro), M5 Pro (Mac mini, 64 GB) and M6 (Mac mini, 32 GB).
-- macOS 27. The prebuilt `build/` runs as is; to rebuild you need Xcode 27's Metal toolchain (`./build.sh`).
+- macOS 27 for the prebuilt `build/` (it refuses to start on macOS 26). On macOS 26 or 27 you can build from source with
+  Xcode's Metal toolchain (`./build.sh`; if it reports "missing Metal Toolchain", run
+  `xcodebuild -downloadComponent MetalToolchain` once, about 690 MB).
 - Python 3.12 with `fastapi uvicorn transformers` for the OpenAI front end, plus `mlx mlx-vlm pillow numpy` for images.
 - Weights: `mlx-community/Qwen3.8-27B-4bit` (text only) or `lmstudio-community` 4-bit / mlx-community 8-bit (with
   the vision tower), and `incoai/Qwen3.8-27B-DFlash2`.

@@ -47,7 +47,7 @@ Start with these:
   a GPU without neural accelerators and routes around the MLX kernels that are wrong there (see docs/MACHINES.md).
   Tested on Mac Studio M5 Ultra, MacBook Pro M5 Max, Mac mini M5 Pro (64 GB) and Mac
   mini M6 (32 GB). The 27B at 4-bit needs about 15 GB of weights plus KV, so 32 GB is the practical minimum.
-- **macOS 27.**
+- **macOS 27** (macOS 26 works when built from source: an external tester's M4 Max; the prebuilt binaries are macOS 27 only).
 - **Xcode 27 with the Metal toolchain**, to build. Check with `xcrun -f metal`. If the toolchain is missing, recent
   Xcodes install it with `xcodebuild -downloadComponent MetalToolchain`. Some machines can't get it: Apple's catalog
   has no toolchain for the Mac mini M5 Pro's macOS build. Build on another Mac and copy `build/` over (see

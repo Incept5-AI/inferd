@@ -38,16 +38,20 @@ strict-JSON replies valid on the first attempt. Overview with charts: [OVERVIEW.
 
 ## Quick start
 
-Needs Apple Silicon and **macOS 27**. M5-class and newer GPUs (with neural accelerators) are the main target; the
-M3/M4 family runs on its own kernel path and is lightly tested; M1/M2 are untested. Python 3.12 for the OpenAI front
-end.
+Needs Apple Silicon. The **prebuilt** binaries need **macOS 27**; on **macOS 26, build from source** (an external
+tester's M4 Max on macOS 26 built and ran it: server, self-tests, logits checks). M5-class and newer GPUs (with neural
+accelerators) are the main target; the M3/M4 family runs on its own kernel path and is lightly tested; M1/M2 are
+untested. Python 3.12 for the OpenAI front end.
 
 **Prebuilt** (no Xcode needed): download `inferd-<version>-macos27-arm64.tar.gz` from
 [Releases](https://github.com/Incept5-AI/inferd/releases), check it against its `.sha256`, unpack it into `engine/`
-of a checkout of the same tag, and skip `./build.sh`.
+of a checkout of the same tag, and skip `./build.sh`. It is **macOS 27 only**: on macOS 26 `inferd` stops at startup
+with "metallib core.metallib: This library is using a deployment target (0x00020009) that is not supported on this
+OS". Build from source there instead.
 
-**From source** (needs Xcode 27's Metal toolchain; the kernels are Metal 4 and must be built on the machine's own
-macOS):
+**From source** (needs Xcode with its Metal toolchain; the kernels are Metal 4 and must be built on the machine's own
+macOS, 26 or 27). Recent Xcode releases (e.g. 26.6) ship **without the Metal compiler**: if `./build.sh` stops with
+"missing Metal Toolchain", install it once with `xcodebuild -downloadComponent MetalToolchain` (about 690 MB).
 
 ```bash
 cd engine

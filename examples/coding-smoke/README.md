@@ -20,7 +20,9 @@ its result file to a temp directory (the benchmark repo stays clean), and prints
 - `python3` 3.10+ (the benchmark is standard library only).
 - **Node + `tsx`** for TypeScript: the harness runs `npx tsx program.ts`
   (`brew install node && npm i -g tsx`). `python3 bench.py doctor` checks the toolchains. The script prints its
-  `v1:` line first. Java/Swift/C/Rust are not needed for this subset.
+  `v1:` line first. Java/Swift/C/Rust are not needed for this subset: the script checks for python3, node and tsx
+  itself and treats `doctor`'s report on the other languages as information only (before 2026-11-04 a missing `rustc`
+  stopped it).
 - The server's max context must hold prompt + `--max-tokens`. The script sends `MAX_TOKENS=30000` for a 32768-token
   server (v1 prompts are about 1k tokens). Larger values are refused with "context too long".
 

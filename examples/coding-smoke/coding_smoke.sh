@@ -23,7 +23,11 @@ OUT=$(mktemp -d)/smoke-$EFFORT.json
 
 MODEL=$(curl -sf $URL/models | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
 cd $LANGBENCH
-python3 bench.py doctor | grep '^v1'
+# bench.py doctor probes every language's toolchain (Java, Swift, C, Rust too) and stops on the first missing one,
+# so it is informational only here; check the two languages this subset runs instead (external tester, 2026-11-04).
+for t in python3 node npx; do command -v $t >/dev/null || { echo "coding-smoke needs $t (brew install node && npm i -g tsx)"; exit 2; }; done
+npx --no-install tsx --version >/dev/null 2>&1 || { echo "coding-smoke needs tsx for TypeScript: npm i -g tsx"; exit 2; }
+python3 bench.py doctor 2>/dev/null | grep '^v1' || echo "v1: (bench.py doctor reports other languages' toolchains missing; not needed here)"
 if [ $EFFORT = none ]; then THINK=(--no-thinking); else THINK=(--effort $EFFORT); fi
 START=$(date +%s)
 python3 bench.py run --suite v1 --langs python,typescript --base-url $URL --model $MODEL $THINK \
