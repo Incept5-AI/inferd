@@ -1,0 +1,8 @@
+4 OCR agents in parallel, effort none; max_context = image tokens + 110 + 150
+
+shipping_label: ERROR image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+receipt: ERROR image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+invoice: ERROR image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+letter: ERROR image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+
+0/21 fields correct, 0.2s wall for all four

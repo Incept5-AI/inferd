@@ -134,8 +134,9 @@ memory (Mac mini M5 Pro: 4 GiB KV, ~129k tokens; Mac mini M6: 2.4 GiB, ~78k). "b
   out the 24k context faster (42.7 vs 60.7 s: faster prefill) but refused 16 of 48 simultaneous agents (HTTP 503);
   oMLX refused 11 and took 438 s for the fan-out; TensorFold 1.2.1 lost its cache under unrelated load (relaunch 193 s,
   resumes 15 s), and its fcfs prefill policy did not help shared-prefix agents. In the mixed fleet (3 long researchers
-  + 32 short helpers) inferd's helpers waited ~100 s behind the researchers' prefill (Splash 63 s, TensorFold 37 s):
-  prefill scheduling, worked on separately.
+  + 32 short helpers) inferd's helpers waited ~100 s behind the researchers' prefill (Splash 63 s, TensorFold 37 s) on the build
+  tested then; the 3 Nov prefill budget (`PREFILL_PRIO`) brings them to 35 s (researchers 54 s, same wall time;
+  RESULTS.md (m)).
 
 ## Errors and limits
 

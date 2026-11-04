@@ -1,0 +1,843 @@
+info: qwen27: prompt capacity=2048 rows, startup stream and scratch reserve=100956012544 bytes
+info: qwen27: lone loop=lanes width=16; lane window=16, lane copies=off
+info: qwen27: 35.2 GiB kept wired between requests, inside 70% of 256 GiB of RAM
+info: qwen27: Neural Engine prompt share requested_columns=0 loaded_columns=0 program_weight_bytes=0 loaded=false exact_output_qualified=false
+info: prompt cache: 16.0 GiB from 70.3 GiB free under the 70% cap (35.6 GiB in use once loaded and 71.2 GiB reserved outside that reading, 256 GiB of RAM, 2 GiB kept for prompt buffers); 16 GiB by default: --prompt-cache-gib takes more, up to what is free
+info: Qwen3.8-27B: 16 streams of 73728 tokens, DFlash2 drafts for one of them
+[tensorfold] prompt chunks of up to 2,048 tokens, cut at replies 256+ tokens apart
+[tensorfold] open-file limit raised: soft 256 -> 65536
+[tensorfold] profile: stable; registered overrides: none
+[tensorfold] serving q27 at http://127.0.0.1:8373/v1 (sampling: temperature 1.0, top_k 20, top_p 0.95; drafts: DFlash2 (/Volumes/SanDisk/models--z-lab--Qwen3.8-27B-DFlash2/snapshots/50307d4c4cde6860d4eee73e2547cd786fe8e8a4) + copies; context: 73728; loaded in 24.4s)
+[tensorfold] thinking on (the chat template's default): replies reason in reasoning_content before the answer in content, and max_tokens counts both. --no-thinking turns it off; a request can send chat_template_kwargs {"enable_thinking": false}
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: prompt cache: 2016 tokens, resumed at 0, kept 1; 1 states, 448 MiB and 0 MiB spare of 16384 MiB (hits 0, misses 1, evicted 0, refused 0, failed 0)
+[tensorfold] done chatcmpl-e2805f7121a6cf001c6f78b17867fabf prompt=2016 cached=0 thinking=False effort=none tokens=32 sha=de66b4417b47 finish=length rounds=6 accepted=27/90 ttft=1.128 decode=0.188 elapsed=1.316 queued=0.000 tok/s=164.8
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 0, kept 3; 5 states, 10752 MiB and 0 MiB spare of 16384 MiB (hits 0, misses 2, evicted 0, refused 0, failed 0)
+[tensorfold] done chatcmpl-2a5b2969e9547cef06d276359cb97578 prompt=65654 cached=0 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.328 decode=0.323 elapsed=45.651 queued=0.000 tok/s=195.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+info: prompt cache: 65752 tokens, resumed at 65718, kept 0; 6 states, 15680 MiB and 0 MiB spare of 16384 MiB (hits 1, misses 2, evicted 0, refused 0, failed 0)
+[tensorfold] done chatcmpl-74777d806e14f0262cfc2e4763d466c0 prompt=65752 cached=65718 thinking=False effort=none tokens=512 sha=be83acb9db62 finish=length rounds=76 accepted=438/1125 ttft=0.178 decode=2.729 elapsed=2.907 queued=0.000 tok/s=187.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65649 tokens, resumed at 0, kept 3; 6 states, 15680 MiB and 0 MiB spare of 16384 MiB (hits 1, misses 3, evicted 4, refused 0, failed 0)
+[tensorfold] done chatcmpl-7653545558875e4144d774309610039e prompt=65649 cached=0 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=10 accepted=54/150 ttft=45.282 decode=0.398 elapsed=45.680 queued=0.000 tok/s=158.5
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65651 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 2, misses 3, evicted 9, refused 0, failed 0)
+[tensorfold] done chatcmpl-c68c9cc2709ce48680dd221704b91cad prompt=65651 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=55/165 ttft=45.276 decode=0.428 elapsed=45.704 queued=0.000 tok/s=147.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65651 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 3, misses 3, evicted 12, refused 0, failed 0)
+[tensorfold] done chatcmpl-c87548cc76792acb4bfea9dcca6a67f4 prompt=65651 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.619 decode=0.428 elapsed=46.047 queued=0.000 tok/s=147.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 4, misses 3, evicted 15, refused 0, failed 0)
+[tensorfold] done chatcmpl-6eb6fc52d5caf77a3c3af0c803fa1dba prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.301 decode=0.428 elapsed=45.728 queued=0.000 tok/s=147.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65749 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 5, misses 3, evicted 18, refused 0, failed 0)
+info: Qwen3.8-27B: a slot took its memory (2 of 16 ready)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-211a571f7be56eac2bc26bb5a19b5f8c prompt=65749 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1053 ttft=45.450 decode=25.291 elapsed=70.740 queued=0.000 tok/s=20.2
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65749 tokens, resumed at 3, kept 5; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 6, misses 3, evicted 21, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-ecb123debae3a8a50beb2a034dfbb98d prompt=65749 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=94.201 decode=25.286 elapsed=119.487 queued=0.000 tok/s=20.2
+info: prompt cache: 66266 tokens, resumed at 66260, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 7, misses 3, evicted 22, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65747 tokens, resumed at 3, kept 9; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 8, misses 3, evicted 25, refused 0, failed 0)
+info: prompt cache: 65748 tokens, resumed at 65714, kept 9; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 9, misses 3, evicted 25, refused 0, failed 0)
+[tensorfold] done chatcmpl-a1023c8e894f62012cbc75b912ffbdad prompt=65747 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=89 accepted=422/680 ttft=143.019 decode=4.045 elapsed=147.064 queued=0.000 tok/s=126.3
+[tensorfold] done chatcmpl-2afefd9291764429d9271fcf0a3e6a27 prompt=65748 cached=65714 thinking=False effort=none tokens=512 sha=f1e05da92b5a finish=length rounds=88 accepted=423/663 ttft=143.216 decode=3.893 elapsed=147.109 queued=1.120 tok/s=131.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66265 tokens, resumed at 0, kept 1; 2 states, 9664 MiB and 4928 MiB spare of 16384 MiB (hits 10, misses 5, evicted 31, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65651 tokens, resumed at 0, kept 5; 3 states, 14592 MiB and 0 MiB spare of 16384 MiB (hits 10, misses 5, evicted 34, refused 0, failed 0)
+[tensorfold] done chatcmpl-34fa7cc131202a5880c50e1336a9e81c prompt=65651 cached=0 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=91.161 decode=0.427 elapsed=91.588 queued=0.017 tok/s=147.5
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65653 tokens, resumed at 0, kept 3; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 10, misses 6, evicted 37, refused 0, failed 0)
+[tensorfold] done chatcmpl-40de662dd786ee93089fd2e2b9c114b5 prompt=65653 cached=0 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.222 decode=0.428 elapsed=45.650 queued=0.000 tok/s=147.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 11, misses 6, evicted 40, refused 0, failed 0)
+[tensorfold] done chatcmpl-9b33f09542660054d5ee039800efcbc2 prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.194 decode=0.428 elapsed=45.622 queued=0.000 tok/s=147.2
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65655 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 12, misses 6, evicted 43, refused 0, failed 0)
+[tensorfold] done chatcmpl-54129713f52ae38620f4f34e3c201e77 prompt=65655 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.202 decode=0.321 elapsed=45.523 queued=0.000 tok/s=196.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65656 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 13, misses 6, evicted 46, refused 0, failed 0)
+[tensorfold] done chatcmpl-8ee7cb8266e17b27ad325fcdfc5102f7 prompt=65656 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.208 decode=0.428 elapsed=45.637 queued=0.000 tok/s=147.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65651 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 14, misses 6, evicted 49, refused 0, failed 0)
+[tensorfold] done chatcmpl-9b0d3f6dad50ef5307b4290d1c55f727 prompt=65651 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.198 decode=0.429 elapsed=45.627 queued=0.000 tok/s=146.9
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65655 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 15, misses 6, evicted 52, refused 0, failed 0)
+[tensorfold] done chatcmpl-b11ee1a0d5fc6c72c9545488270bf5c5 prompt=65655 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.193 decode=0.321 elapsed=45.513 queued=0.000 tok/s=196.5
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 16, misses 6, evicted 55, refused 0, failed 0)
+[tensorfold] done chatcmpl-c84e156fdee4696a572318bb32d2c91c prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.203 decode=0.321 elapsed=45.524 queued=0.000 tok/s=196.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65754 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 17, misses 6, evicted 58, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-13c22794465ff8587795e0538ea827e4 prompt=65754 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1053 ttft=45.364 decode=25.175 elapsed=70.539 queued=0.000 tok/s=20.3
+info: prompt cache: 65753 tokens, resumed at 3, kept 5; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 18, misses 6, evicted 61, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-4adcc2e82a45437c15ed3b5d162c9437 prompt=65753 cached=3 thinking=False effort=none tokens=512 sha=c07f41176e14 finish=length rounds=91 accepted=421/1310 ttft=94.006 decode=33.655 elapsed=127.661 queued=0.000 tok/s=15.2
+info: prompt cache: 66270 tokens, resumed at 66265, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 19, misses 6, evicted 62, refused 0, failed 0)
+info: prompt cache: 65753 tokens, resumed at 3, kept 9; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 20, misses 6, evicted 65, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-8e77d3f7b67350d8a016e4679db4df10 prompt=65753 cached=3 thinking=False effort=none tokens=512 sha=029d73cfb915 finish=length rounds=91 accepted=420/1323 ttft=143.770 decode=33.525 elapsed=177.296 queued=0.000 tok/s=15.2
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65749 tokens, resumed at 3, kept 12; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 21, misses 6, evicted 68, refused 0, failed 0)
+info: prompt cache: 65752 tokens, resumed at 65718, kept 12; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 22, misses 6, evicted 68, refused 0, failed 0)
+info: Qwen3.8-27B: a slot took its memory (3 of 16 ready)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-cf48b8806c4106a1b1f4d692983a6af2 prompt=65749 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=89 accepted=422/692 ttft=193.336 decode=33.500 elapsed=226.837 queued=1.085 tok/s=15.3
+[tensorfold] done chatcmpl-e73912ec7cab2825ce6f2e133d2d0096 prompt=65752 cached=65718 thinking=False effort=none tokens=512 sha=195eb471abe0 finish=length rounds=92 accepted=419/685 ttft=193.537 decode=35.441 elapsed=228.977 queued=1.085 tok/s=14.4
+info: prompt cache: 65751 tokens, resumed at 3, kept 16; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 23, misses 6, evicted 72, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-c5003f4d9f6109a00b6f84a58b24cdab prompt=65751 cached=3 thinking=False effort=none tokens=512 sha=a0ac430c1e71 finish=length rounds=70 accepted=442/1025 ttft=244.237 decode=24.856 elapsed=269.093 queued=1.085 tok/s=20.6
+info: prompt cache: 66268 tokens, resumed at 66263, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 24, misses 6, evicted 73, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 20; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 25, misses 6, evicted 76, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-60dc681f02fb4e021de2644a4798f81f prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=f1e05da92b5a finish=length rounds=72 accepted=440/1047 ttft=292.985 decode=25.567 elapsed=318.551 queued=1.085 tok/s=20.0
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65749 tokens, resumed at 3, kept 23; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 26, misses 6, evicted 79, refused 0, failed 0)
+[tensorfold] done chatcmpl-4174baad941eca2e759e3f71b8339d1a prompt=65749 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1065 ttft=341.662 decode=2.659 elapsed=344.321 queued=1.084 tok/s=192.2
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65652 tokens, resumed at 0, kept 3; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 27, misses 7, evicted 84, refused 0, failed 0)
+[tensorfold] done chatcmpl-bfd4fc41aaf36626cb455c218e0f3639 prompt=65652 cached=0 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.243 decode=0.429 elapsed=45.672 queued=0.013 tok/s=146.9
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 28, misses 7, evicted 87, refused 0, failed 0)
+[tensorfold] done chatcmpl-8796dade0917cbf2214dc5a1a1845833 prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=52/165 ttft=45.201 decode=0.427 elapsed=45.628 queued=0.000 tok/s=147.5
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65652 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 29, misses 7, evicted 90, refused 0, failed 0)
+[tensorfold] done chatcmpl-a098540a5d8d774b7ccd1ab586fc28d2 prompt=65652 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.194 decode=0.428 elapsed=45.623 queued=0.000 tok/s=147.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 30, misses 7, evicted 93, refused 0, failed 0)
+[tensorfold] done chatcmpl-bc264d47e5ac0dbf7b349ffc8c690dfd prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.195 decode=0.321 elapsed=45.516 queued=0.000 tok/s=196.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 31, misses 7, evicted 96, refused 0, failed 0)
+[tensorfold] done chatcmpl-49d869f09d2e0181f18da7b5050a9903 prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.194 decode=0.321 elapsed=45.515 queued=0.000 tok/s=196.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65647 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 32, misses 7, evicted 99, refused 0, failed 0)
+[tensorfold] done chatcmpl-916815260c90e3a6e5a5669438ca2f0f prompt=65647 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.194 decode=0.429 elapsed=45.623 queued=0.000 tok/s=146.9
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 33, misses 7, evicted 102, refused 0, failed 0)
+[tensorfold] done chatcmpl-58f22c8c72dc7a9ab75d2f6fcdab08f4 prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.192 decode=0.427 elapsed=45.620 queued=0.000 tok/s=147.4
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 34, misses 7, evicted 105, refused 0, failed 0)
+[tensorfold] done chatcmpl-c668620c694ee70222bfa5e80db2e425 prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=be32a89885d4 finish=length rounds=8 accepted=56/120 ttft=45.205 decode=0.321 elapsed=45.526 queued=0.000 tok/s=196.2
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65651 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 36, misses 7, evicted 109, refused 0, failed 0)
+[tensorfold] done chatcmpl-bd8b04327940e3c964b7316bbfed69e5 prompt=65651 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.240 decode=0.427 elapsed=45.668 queued=0.029 tok/s=147.4
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65652 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 37, misses 7, evicted 112, refused 0, failed 0)
+[tensorfold] done chatcmpl-e8471d2c4d63ec3bf77218ca87172fe5 prompt=65652 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.193 decode=0.321 elapsed=45.514 queued=0.000 tok/s=196.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 38, misses 7, evicted 115, refused 0, failed 0)
+[tensorfold] done chatcmpl-f5070f22f52337d13ef4f2ed616b4120 prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.206 decode=0.429 elapsed=45.635 queued=0.000 tok/s=147.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65652 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 39, misses 7, evicted 118, refused 0, failed 0)
+[tensorfold] done chatcmpl-3244e9f0551fb58c6374c842fd4de3da prompt=65652 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.193 decode=0.428 elapsed=45.621 queued=0.000 tok/s=147.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65653 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 40, misses 7, evicted 121, refused 0, failed 0)
+[tensorfold] done chatcmpl-bbb5e3e66613d7de338f2f7c78f8b7e3 prompt=65653 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.201 decode=0.429 elapsed=45.629 queued=0.000 tok/s=147.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65655 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 41, misses 7, evicted 124, refused 0, failed 0)
+[tensorfold] done chatcmpl-62db25bf81f9d06bb3acf572cc9e72f7 prompt=65655 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.198 decode=0.427 elapsed=45.626 queued=0.000 tok/s=147.4
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65651 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 42, misses 7, evicted 127, refused 0, failed 0)
+[tensorfold] done chatcmpl-f6cb78308ee2bbf596f456717b353b1f prompt=65651 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.197 decode=0.428 elapsed=45.625 queued=0.000 tok/s=147.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65655 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 43, misses 7, evicted 130, refused 0, failed 0)
+[tensorfold] done chatcmpl-790be1be785fcdbffd5d9224df32d1c6 prompt=65655 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.199 decode=0.321 elapsed=45.520 queued=0.000 tok/s=196.4
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65753 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 44, misses 7, evicted 133, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-06e4515f837547355084ca75edb412a1 prompt=65753 cached=3 thinking=False effort=none tokens=512 sha=dffd62875893 finish=length rounds=81 accepted=430/1195 ttft=45.359 decode=29.287 elapsed=74.647 queued=0.000 tok/s=17.4
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65750 tokens, resumed at 3, kept 5; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 45, misses 7, evicted 136, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-60e67ec83ad9ed442dc9c2a5a8f60b67 prompt=65750 cached=3 thinking=False effort=none tokens=512 sha=f1e05da92b5a finish=length rounds=71 accepted=440/1042 ttft=94.457 decode=25.272 elapsed=119.730 queued=1.086 tok/s=20.2
+info: prompt cache: 66267 tokens, resumed at 66261, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 46, misses 7, evicted 137, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65750 tokens, resumed at 3, kept 9; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 47, misses 7, evicted 140, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-c275916f2a91a364bcd596b4fe82a27a prompt=65750 cached=3 thinking=False effort=none tokens=512 sha=6a2beb5eb9b7 finish=length rounds=90 accepted=421/1314 ttft=143.264 decode=33.098 elapsed=176.361 queued=1.086 tok/s=15.4
+info: prompt cache: 65750 tokens, resumed at 3, kept 12; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 48, misses 7, evicted 143, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-8efdd05a1b34295bf867bb6988fe658c prompt=65750 cached=3 thinking=False effort=none tokens=512 sha=a4575de167b2 finish=length rounds=68 accepted=443/989 ttft=192.782 decode=24.060 elapsed=216.841 queued=1.085 tok/s=21.2
+info: prompt cache: 66267 tokens, resumed at 66261, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 49, misses 7, evicted 144, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65745 tokens, resumed at 3, kept 16; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 50, misses 7, evicted 147, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-4de2f00136c5ec14da2e415dc52f21c9 prompt=65745 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=70 accepted=441/1041 ttft=241.437 decode=24.769 elapsed=266.206 queued=1.085 tok/s=20.6
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65749 tokens, resumed at 3, kept 19; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 51, misses 7, evicted 150, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-c576bcafc41f5b0128d3578f3291c172 prompt=65749 cached=3 thinking=False effort=none tokens=512 sha=6610868fbb15 finish=length rounds=81 accepted=430/1185 ttft=290.019 decode=29.396 elapsed=319.415 queued=1.085 tok/s=17.4
+info: prompt cache: 66264 tokens, resumed at 65742, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 52, misses 7, evicted 151, refused 0, failed 0)
+info: prompt cache: 65752 tokens, resumed at 3, kept 23; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 53, misses 7, evicted 154, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-fdd3f427214f72ebd0a205327ddc3326 prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=339.855 decode=25.173 elapsed=365.029 queued=1.085 tok/s=20.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65751 tokens, resumed at 3, kept 26; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 54, misses 7, evicted 157, refused 0, failed 0)
+info: prompt cache: 65753 tokens, resumed at 65719, kept 26; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 55, misses 7, evicted 157, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-025703061b9a592340a63e460987e034 prompt=65753 cached=65719 thinking=False effort=none tokens=512 sha=195eb471abe0 finish=length rounds=91 accepted=420/663 ttft=388.681 decode=34.950 elapsed=423.631 queued=1.084 tok/s=14.6
+[tensorfold] done chatcmpl-a43efd14756e29ed8355934fab449cc6 prompt=65751 cached=3 thinking=False effort=none tokens=512 sha=2bddf1b4f7d9 finish=length rounds=95 accepted=416/736 ttft=388.481 decode=36.060 elapsed=424.541 queued=1.084 tok/s=14.2
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 30; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 56, misses 7, evicted 161, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-7750afb909e3cf70bd4c03da25c78dfe prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=db86f9cca088 finish=length rounds=92 accepted=419/1339 ttft=439.416 decode=34.085 elapsed=473.501 queued=1.084 tok/s=15.0
+info: prompt cache: 66269 tokens, resumed at 66263, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 57, misses 7, evicted 162, refused 0, failed 0)
+info: prompt cache: 65748 tokens, resumed at 3, kept 34; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 58, misses 7, evicted 165, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-d3ed20047894a6f50d7ce408376390c0 prompt=65748 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=489.230 decode=25.170 elapsed=514.400 queued=1.084 tok/s=20.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65749 tokens, resumed at 3, kept 37; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 59, misses 7, evicted 168, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-db7cc560e677141957a901349d1c4e81 prompt=65749 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=537.861 decode=25.277 elapsed=563.138 queued=1.084 tok/s=20.2
+info: prompt cache: 66266 tokens, resumed at 66260, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 60, misses 7, evicted 169, refused 0, failed 0)
+info: prompt cache: 65748 tokens, resumed at 3, kept 41; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 61, misses 7, evicted 172, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-b432f06ec467e3b695bc94e95eb021e0 prompt=65748 cached=3 thinking=False effort=none tokens=512 sha=f1e05da92b5a finish=length rounds=71 accepted=440/1042 ttft=586.666 decode=25.167 elapsed=611.833 queued=1.084 tok/s=20.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65748 tokens, resumed at 3, kept 44; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 62, misses 7, evicted 175, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-778642797919b765b1782015d23a4280 prompt=65748 cached=3 thinking=False effort=none tokens=512 sha=7e37846db5bc finish=length rounds=90 accepted=421/1304 ttft=635.296 decode=33.223 elapsed=668.519 queued=1.084 tok/s=15.4
+info: prompt cache: 66265 tokens, resumed at 66259, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 63, misses 7, evicted 176, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65751 tokens, resumed at 3, kept 48; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 64, misses 7, evicted 179, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-1274e93b3551483af9245b26501d6006 prompt=65751 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=685.005 decode=25.173 elapsed=710.178 queued=1.084 tok/s=20.3
+info: prompt cache: 65750 tokens, resumed at 3, kept 51; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 65, misses 7, evicted 182, refused 0, failed 0)
+[tensorfold] done chatcmpl-3612d9854a0a9a5c375fd3d6210cf175 prompt=65750 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1065 ttft=733.641 decode=2.665 elapsed=736.306 queued=1.084 tok/s=191.8
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 0, kept 3; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 66, misses 8, evicted 187, refused 0, failed 0)
+[tensorfold] done chatcmpl-e69b36c78217668530d7f5e9be1d97fe prompt=65654 cached=0 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.230 decode=0.321 elapsed=45.550 queued=0.008 tok/s=196.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 67, misses 8, evicted 190, refused 0, failed 0)
+[tensorfold] done chatcmpl-5515e241b45cf17af1905f54c22da537 prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.195 decode=0.428 elapsed=45.623 queued=0.000 tok/s=147.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 68, misses 8, evicted 193, refused 0, failed 0)
+[tensorfold] done chatcmpl-9e4385b595abf30e129bc9aa139ca3c5 prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.191 decode=0.322 elapsed=45.513 queued=0.000 tok/s=195.9
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65653 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 69, misses 8, evicted 196, refused 0, failed 0)
+[tensorfold] done chatcmpl-f803ec62543707f88772b426c0689322 prompt=65653 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.195 decode=0.322 elapsed=45.517 queued=0.000 tok/s=195.8
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 70, misses 8, evicted 199, refused 0, failed 0)
+[tensorfold] done chatcmpl-7490d53662b37ece35d1b6c557765eee prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.203 decode=0.428 elapsed=45.631 queued=0.000 tok/s=147.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65653 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 71, misses 8, evicted 202, refused 0, failed 0)
+[tensorfold] done chatcmpl-acf4f2cb1709bdad7b3174d88f290bbb prompt=65653 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.197 decode=0.322 elapsed=45.519 queued=0.000 tok/s=195.5
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 72, misses 8, evicted 205, refused 0, failed 0)
+[tensorfold] done chatcmpl-bac21387b86e01251d83bd762bbada59 prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=10 accepted=54/150 ttft=45.198 decode=0.393 elapsed=45.591 queued=0.000 tok/s=160.4
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65656 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 73, misses 8, evicted 208, refused 0, failed 0)
+[tensorfold] done chatcmpl-7897cef03e3536914826b4b90b09f0b7 prompt=65656 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.205 decode=0.429 elapsed=45.633 queued=0.000 tok/s=147.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 74, misses 8, evicted 211, refused 0, failed 0)
+[tensorfold] done chatcmpl-c2778a9e36b63344ea098e6c6bf62876 prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.200 decode=0.322 elapsed=45.522 queued=0.000 tok/s=195.9
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65653 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 75, misses 8, evicted 214, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-86ca7a49f3bfee5ff22d16ffa1610414 prompt=65653 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.197 decode=0.428 elapsed=45.624 queued=0.000 tok/s=147.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65652 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 76, misses 8, evicted 217, refused 0, failed 0)
+[tensorfold] done chatcmpl-f20bf57fe1975854cb479d29adf22e1b prompt=65652 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=62/120 ttft=45.200 decode=0.322 elapsed=45.521 queued=0.000 tok/s=195.8
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65656 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 77, misses 8, evicted 220, refused 0, failed 0)
+[tensorfold] done chatcmpl-182ab3833f6a0126554131efd6c99b8c prompt=65656 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.203 decode=0.429 elapsed=45.631 queued=0.000 tok/s=147.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65652 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 78, misses 8, evicted 223, refused 0, failed 0)
+[tensorfold] done chatcmpl-b5bf38909032554d6e7644cf78458a7d prompt=65652 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.192 decode=0.429 elapsed=45.621 queued=0.000 tok/s=146.8
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65652 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 79, misses 8, evicted 226, refused 0, failed 0)
+[tensorfold] done chatcmpl-10dd6f87da833a04c17ed07067a6d908 prompt=65652 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.196 decode=0.321 elapsed=45.517 queued=0.000 tok/s=196.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65655 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 80, misses 8, evicted 229, refused 0, failed 0)
+[tensorfold] done chatcmpl-0b5bc2ea883933896b85bafcd70823de prompt=65655 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.189 decode=0.428 elapsed=45.617 queued=0.000 tok/s=147.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 81, misses 8, evicted 232, refused 0, failed 0)
+[tensorfold] done chatcmpl-67924b9ef1261eb53851387ea73d927f prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.197 decode=0.321 elapsed=45.518 queued=0.000 tok/s=196.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65651 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 82, misses 8, evicted 235, refused 0, failed 0)
+[tensorfold] done chatcmpl-6ff50727150c769ecdc7c491ab762ab6 prompt=65651 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.193 decode=0.321 elapsed=45.514 queued=0.000 tok/s=196.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65655 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 83, misses 8, evicted 238, refused 0, failed 0)
+[tensorfold] done chatcmpl-3c7de424811a3a746193ae63f4cb2005 prompt=65655 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.197 decode=0.428 elapsed=45.625 queued=0.000 tok/s=147.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65653 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 84, misses 8, evicted 241, refused 0, failed 0)
+[tensorfold] done chatcmpl-7451d10a0fd47b94e8c9d185ebea46f1 prompt=65653 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.196 decode=0.429 elapsed=45.624 queued=0.000 tok/s=147.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 85, misses 8, evicted 244, refused 0, failed 0)
+[tensorfold] done chatcmpl-d95501bd191be80373f2772fe0465de8 prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.199 decode=0.321 elapsed=45.521 queued=0.000 tok/s=196.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65655 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 86, misses 8, evicted 247, refused 0, failed 0)
+[tensorfold] done chatcmpl-0d95f5ec42aef469fe8f2700f6c9e491 prompt=65655 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.202 decode=0.322 elapsed=45.524 queued=0.000 tok/s=195.8
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 87, misses 8, evicted 250, refused 0, failed 0)
+[tensorfold] done chatcmpl-4fc2ea8ea55ef4024f74d5aa1418cf49 prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.194 decode=0.429 elapsed=45.623 queued=0.000 tok/s=147.0
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 88, misses 8, evicted 253, refused 0, failed 0)
+[tensorfold] done chatcmpl-e48a81890d8d2ea9f2f5b304aac5c213 prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.200 decode=0.428 elapsed=45.629 queued=0.000 tok/s=147.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65650 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 89, misses 8, evicted 256, refused 0, failed 0)
+[tensorfold] done chatcmpl-eeda989fe2fc01b3643e077cabed40a2 prompt=65650 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.191 decode=0.428 elapsed=45.619 queued=0.000 tok/s=147.2
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65656 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 90, misses 8, evicted 259, refused 0, failed 0)
+[tensorfold] done chatcmpl-58e041c7a683740ef66a8ce16c5231ed prompt=65656 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.204 decode=0.321 elapsed=45.525 queued=0.000 tok/s=196.5
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65653 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 91, misses 8, evicted 262, refused 0, failed 0)
+[tensorfold] done chatcmpl-ba8fe9d7e8c6fd48b855ac8c263748e5 prompt=65653 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.198 decode=0.428 elapsed=45.626 queued=0.000 tok/s=147.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65657 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 92, misses 8, evicted 265, refused 0, failed 0)
+[tensorfold] done chatcmpl-9b71e2c4dfeeb9f183b2a048ac1aa3a3 prompt=65657 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.201 decode=0.428 elapsed=45.629 queued=0.000 tok/s=147.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 93, misses 8, evicted 268, refused 0, failed 0)
+[tensorfold] done chatcmpl-f29bc440fb1af0e5880f49a7862add02 prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.196 decode=0.321 elapsed=45.517 queued=0.000 tok/s=196.3
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65649 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 94, misses 8, evicted 271, refused 0, failed 0)
+[tensorfold] done chatcmpl-2cbd60313ba2594fc2b8657a8a65d4b0 prompt=65649 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=62/120 ttft=45.192 decode=0.322 elapsed=45.514 queued=0.000 tok/s=195.8
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65654 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 95, misses 8, evicted 274, refused 0, failed 0)
+[tensorfold] done chatcmpl-727d565041344f6da4280009f5176f5e prompt=65654 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=58/120 ttft=45.202 decode=0.322 elapsed=45.523 queued=0.000 tok/s=195.9
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65651 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 96, misses 8, evicted 277, refused 0, failed 0)
+[tensorfold] done chatcmpl-9aabcb3f153d051d5648e6b3b8afe11e prompt=65651 cached=3 thinking=False effort=none tokens=64 sha=0111fff6666d finish=length rounds=11 accepted=53/165 ttft=45.195 decode=0.428 elapsed=45.623 queued=0.000 tok/s=147.2
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65655 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 97, misses 8, evicted 280, refused 0, failed 0)
+[tensorfold] done chatcmpl-1aadabcd55fcaed7f3916ddef7b90fd3 prompt=65655 cached=3 thinking=False effort=none tokens=64 sha=79dabd6a3351 finish=length rounds=8 accepted=60/120 ttft=45.198 decode=0.321 elapsed=45.519 queued=0.000 tok/s=196.1
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65751 tokens, resumed at 3, kept 2; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 98, misses 8, evicted 283, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-c42d237c2824edded2211471adcfa776 prompt=65751 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=45.351 decode=25.174 elapsed=70.525 queued=0.000 tok/s=20.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65755 tokens, resumed at 3, kept 5; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 99, misses 8, evicted 286, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-3633dffff0185221b87de0ac80d60b30 prompt=65755 cached=3 thinking=False effort=none tokens=512 sha=ca4e4b3a8e29 finish=length rounds=83 accepted=428/1230 ttft=93.994 decode=30.246 elapsed=124.239 queued=1.084 tok/s=16.9
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 8; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 100, misses 8, evicted 289, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-33a1b099a4d19b64de1c0885b9427596 prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=47e9a0404d7b finish=length rounds=93 accepted=418/1341 ttft=143.319 decode=34.390 elapsed=177.709 queued=1.082 tok/s=14.9
+info: prompt cache: 65748 tokens, resumed at 3, kept 11; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 101, misses 8, evicted 292, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-7a46964060dc0b3dc3f8a18f86d32091 prompt=65748 cached=3 thinking=False effort=none tokens=512 sha=195eb471abe0 finish=length rounds=77 accepted=434/1121 ttft=192.976 decode=27.722 elapsed=220.697 queued=1.082 tok/s=18.4
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65753 tokens, resumed at 3, kept 14; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 102, misses 8, evicted 295, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-401ac6bd54ff3a135cc9e90043d6b803 prompt=65753 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=241.997 decode=25.174 elapsed=267.171 queued=1.082 tok/s=20.3
+info: prompt cache: 65751 tokens, resumed at 3, kept 17; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 103, misses 8, evicted 298, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-d991c5e6a84d79ddeca75905b0c1e3a7 prompt=65751 cached=3 thinking=False effort=none tokens=512 sha=91ca9566a61d finish=length rounds=90 accepted=422/1297 ttft=290.638 decode=33.215 elapsed=323.853 queued=1.082 tok/s=15.4
+info: prompt cache: 65748 tokens, resumed at 3, kept 20; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 104, misses 8, evicted 301, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-2fe1859e50d71ae4efb2afca8853d1b9 prompt=65748 cached=3 thinking=False effort=none tokens=512 sha=52bf83318055 finish=length rounds=77 accepted=435/1118 ttft=340.278 decode=27.610 elapsed=367.887 queued=1.081 tok/s=18.5
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 23; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 105, misses 8, evicted 304, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-df2b7b78c9531263eebb03a9786c6448 prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=dffd62875893 finish=length rounds=80 accepted=431/1181 ttft=389.185 decode=28.983 elapsed=418.168 queued=1.081 tok/s=17.6
+info: prompt cache: 65751 tokens, resumed at 3, kept 26; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 106, misses 8, evicted 307, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-54b37121461f9f84d1456248b38498cf prompt=65751 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=438.370 decode=25.175 elapsed=463.545 queued=1.081 tok/s=20.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65750 tokens, resumed at 3, kept 29; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 107, misses 8, evicted 310, refused 0, failed 0)
+info: prompt cache: 65753 tokens, resumed at 65719, kept 29; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 108, misses 8, evicted 310, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-c4cc6bb93f0804b8f036521d52b6aa10 prompt=65750 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=93 accepted=418/719 ttft=487.014 decode=35.221 elapsed=522.236 queued=1.081 tok/s=14.5
+[tensorfold] done chatcmpl-984456e1bbf1ce5ba7860c25425b58d5 prompt=65753 cached=65719 thinking=False effort=none tokens=512 sha=b80d44092b93 finish=length rounds=93 accepted=418/669 ttft=487.215 decode=35.885 elapsed=523.101 queued=1.080 tok/s=14.2
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65747 tokens, resumed at 3, kept 33; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 109, misses 8, evicted 314, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-b0fd217cb330a11415ea31a701006cbb prompt=65747 cached=3 thinking=False effort=none tokens=512 sha=195eb471abe0 finish=length rounds=77 accepted=434/1121 ttft=537.972 decode=27.723 elapsed=565.694 queued=1.080 tok/s=18.4
+info: prompt cache: 65751 tokens, resumed at 3, kept 36; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 110, misses 8, evicted 317, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-1d44fd709a14de9cb196c5222a9014bc prompt=65751 cached=3 thinking=False effort=none tokens=512 sha=7e37846db5bc finish=length rounds=90 accepted=421/1304 ttft=586.982 decode=33.092 elapsed=620.074 queued=1.080 tok/s=15.4
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65753 tokens, resumed at 3, kept 39; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 111, misses 8, evicted 320, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-7b4fc753e0f2809f5789ae0702147c85 prompt=65753 cached=3 thinking=False effort=none tokens=512 sha=be83acb9db62 finish=length rounds=76 accepted=435/1106 ttft=636.499 decode=27.315 elapsed=663.814 queued=1.080 tok/s=18.7
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 42; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 112, misses 8, evicted 323, refused 0, failed 0)
+[tensorfold] done chatcmpl-99f32efbff7bbd62806268ae927558bc prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=195eb471abe0 finish=length rounds=77 accepted=434/1121 ttft=685.484 decode=27.611 elapsed=713.095 queued=1.080 tok/s=18.5
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65754 tokens, resumed at 3, kept 45; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 113, misses 8, evicted 326, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-69acb79b40729b0951330234723e3844 prompt=65754 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=70 accepted=441/1041 ttft=734.385 decode=24.871 elapsed=759.256 queued=1.079 tok/s=20.5
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 45; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 114, misses 8, evicted 329, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-cef2fc4e9f9eeecf83957a7dba77b9bd prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=783.076 decode=25.173 elapsed=808.249 queued=70.514 tok/s=20.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66268 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 115, misses 8, evicted 331, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66272 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 116, misses 8, evicted 333, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66269 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 117, misses 8, evicted 335, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66265 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 118, misses 8, evicted 337, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66270 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 119, misses 8, evicted 339, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66268 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 120, misses 8, evicted 341, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66265 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 121, misses 8, evicted 343, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66269 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 122, misses 8, evicted 345, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66268 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 123, misses 8, evicted 347, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66267 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 124, misses 8, evicted 349, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66270 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 125, misses 8, evicted 351, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66264 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 126, misses 8, evicted 353, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66268 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 127, misses 8, evicted 355, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66270 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 128, misses 8, evicted 357, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66269 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 129, misses 8, evicted 359, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66271 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 130, misses 8, evicted 361, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 66269 tokens, resumed at 3, kept 1; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 131, misses 8, evicted 363, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 79; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 132, misses 8, evicted 366, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-f417880380dc9ad3967c1e5915ccca58 prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=70 accepted=441/1041 ttft=1612.260 decode=24.871 elapsed=1637.131 queued=124.229 tok/s=20.5
+info: prompt cache: 66269 tokens, resumed at 66263, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 133, misses 8, evicted 367, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65748 tokens, resumed at 3, kept 80; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 134, misses 8, evicted 370, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-9ab4cb565833502062803d3a9568bf55 prompt=65748 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=1661.012 decode=25.172 elapsed=1686.184 queued=177.698 tok/s=20.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65754 tokens, resumed at 3, kept 80; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 135, misses 8, evicted 373, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-552f86757f832727afa4f0b8a2fa250c prompt=65754 cached=3 thinking=False effort=none tokens=512 sha=38c87e799bc5 finish=length rounds=92 accepted=419/1326 ttft=1709.652 decode=34.090 elapsed=1743.742 queued=220.687 tok/s=15.0
+info: prompt cache: 66271 tokens, resumed at 66265, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 136, misses 8, evicted 374, refused 0, failed 0)
+info: prompt cache: 65748 tokens, resumed at 3, kept 81; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 137, misses 8, evicted 377, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-1009fca4f4af2f82fb5058c9f781313a prompt=65748 cached=3 thinking=False effort=none tokens=512 sha=75e42297c649 finish=length rounds=84 accepted=427/1226 ttft=1759.475 decode=30.533 elapsed=1790.008 queued=267.161 tok/s=16.7
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 81; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 138, misses 8, evicted 380, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-03ca39a70a1fcc7059358907af3957cf prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=3b15ec5b6935 finish=length rounds=76 accepted=435/1110 ttft=1808.721 decode=27.316 elapsed=1836.037 queued=323.841 tok/s=18.7
+info: prompt cache: 66267 tokens, resumed at 65745, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 139, misses 8, evicted 381, refused 0, failed 0)
+info: prompt cache: 65754 tokens, resumed at 3, kept 82; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 140, misses 8, evicted 384, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-7cb773c89c0a1ca98d26bca0bc136e84 prompt=65754 cached=3 thinking=False effort=none tokens=512 sha=f1e05da92b5a finish=length rounds=72 accepted=439/1045 ttft=1858.329 decode=25.562 elapsed=1883.891 queued=367.876 tok/s=20.0
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65751 tokens, resumed at 3, kept 82; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 141, misses 8, evicted 387, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-f383f494a9bebb418589b2350aa24919 prompt=65751 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=1907.008 decode=25.278 elapsed=1932.286 queued=418.156 tok/s=20.2
+info: prompt cache: 66268 tokens, resumed at 66262, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 142, misses 8, evicted 388, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65750 tokens, resumed at 3, kept 83; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 143, misses 8, evicted 391, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-458697e1badf060d462d55c40bec9c05 prompt=65750 cached=3 thinking=False effort=none tokens=512 sha=195eb471abe0 finish=length rounds=77 accepted=434/1121 ttft=1955.817 decode=27.604 elapsed=1983.421 queued=463.534 tok/s=18.5
+info: prompt cache: 65753 tokens, resumed at 3, kept 83; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 144, misses 8, evicted 394, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-7c1590cf1bbc1ab858551338fc795bd1 prompt=65753 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=2004.708 decode=25.279 elapsed=2029.987 queued=522.223 tok/s=20.2
+info: prompt cache: 66270 tokens, resumed at 66264, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 145, misses 8, evicted 395, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 86; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 146, misses 8, evicted 398, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-434ba79b6fce3913ba42974a33082b64 prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=7d10fdafa46e finish=length rounds=76 accepted=436/1104 ttft=2053.526 decode=27.193 elapsed=2080.718 queued=523.089 tok/s=18.8
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65750 tokens, resumed at 3, kept 86; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 147, misses 8, evicted 401, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-61491ada602765887f2c858346118745 prompt=65750 cached=3 thinking=False effort=none tokens=512 sha=c07f41176e14 finish=length rounds=92 accepted=420/1325 ttft=2102.382 decode=34.085 elapsed=2136.467 queued=565.683 tok/s=15.0
+info: prompt cache: 66267 tokens, resumed at 66262, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 148, misses 8, evicted 402, refused 0, failed 0)
+info: prompt cache: 65748 tokens, resumed at 3, kept 87; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 149, misses 8, evicted 405, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-ba74f0b1f57b4105429b4a5910c94695 prompt=65748 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=70 accepted=441/1041 ttft=2152.196 decode=24.762 elapsed=2176.957 queued=620.063 tok/s=20.6
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65752 tokens, resumed at 3, kept 87; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 150, misses 8, evicted 408, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-8d304636ace3c7cda21745e88f447e22 prompt=65752 cached=3 thinking=False effort=none tokens=512 sha=b80d44092b93 finish=length rounds=76 accepted=435/1124 ttft=2200.775 decode=27.322 elapsed=2228.097 queued=663.801 tok/s=18.7
+info: prompt cache: 66269 tokens, resumed at 66263, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 151, misses 8, evicted 409, refused 0, failed 0)
+info: prompt cache: 65749 tokens, resumed at 3, kept 88; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 152, misses 8, evicted 412, refused 0, failed 0)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+[tensorfold] done chatcmpl-516e1a91dd4b114d25a76326a5bcc3e5 prompt=65749 cached=3 thinking=False effort=none tokens=512 sha=f44751803a1d finish=length rounds=71 accepted=440/1056 ttft=2249.827 decode=25.168 elapsed=2274.995 queued=713.083 tok/s=20.3
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] 127.0.0.1 "GET /api/version HTTP/1.1" 404 -
+info: prompt cache: 65749 tokens, resumed at 3, kept 88; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 153, misses 8, evicted 415, refused 0, failed 0)
+[tensorfold] done chatcmpl-0230c03aa061fdf3f0aefbae934a4e7e prompt=65749 cached=3 thinking=False effort=none tokens=512 sha=7d10fdafa46e finish=length rounds=75 accepted=440/1125 ttft=2298.459 decode=2.808 elapsed=2301.267 queued=759.243 tok/s=182.0
+[tensorfold] shutting down (SIGTERM): draining: new requests get 503; 0 request(s) in progress may finish within 20.0 s
+[tensorfold] shutting down: drained
+info: prompt cache: 66266 tokens, resumed at 66261, kept 0; 4 states, 14784 MiB and 0 MiB spare of 16384 MiB (hits 154, misses 8, evicted 416, refused 0, failed 0)
+[tensorfold] shutting down: stopped

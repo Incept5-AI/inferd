@@ -1,0 +1,14 @@
+info: qwen27: prompt capacity=512 rows, startup stream and scratch reserve=25104678912 bytes
+info: qwen27: lone loop=lanes width=16; lane window=16, lane copies=off
+info: qwen27: 21.4 GiB kept wired between requests, inside 70% of 64 GiB of RAM
+info: qwen27: Neural Engine prompt share requested_columns=0 loaded_columns=0 program_weight_bytes=0 loaded=false exact_output_qualified=false
+info: prompt cache: 5.3 GiB from 5.3 GiB free under the 70% cap (21.7 GiB in use once loaded and 15.8 GiB reserved outside that reading, 64 GiB of RAM, 2 GiB kept for prompt buffers)
+info: Qwen3.8-27B: 8 streams of 32768 tokens, DFlash2 drafts for one of them
+[tensorfold] prompt chunks of up to 512 tokens, cut at replies 256+ tokens apart
+[tensorfold] open-file limit raised: soft 256 -> 65536
+[tensorfold] profile: stable; registered overrides: none
+[tensorfold] serving q27 at http://127.0.0.1:8091/v1 (sampling: temperature 1.0, top_k 20, top_p 0.95; drafts: DFlash2 (~/.cache/huggingface/hub/models--incoai--Qwen3.8-27B-DFlash2/snapshots/015e795645c74b1a0eeef3b570031fb62e769bc5) + copies; context: 32768; loaded in 4.8s)
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] shutting down (SIGTERM): draining: new requests get 503; 0 request(s) in progress may finish within 20.0 s
+[tensorfold] shutting down: drained
+[tensorfold] shutting down: stopped

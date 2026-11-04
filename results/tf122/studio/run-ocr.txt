@@ -1,0 +1,8 @@
+up on 127.0.0.1:8300 (inferd pid 70168, front end pid 70246, socket /var/folders/cy/wjncqll968nbq194ybzdgt_h0000gn/T/inferd-501/inferd-8300.sock)
+inferd: memory: GPU budget 222.7 GiB; model + state + scratch 21.7, drafter 0.0, PF8 22.7, KV 151.6 (auto) -> 196.0 allocated
+inferd: 8-bit KV, 152828 KV blocks (152 GiB, 4.9M tokens), 48 slots (6.9 GiB state), max ctx 32768
+inferd: PF8: on (auto: fits; KV room after copies 151.6 GiB, need 16.3 for 16 x 32768 tokens), copies 22.69 GiB, KV 151.6 GiB
+inferd: warm-up: 637 + 24-token prompts, 8 tokens each (17 steps; PF8 on, no drafter), 29 pipelines created (2 ms), 3.52 s (WARMUP=0 disables)
+inferd: listening on /var/folders/cy/wjncqll968nbq194ybzdgt_h0000gn/T/inferd-501/inferd-8300.sock
+inferd: vocabulary for structured output: 248077 tokens
+run.sh: stopped 2 process(es) on port 8300

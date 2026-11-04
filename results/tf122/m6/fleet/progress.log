@@ -1,0 +1,6 @@
+19:33:20 ##### m6 start (phases fleet single)
+19:33:28 tf122-fleet failed: tensorfold: --parallel 8 needs 23.4 GiB for its streams and 512-row prompt scratch at a 32768-token context; 1.1 GiB remains beside the weights and an 8 GiB margin: lower --parallel or --context
+19:33:50 tf121-fleet failed: tensorfold: --parallel 8 needs 23.4 GiB for its streams and 512-row prompt scratch at a 32768-token context; 1.1 GiB remains beside the weights and an 8 GiB margin: lower --parallel or --context
+19:34:16 inferd up in 11 s; file-backed 11.9 -> 4.1 GiB; System-wide memory free percentage: 87%; inferd: memory: GPU budget 25.0 GiB; model + state + scratch 18.3, drafter 2.8, PF8 0.0, KV 2.4 (auto) -> 23.5 allocated inferd: 8-bit KV, 2429 KV blocks (2 GiB, 0.1M tokens), 24 slots (3.4 GiB state), max ctx 32768 
+20:08:05 inferd fleet done
+20:08:21 ##### m6 done

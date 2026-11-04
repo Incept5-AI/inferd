@@ -1,0 +1,9 @@
+22:53:12 ##### start (phases conc ocr)
+22:54:12 == tf122-conc-16k (parallel 32, context 20480)
+23:14:31 == tf122-conc-64k (parallel 16, context 73728)
+01:02:06 == tf121-conc-16k (parallel 32, context 20480)
+01:22:35 == tf121-conc-64k (parallel 16, context 73728)
+03:09:33 == ocr inferd 4a1c66a
+03:11:58 == tf121-ocr
+03:13:13 == tf122-ocr
+03:13:26 ##### done

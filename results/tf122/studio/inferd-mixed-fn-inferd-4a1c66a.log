@@ -1,0 +1,9 @@
+loading the PLE n-gram table...
+MTP head loaded from mtp.* (KV pool 12)
+inferd: MTP head drafter (block 4: 3 drafts per cycle)
+inferd: memory: GPU budget 222.7 GiB; model + state + scratch 109.3, drafter 12.6, PF8 0.0, KV 64.0 -> 185.9 allocated
+inferd: 8-bit KV, 114716 KV blocks (64 GiB, 3.7M tokens), 48 slots (5.2 GiB state), max ctx 32768
+inferd: PF8: off (Flash-Next default; PF8=1 to enable), copies 2.78 GiB (not made), KV 64.0 GiB
+inferd: warm-up: 637 + 24-token prompts, 8 tokens each (12 steps; PF8 off, MTP verify), 75 pipelines created (3 ms), 2.20 s (WARMUP=0 disables)
+inferd: listening on /var/folders/cy/wjncqll968nbq194ybzdgt_h0000gn/T/inferd-501/inferd-8374.sock
+inferd: vocabulary for structured output: 248077 tokens

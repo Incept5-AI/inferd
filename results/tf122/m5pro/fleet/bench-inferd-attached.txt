@@ -1,0 +1,37 @@
+community-v2: code and chat, 2 temperatures, 5 repeats after warm-up.
+This generates model replies; use Ctrl-C to cancel. Nothing is uploaded unless you publish.
+code T=1 warm-up: ok 100.39 delivery tok/s
+code T=1 repeat 1/5: ok 88.58 delivery tok/s
+code T=1 repeat 2/5: ok 108.20 delivery tok/s
+code T=1 repeat 3/5: ok 93.82 delivery tok/s
+code T=1 repeat 4/5: ok 79.02 delivery tok/s
+code T=1 repeat 5/5: ok 88.36 delivery tok/s
+chat T=1 warm-up: ok 32.26 delivery tok/s
+chat T=1 repeat 1/5: ok 33.96 delivery tok/s
+chat T=1 repeat 2/5: ok 36.87 delivery tok/s
+chat T=1 repeat 3/5: ok 35.93 delivery tok/s
+chat T=1 repeat 4/5: ok 30.41 delivery tok/s
+chat T=1 repeat 5/5: ok 43.34 delivery tok/s
+code T=0 warm-up: ok 105.89 delivery tok/s
+code T=0 repeat 1/5: ok 105.89 delivery tok/s
+code T=0 repeat 2/5: ok 105.77 delivery tok/s
+code T=0 repeat 3/5: ok 105.95 delivery tok/s
+code T=0 repeat 4/5: ok 106.03 delivery tok/s
+code T=0 repeat 5/5: ok 106.19 delivery tok/s
+chat T=0 warm-up: ok 43.95 delivery tok/s
+chat T=0 repeat 1/5: ok 44.04 delivery tok/s
+chat T=0 repeat 2/5: ok 44.10 delivery tok/s
+chat T=0 repeat 3/5: ok 44.14 delivery tok/s
+chat T=0 repeat 4/5: ok 44.18 delivery tok/s
+chat T=0 repeat 5/5: ok 44.14 delivery tok/s
+Run c5dd4133-ae3c-48cc-afa9-aeaad93958c9 | mlx | local model
+Protocol community-v2; compare only within this protocol and manifest digest.
+Workload       Temp    Stream delivery tok/s    First text, s    Status
+code           1      88.58                     0.092            complete
+chat           1      35.93                     0.095            complete
+code           0      105.95                    0.093            complete
+chat           0      44.14                     0.095            complete
+Stream delivery includes transport buffering; it is not an engine token clock.
+Attached-server hardware and checkpoint revisions are unknown; this result is unranked.
+Receipt saved: ~/inference/results/tf122-m5pro/bench-inferd-attached.json
+Draft counts: the server reported none; saved: ~/inference/results/tf122-m5pro/bench-inferd-attached.drafts.json

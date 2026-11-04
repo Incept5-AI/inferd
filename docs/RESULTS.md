@@ -925,7 +925,8 @@ Studio, `bench/wall.py` (14,336-token prompts, 6,400 forced tokens, N agents at 
 
 Mixed arrivals (16 agents, Poisson 3 s apart, 2k–16k prompts, 256–512 tokens out): 27B total 105.0 → 78.7 s,
 TTFT p95 59.1 → 34.0 s, 9.2 → 12.2 turns/min (TensorFold 116.7 s / 72.0 s / 8.2); Flash-Next 60.4 → 54.5 s,
-TTFT p95 15.3 → 11.4 s (TensorFold 57.2 s / 9.1 s). Fleets (conc 16k × 8/16/32) level; Flash-Next 16 agents +8%.
+TTFT p95 15.3 → 11.4 s with PF8 on; with the shipped default (PF8 off for Flash-Next) 57.2 s / 13.7 s, level
+with TensorFold on total time and behind on the tail (TensorFold 57.2 s / 9.1 s; re-measured in (m)). Fleets (conc 16k × 8/16/32) level; Flash-Next 16 agents +8%.
 
 - Flash-Next N=1: the 42.5 s first measured was a build with the macOS 26 kernel target (wrong large-M kernels, reverted
   in 540f107). On 540f107, 9 trials average 39.4 s vs 38.3 s for the earlier tree; each trial is either ~37 s or ~42 s
@@ -950,6 +951,54 @@ every engine, `conc.py` at 32k (full table and per-phase thermals: `results/m3ma
 
 Splash leads clearly for one agent on this GPU (the M3/M4 kernel path has no int8 tensor units to use). At 16 agents
 the totals are level and inferd's last agent starts 4× sooner. TensorFold did not reuse the shared prefix here.
+
+## (m) TensorFold 1.2.2 re-tests, 3–4 November
+
+TensorFold 1.2.2 (3 Nov) beside 1.2.1, each arm launched exactly as its 1.2.1 run; new options as extra arms
+(`TENSORFOLD_PREFILL_ORDER=srpt`, `--prompt-cache-disk`). inferd 4a1c66a (rows re-used where measured on the same
+defaults: (k)'s wall.py candidates, the 27B mixed arm, the 3 Nov Studio sweep). Raw: [results/tf122/](../results/tf122/).
+
+**N agents at once (Studio, wall.py, 3 trials), total s:**
+
+| N | 27B inferd | TF 1.2.1 fcfs | TF 1.2.2 fcfs | TF 1.2.2 srpt | Flash-Next inferd | TF 1.2.1 fcfs | TF 1.2.2 fcfs | TF 1.2.2 srpt |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 29.8 | 30.7 | 32.1 | 31.3 | 39.4 | 29.5 | 29.9 | 29.2 |
+| 2 | 53.4 | 51.7 | 53.9 | 54.1 | 57.2 | 50.4 | 50.3 | 50.3 |
+| 3 | **61.5** | 72.1 | 71.4 | 74.1 | 73.4 | 67.6 | 66.6 | 67.4 |
+| 4 | **75.7** | 91.4 | 91.3 | 102.4 | 89.2 | 85.2 | 86.7 | 85.2 |
+| 5 | **93.3** | 113.1 | 113.1 | 141.0 | 105.9 | 104.2 | 104.6 | 103.6 |
+| 6 | **101.4** | 135.1 | 133.3 | 168.2 | **118.6** | 124.6 | 125.1 | 126.6 |
+| 8 | **125.6** | 177.9 | 177.6 | 211.0 | **137.7** | 166.3 | 166.1 | 166.7 |
+
+1.2.2 is 1.2.1 within noise. srpt does nothing for Flash-Next and costs the 27B 25–30% from 4 agents (later prompts
+wait behind decoding: last first token 46 → 112 s at N = 5). The 27B still finishes sooner on inferd from 3 agents
+(−29% at 8); Flash-Next is level at 5 and inferd sooner from 6 (−17% at 8).
+
+**Mixed arrivals (Studio, 16 users, Poisson 3 s, 2k–16k prompts, 3 trials), total s / TTFT p95 s:** 27B inferd
+78.7 / 34.0; TF 1.2.1 116.7 / 72.0; 1.2.2 116.8 / 72.1; 1.2.2 srpt 122.9 / 79.0. Flash-Next inferd (shipped default,
+PF8 off) 57.2 / 13.7 (the 54.5 / 11.4 in (k) was the PF8-on arm); TF 1.2.1 57.2 / 9.1; 1.2.2 57.3 / 9.2; srpt 57.6 / 9.7.
+
+**Agent contexts (M5 Pro 64 GB, agents_scenarios.py), TTFT median (cached):**
+
+| phase | inferd | TF 1.2.1 | TF 1.2.2 | TF 1.2.2 `--prompt-cache-disk` |
+|---|---|---|---|---|
+| a: 48 agents × 3 turns, all turns / wall | 23.4 s / 128 s | 140.4 / 813 s | 141.9 / 816 s | 44.0 / 206 s |
+| b: relaunch 16 × 30k forks after unrelated load | 2.1 s (100%) | 193 s (50%) | 196 s (50%) | 195 s (50%) |
+| c: resume 8 × 8k agents after unrelated load | 0.25 s (99%) | 15.3 s (0%) | 15.3 s (0%) | 15.4 s (0%) |
+| e: 32 helpers / 3 researchers | 35 / 54 s | 37 / 89 s | 81 / 136 s | 50 / 127 s |
+
+The disk cache restores only short (~2.1k-token) states, which fixes TF's many-small-agents case but not long
+contexts. On the 32 GB M6 neither TensorFold version can start the 27B (its 8 GiB margin leaves 1.1 GiB for streams).
+
+**Follow-up fleets.** M5 Pro conc 16k × 8 / 16: inferd 145.0 / 158.8 tok/s, TF 1.2.1 and 1.2.2 12.7 / 12.0 (every
+context re-prefilled; 1.2.2's page-cache release frees ~18 GiB of file cache but its budget is static). Studio 16k ×
+8 / 16 / 32: inferd 494 / 581 / 615, TF 1.2.2 79 / 54 / 49 (16 GiB default prompt cache); one agent: TF 186 vs 143.
+
+**Single agent (M5 Pro, `tensorfold benchmark`, same prompts via `--server --chat-only`), code / chat at T 1:**
+TF 1.2.2 130.7 / 49.1 tok/s, inferd 88.6 / 35.9. Managed (their protocol): 1.2.1 94.6 / 49.3, 1.2.2 94.5 / 49.2
+(their 48 GB figure: 89.1 / 47.2).
+
+OCR vs TensorFold was not measured: both versions refuse JPEG without libjpeg-turbo 3.1.4.1 (the Studio has 3.2.0).
 
 ## Engine-level measurements
 

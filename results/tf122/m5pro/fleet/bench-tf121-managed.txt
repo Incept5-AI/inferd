@@ -1,0 +1,36 @@
+community-v2: code and chat, 2 temperatures, 5 repeats after warm-up.
+This generates model replies; use Ctrl-C to cancel. Nothing is uploaded unless you publish.
+code T=1 warm-up: ok 75.98 delivery tok/s
+code T=1 repeat 1/5: ok 77.60 delivery tok/s
+code T=1 repeat 2/5: ok 103.51 delivery tok/s
+code T=1 repeat 3/5: ok 100.22 delivery tok/s
+code T=1 repeat 4/5: ok 74.26 delivery tok/s
+code T=1 repeat 5/5: ok 94.61 delivery tok/s
+chat T=1 warm-up: ok 50.80 delivery tok/s
+chat T=1 repeat 1/5: ok 50.86 delivery tok/s
+chat T=1 repeat 2/5: ok 46.65 delivery tok/s
+chat T=1 repeat 3/5: ok 43.06 delivery tok/s
+chat T=1 repeat 4/5: ok 63.01 delivery tok/s
+chat T=1 repeat 5/5: ok 49.29 delivery tok/s
+code T=0 warm-up: ok 83.27 delivery tok/s
+code T=0 repeat 1/5: ok 83.17 delivery tok/s
+code T=0 repeat 2/5: ok 83.15 delivery tok/s
+code T=0 repeat 3/5: ok 83.13 delivery tok/s
+code T=0 repeat 4/5: ok 82.85 delivery tok/s
+code T=0 repeat 5/5: ok 82.51 delivery tok/s
+chat T=0 warm-up: ok 58.00 delivery tok/s
+chat T=0 repeat 1/5: ok 57.98 delivery tok/s
+chat T=0 repeat 2/5: ok 57.91 delivery tok/s
+chat T=0 repeat 3/5: ok 58.03 delivery tok/s
+chat T=0 repeat 4/5: ok 58.02 delivery tok/s
+chat T=0 repeat 5/5: ok 58.12 delivery tok/s
+Run 1fc62eb0-f372-4593-9c3c-eaea163e7316 | mlx | local model
+Protocol community-v2; compare only within this protocol and manifest digest.
+Workload       Temp    Stream delivery tok/s    First text, s    Status
+code           1      94.61                     0.065            complete
+chat           1      49.29                     0.064            complete
+code           0      83.13                     0.066            complete
+chat           0      58.02                     0.066            complete
+Stream delivery includes transport buffering; it is not an engine token clock.
+Receipt saved: ~/inference/results/tf122-m5pro/bench-tf121-managed.json
+Draft counts: 4106 of 15674 drafted tokens accepted over 1055 rounds (20 of 20 attempts reported them); saved: ~/inference/results/tf122-m5pro/bench-tf121-managed.drafts.json

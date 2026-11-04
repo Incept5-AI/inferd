@@ -1,0 +1,34 @@
+warning: /opt/homebrew/opt/jpeg-turbo/lib/libturbojpeg.0.dylib is not libjpeg-turbo 3.1.4.1; JPEG images are refused until it is
+[tensorfold] warning: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+info: Qwen3.8-27B: image tower loaded (1.79 GiB with scratch for 4096 image tokens a request)
+info: qwen27: prompt capacity=2048 rows, startup stream and scratch reserve=30352637952 bytes
+info: qwen27: lone loop=plain width=1; lane window=16, lane copies=off
+info: qwen27: 27.8 GiB kept wired between requests, inside 70% of 256 GiB of RAM
+info: qwen27: Neural Engine prompt share requested_columns=0 loaded_columns=0 program_weight_bytes=0 loaded=false exact_output_qualified=false
+info: prompt cache: 16.0 GiB from 133.1 GiB free under the 70% cap (28.1 GiB in use once loaded and 16.1 GiB reserved outside that reading, 256 GiB of RAM, 2 GiB kept for prompt buffers); 16 GiB by default: --prompt-cache-gib takes more, up to what is free
+info: Qwen3.8-27B: 8 streams of 32768 tokens, images read
+[tensorfold] prompt chunks of up to 2,048 tokens, cut at replies 256+ tokens apart
+[tensorfold] open-file limit raised: soft 256 -> 65536
+[tensorfold] profile: stable; registered overrides: none
+[tensorfold] serving qwen3.8-27b at http://127.0.0.1:8091/v1 (sampling: temperature 1.0, top_k 20, top_p 0.95; drafts: copies only; context: 32768; loaded in 2.9s)
+[tensorfold] thinking on (the chat template's default): replies reason in reasoning_content before the answer in content, and max_tokens counts both. --no-thinking turns it off; a request can send chat_template_kwargs {"enable_thinking": false}
+[tensorfold] 127.0.0.1 "GET /v1/models HTTP/1.1" 200 -
+[tensorfold] refused chatcmpl-b70a8bd18486880d392f41f2bced74de: image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 400 -
+[tensorfold] refused chatcmpl-dd7a02dbb460e2619f3a858932bfe43c: image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 400 -
+[tensorfold] refused chatcmpl-f1a196cacd18a37ac13ea8e2f8681241: image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 400 -
+[tensorfold] refused chatcmpl-830c14303c3fe305011e64a9138c15dc: image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 400 -
+[tensorfold] refused chatcmpl-716b1ba18e16c9f0c018408847e10eb4: image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 400 -
+[tensorfold] refused chatcmpl-ff334ec61cc56555819797a03791f0ef: image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 400 -
+[tensorfold] refused chatcmpl-5656044bdd90c6fe5654d8f496ad090f: image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 400 -
+[tensorfold] refused chatcmpl-bd22364a3a7e49d36041207eb5612518: image 1: JPEG images need libjpeg-turbo 3.1.4.1 (libturbojpeg); the library has another release, whose pixels can differ; libturbojpeg.0.dylib is required for JPEG inputs (--vision); install libjpeg-turbo 3.1.4.1 and set TENSORFOLD_LIBTURBOJPEG to its file, or put it on the documented loader path
+[tensorfold] 127.0.0.1 "POST /v1/chat/completions HTTP/1.1" 400 -
+[tensorfold] shutting down (SIGTERM): draining: new requests get 503; 0 request(s) in progress may finish within 20.0 s
+[tensorfold] shutting down: drained
+[tensorfold] shutting down: stopped

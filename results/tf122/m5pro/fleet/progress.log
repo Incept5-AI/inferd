@@ -1,0 +1,22 @@
+21:20:53 ##### m5pro start (phases fleet single)
+21:20:57 tf122-fleet up in 4 s; file-backed 26.5 -> 8.8 GiB; System-wide memory free percentage: 61%
+21:53:56 tf122-fleet done; System-wide memory free percentage: 32%
+21:54:18 tf121-fleet up in 5 s; file-backed 11.6 -> 29.3 GiB; System-wide memory free percentage: 61%
+22:27:19 tf121-fleet done; System-wide memory free percentage: 32%
+22:27:43 inferd up in 8 s; file-backed 13.2 -> 6.5 GiB; System-wide memory free percentage: 93%; inferd: memory: GPU budget 51.8 GiB; model + state + scratch 24.0, drafter 4.4, PF8 0.0, KV 22.0 (auto) -> 50.3 allocated inferd: 8-bit KV, 22160 KV blocks (22 GiB, 0.7M tokens), 64 slots (9.2 GiB state), max ctx 32768 
+22:45:19 inferd fleet done
+22:45:36 benchmark managed tf1.2.1
+22:47:17 tf1.2.1 managed exit 0
+22:47:32 benchmark managed tf1.2.2
+22:49:12 tf1.2.2 managed exit 0
+22:49:32 tf122-attach up in 5 s; file-backed 2.9 -> 2.9 GiB; System-wide memory free percentage: 60%
+22:49:32 tf122 attached exit 1
+22:49:56 inferd up in 8 s; file-backed 2.9 -> 7.3 GiB; System-wide memory free percentage: 93%; inferd: memory: GPU budget 51.8 GiB; model + state + scratch 24.0, drafter 4.4, PF8 0.0, KV 22.0 (auto) -> 50.3 allocated inferd: 8-bit KV, 22160 KV blocks (22 GiB, 0.7M tokens), 64 slots (9.2 GiB state), max ctx 32768 
+22:49:56 inferd attached exit 1
+22:50:12 ##### m5pro done
+tf122 attached exit 1
+inferd attached exit 1
+ATTACH DONE
+tf122 attached exit 0
+inferd attached exit 0
+ATTACH DONE

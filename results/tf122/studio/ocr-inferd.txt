@@ -1,0 +1,16 @@
+effort  round fields ok  wall s  output tokens ['invoice', 'receipt', 'shipping_label', 'letter']  wrong
+none        1   21/21       5.9       [94, 71, 87, 58]  
+        letter: 900x800 px -> 700 image tokens (estimate), prompt_tokens 767
+        receipt: 900x720 px -> 616 image tokens (estimate), prompt_tokens 685
+        shipping_label: 900x560 px -> 504 image tokens (estimate), prompt_tokens 578
+        invoice: 900x760 px -> 672 image tokens (estimate), prompt_tokens 744
+none        2   21/21       3.9       [94, 71, 93, 58]  
+none        3   21/21       3.9       [94, 71, 93, 58]  
+low         1   21/21       6.9   [215, 173, 196, 225]  
+        max output this round: 225 tokens
+low         2   21/21       8.9   [327, 165, 196, 191]  
+low         3   21/21       7.6   [258, 165, 196, 225]  
+medium      1   21/21       9.1   [292, 198, 333, 201]  
+        max output this round: 333 tokens
+medium      2   21/21       9.3   [288, 229, 332, 261]  
+medium      3   21/21       9.1   [195, 230, 332, 206]  

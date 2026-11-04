@@ -1,0 +1,37 @@
+community-v2: code and chat, 2 temperatures, 5 repeats after warm-up.
+This generates model replies; use Ctrl-C to cancel. Nothing is uploaded unless you publish.
+code T=1 warm-up: ok 130.35 delivery tok/s
+code T=1 repeat 1/5: ok 130.96 delivery tok/s
+code T=1 repeat 2/5: ok 109.80 delivery tok/s
+code T=1 repeat 3/5: ok 117.28 delivery tok/s
+code T=1 repeat 4/5: ok 130.66 delivery tok/s
+code T=1 repeat 5/5: ok 130.73 delivery tok/s
+chat T=1 warm-up: ok 50.71 delivery tok/s
+chat T=1 repeat 1/5: ok 50.69 delivery tok/s
+chat T=1 repeat 2/5: ok 46.48 delivery tok/s
+chat T=1 repeat 3/5: ok 42.90 delivery tok/s
+chat T=1 repeat 4/5: ok 62.74 delivery tok/s
+chat T=1 repeat 5/5: ok 49.05 delivery tok/s
+code T=0 warm-up: ok 132.06 delivery tok/s
+code T=0 repeat 1/5: ok 131.53 delivery tok/s
+code T=0 repeat 2/5: ok 131.86 delivery tok/s
+code T=0 repeat 3/5: ok 132.38 delivery tok/s
+code T=0 repeat 4/5: ok 131.96 delivery tok/s
+code T=0 repeat 5/5: ok 132.08 delivery tok/s
+chat T=0 warm-up: ok 58.60 delivery tok/s
+chat T=0 repeat 1/5: ok 58.60 delivery tok/s
+chat T=0 repeat 2/5: ok 58.51 delivery tok/s
+chat T=0 repeat 3/5: ok 58.47 delivery tok/s
+chat T=0 repeat 4/5: ok 58.37 delivery tok/s
+chat T=0 repeat 5/5: ok 58.38 delivery tok/s
+Run 4ee74a9b-605b-480b-b18b-b0b9455bc833 | mlx | local model
+Protocol community-v2; compare only within this protocol and manifest digest.
+Workload       Temp    Stream delivery tok/s    First text, s    Status
+code           1      130.66                    0.080            complete
+chat           1      49.05                     0.081            complete
+code           0      131.96                    0.080            complete
+chat           0      58.47                     0.083            complete
+Stream delivery includes transport buffering; it is not an engine token clock.
+The attached server's manifest does not attest a rank count and checkpoint revision; this result is unranked.
+Receipt saved: ~/inference/results/tf122-m5pro/bench-tf122-attached.json
+Draft counts: 4237 of 13710 drafted tokens accepted over 920 rounds (20 of 20 attempts reported them); saved: ~/inference/results/tf122-m5pro/bench-tf122-attached.drafts.json

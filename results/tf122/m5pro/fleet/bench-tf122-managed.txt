@@ -1,0 +1,36 @@
+community-v2: code and chat, 2 temperatures, 5 repeats after warm-up.
+This generates model replies; use Ctrl-C to cancel. Nothing is uploaded unless you publish.
+code T=1 warm-up: ok 77.32 delivery tok/s
+code T=1 repeat 1/5: ok 77.43 delivery tok/s
+code T=1 repeat 2/5: ok 103.43 delivery tok/s
+code T=1 repeat 3/5: ok 99.92 delivery tok/s
+code T=1 repeat 4/5: ok 73.90 delivery tok/s
+code T=1 repeat 5/5: ok 94.49 delivery tok/s
+chat T=1 warm-up: ok 50.67 delivery tok/s
+chat T=1 repeat 1/5: ok 50.69 delivery tok/s
+chat T=1 repeat 2/5: ok 46.57 delivery tok/s
+chat T=1 repeat 3/5: ok 43.01 delivery tok/s
+chat T=1 repeat 4/5: ok 62.82 delivery tok/s
+chat T=1 repeat 5/5: ok 49.23 delivery tok/s
+code T=0 warm-up: ok 83.14 delivery tok/s
+code T=0 repeat 1/5: ok 83.01 delivery tok/s
+code T=0 repeat 2/5: ok 83.06 delivery tok/s
+code T=0 repeat 3/5: ok 82.87 delivery tok/s
+code T=0 repeat 4/5: ok 82.58 delivery tok/s
+code T=0 repeat 5/5: ok 82.36 delivery tok/s
+chat T=0 warm-up: ok 57.93 delivery tok/s
+chat T=0 repeat 1/5: ok 57.97 delivery tok/s
+chat T=0 repeat 2/5: ok 57.95 delivery tok/s
+chat T=0 repeat 3/5: ok 57.92 delivery tok/s
+chat T=0 repeat 4/5: ok 57.96 delivery tok/s
+chat T=0 repeat 5/5: ok 58.02 delivery tok/s
+Run 40f84517-1d6e-4403-bb2b-9b87801832db | mlx | local model
+Protocol community-v2; compare only within this protocol and manifest digest.
+Workload       Temp    Stream delivery tok/s    First text, s    Status
+code           1      94.49                     0.065            complete
+chat           1      49.23                     0.067            complete
+code           0      82.87                     0.066            complete
+chat           0      57.96                     0.067            complete
+Stream delivery includes transport buffering; it is not an engine token clock.
+Receipt saved: ~/inference/results/tf122-m5pro/bench-tf122-managed.json
+Draft counts: 4106 of 15720 drafted tokens accepted over 1055 rounds (20 of 20 attempts reported them); saved: ~/inference/results/tf122-m5pro/bench-tf122-managed.drafts.json
