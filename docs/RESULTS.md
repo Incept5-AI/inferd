@@ -1049,6 +1049,24 @@ summarised there too.
 - **9B follow-ups at 16k, 16 agents:** inferd 158–160 tok/s vs TensorFold 22.6–22.8 (4-bit); 114–115 vs 8.7 (8-bit).
   TensorFold leads at 4 agents (4k 98 vs 75).
 
+## (p) oMLX 0.7.4.dev1 vs inferd 0.2.0 on the Mac Studio, 4 November
+
+Same weights (Qwen3.8-27B 4-bit + DFlash2; Flash-Next oQ4e; 27B 8-bit) and harness; 0 errors. Full tables and the
+prefill-accelerator estimate: [results/omlx074-2026-11-04/](../results/omlx074-2026-11-04/README.md).
+
+| | inferd 0.2.0 | oMLX 0.7.4.dev1 | oMLX 0.7.3 |
+|---|---|---|---|
+| 27B follow-ups 16k, total tok/s, 1 / 8 / 32 agents | **150 / 490 / 628** | 127 / 154 / 179 | 41 / 42 / 45 (prefix not reused) |
+| 27B, N agents at once, all done (s), 1 / 4 / 8 | **32.9 / 71.7 / 125.0** | 43.2 / 163.2 / 286.3 | – / – / 302.5 |
+| 27B single stream, decode / prefill at 16k (tok/s) | **211** / 2,382 (PF8) | 162 / **2,582** | |
+| Flash-Next, N at once (s), 1 / 4 / 8 | 38.9 / **92.1 / 142.7** | **34.8** / 121.0 / 191.7 | – / – / 201.7 |
+| 27B 8-bit, 6 requests decode tok/s (no drafter / DFlash2) | 146.8 / **491.6** | **148.1** / 255.9 | 129.4 / – |
+
+oMLX is faster for one user (first token, Flash-Next) and at 8–16k prefill: its int8-activation prefill reads the
+packed 4-bit weights directly (no 22.7 GiB int8 copy like inferd's PF8). That kernel is being adapted for inferd
+(32–64 GB Macs, where PF8 does not fit). Their back-to-back long-prompt fix (90.7 → 13.1 s) did not reproduce as a
+collapse on the Studio: 0.7.3 was already 6.6 s, 0.7.4 5.7–6.0 s, inferd 9.1 s flat.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
