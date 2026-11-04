@@ -1079,8 +1079,8 @@ where installed), same checkpoints and harness. Every table: [results/queue-2026
 | Mac mini M5 Pro 64 GB | **381–391** vs 274–276 | **287–295** vs 40–46 | **218** vs 20 |
 | Mac mini M4 Pro 64 GB | **193** vs 144 | **156** vs 17 | |
 
-TensorFold leads at 4–8 agents on the 4k cells of the M4 Pro and M5 Pro (e.g. M5 Pro 8 × 4k 269–273 vs 255–264) and
-at 4 agents on the M6; one agent is level. 9B agent fleets on the M5 Pro (8k, turns/min, 8/16/32 agents): inferd
+TensorFold leads at 4–8 agents on the M5 Pro's 4k cells (8 × 4k 269–273 vs 255–264), at 8 agents on the M4 Pro's
+(144 vs 115) and at 4 agents on the M6; one agent is level. 9B agent fleets on the M5 Pro (8k, turns/min, 8/16/32 agents): inferd
 44.5 / 54.0 / 53.3 vs TensorFold 40.7 / 20.4 / 7.7 (4-bit) and 44.0 / 42.8 / 45.8 vs 19.3 / 8.6 / 3.0 (8-bit).
 27B long context on the M5 Pro (one agent, cold prompt + 512 out): 32k 68 s, 64k 149–152 s.
 
