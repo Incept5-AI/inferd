@@ -2,9 +2,14 @@
 //   Greedy-decodes n_gen tokens after each prompt in tokens.txt ("B T" + rows), first plainly and then with
 //   DFlash2 speculation, for B sequences batched together. Checks the two outputs are identical (speculation
 //   must be lossless) and reports tokens/s and tokens committed per cycle.
+// Outputs (both runs' token rows, plain first, for tools/tie_check.py) go to SPEC_OUT, else a fresh
+// $TMPDIR/spec_out-XXXXXX.txt (printed as "outputs: <path>"); a fixed /tmp path collided between runs and users.
+// The last line is machine-readable: "lossless: <identical>/<B> identical, <n> diverged[: seqs a,b]". Exit status 0,
+// or with SPEC_STRICT=1, 3 when any sequence diverged (tools/release_gate.sh then checks the gaps with tie_check.py).
 #include <chrono>
 #include <fstream>
 #include <sstream>
+#include <unistd.h>
 #include "../src/dflash.h"
 #include "../src/tree.h"
 
@@ -317,11 +322,38 @@ int main(int argc, char** argv) {
       same += k >= n;
       if (k < n) printf("seq %d diverges after %d generated tokens (plain %d vs spec %d)\n", b, k - T, outs[0][b][k], outs[1][b][k]);
     }
+    std::string out_path;
+    if (const char* so = getenv("SPEC_OUT"); so && *so) {
+      out_path = so;
+    } else {
+      const char* td = getenv("TMPDIR");
+      std::string tmpl = std::string(td && *td ? td : "/tmp");
+      if (tmpl.back() != '/') tmpl += '/';
+      tmpl += "spec_out-XXXXXX.txt";
+      std::vector<char> buf(tmpl.begin(), tmpl.end());
+      buf.push_back(0);
+      int fd = mkstemps(buf.data(), 4);
+      if (fd < 0) { perror("spec_test: mkstemps"); return 1; }
+      close(fd);
+      out_path = buf.data();
+    }
     {
-      std::ofstream o("/tmp/spec_out.txt");
+      std::ofstream o(out_path);
       for (int mode = 0; mode < 2; mode++)
         for (auto& t : outs[mode]) { for (int v : t) o << v << " "; o << "\n"; }
+      if (!o) { fprintf(stderr, "spec_test: cannot write %s\n", out_path.c_str()); return 1; }
     }
+    printf("outputs: %s\n", out_path.c_str());
     printf("lossless check: %d/%d sequences identical over %d tokens\n", same, B, n_gen);
+    std::string div;
+    for (int b = 0; b < B; b++) {
+      int n = T + n_gen, k = T;
+      while (k < n && k < (int)outs[0][b].size() && k < (int)outs[1][b].size() && outs[0][b][k] == outs[1][b][k]) k++;
+      if (k < n) div += (div.empty() ? ": seqs " : ",") + std::to_string(b);
+    }
+    printf("lossless: %d/%d identical, %d diverged%s\n", same, B, B - same, div.c_str());
+    static const bool strict = getenv("SPEC_STRICT") && atoi(getenv("SPEC_STRICT"));
+    if (strict && same < B) return 3;
   }
+  return 0;
 }

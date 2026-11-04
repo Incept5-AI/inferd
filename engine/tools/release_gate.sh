@@ -11,13 +11,21 @@
 #      large-M prefill kernels the macOS 26 target broke (build.sh); 24-token prompts never did.
 #   3. decode_test bench 1,16,64 at 2048 (recorded; compare with the previous release by hand). Skipped, with a note,
 #      when Metal's GPU budget is under 40 GiB (64 x 2048 does not fit there).
-#   4. spec_test: speculative output equals plain decode (with DRAFT), on the short prompts
+#   4. spec_test: speculative output equals plain decode (with DRAFT), on the short prompts. spec_test exits 3 on a
+#      divergence (SPEC_STRICT=1); the gate then runs tools/tie_check.py on its outputs and passes only when every
+#      diverging sequence among 1-3 is a near-tie: reference (mlx_lm) logit gap <= TIE_MAX (0.5, docs/TESTING.md
+#      section 2.2) between the plain and the speculative token at the first differing position. Sequence 0 ("The
+#      quick brown fox..." repeated) is reported but not judged (TIE_IGNORE=0): after ~69 generated tokens it
+#      sits on a 1.5-logit choice that flips with kernel shape alone (one decode row agrees with the reference; 5, 16
+#      or 93 rows in the last step flip it), with KV8=0, and between Macs (M4 Max, M6), without the drafter, so a
+#      divergence there says nothing about speculation. TIE_IGNORE= judges it too.
 # It writes gate-<date>.log here, headed by the machine, OS, build (metallib sha-256) and model identities. The fleet and
 # long-context gates (conc.py 16k x 8/16/32, wall.py N=1..8, mixed arrivals, SSD pressure) need a running server and are
 # listed in docs/TESTING.md.
 set -u
 M=${1:?usage: release_gate.sh MODEL [DRAFT]}; D=${2:-}
 PY=${PY:-$HOME/.venvs/inferd/bin/python}
+TIE_MAX=${TIE_MAX:-0.5}; TIE_IGNORE=${TIE_IGNORE-0}   # speculative check: near-tie gap; sequences not judged
 LOG=gate-$(date +%Y%m%d-%H%M).log
 step() { echo "== $1" | tee -a $LOG; shift; "$@" >> $LOG 2>&1 && echo "   ok" | tee -a $LOG || { echo "   FAILED (see $LOG)" | tee -a $LOG; exit 1; }; }
 note() { echo "== $1" | tee -a $LOG; }
@@ -59,7 +67,17 @@ else
 fi
 if [ -n "$D" ]; then
   step "reference tokens: 4 x 24 (speculative check)" $PY tools/ref_logits.py make "$M" $T/short.txt 4 24
-  step "speculative = plain" ./build/spec_test "$M" "$D" $T/short.txt 128
+  print "== speculative = plain (near-ties within $TIE_MAX logits pass; sequences ${TIE_IGNORE:-none} not judged)" | tee -a $LOG
+  SPEC_STRICT=1 SPEC_OUT=$T/spec_out.txt ./build/spec_test "$M" "$D" $T/short.txt 128 >> $LOG 2>&1
+  rc=$?
+  grep '^lossless:' $LOG | tail -1 | sed 's/^/   /'
+  if (( rc == 3 )); then
+    print "== tie check on the diverging sequences" | tee -a $LOG
+    $PY tools/tie_check.py "$M" $T/spec_out.txt --max-gap $TIE_MAX --ignore-seqs "$TIE_IGNORE" >> $LOG 2>&1
+    rc=$?
+    grep -E '^(seq [0-9]+ @|tie_check:)' $LOG | tail -5 | sed 's/^/   /'
+  fi
+  (( rc == 0 )) && echo "   ok" | tee -a $LOG || { echo "   FAILED (see $LOG)" | tee -a $LOG; exit 1; }
 fi
 rm -rf $T
 echo "gate passed: $LOG" | tee -a $LOG
