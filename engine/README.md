@@ -118,8 +118,11 @@ speculative sampling where it is exact: `top_k` 1–64 (the GPU sampler sees eac
 for one stream and 92 vs 41 / 89 vs 64 total tok/s for 8 / 16 agents with 8k contexts, although it leaves 2.4 GiB of
 KV instead of 5.2; without it, 16 agents' worst time to first token is lower (13 s vs 54 s) because more contexts stay
 resident. It costs ~2.8 GiB there (weights 1.1, context rings 42 MiB per state slot, scratch and verify tapes ~0.8), so
-on 32 GB keep `snapshots` small and `step tokens` at 1024. Exception: GPUs without neural accelerators (M3/M4), where a
-verify row costs ~3× a decode row: the drafter loses at 16 agents (M4 Pro 4k: 65 vs 73 tok/s); run fleets there without it.
+on 32 GB keep `snapshots` small and `step tokens` at 1024. On GPUs without neural accelerators (M3/M4) a verify row
+costs ~3× a decode row; up to 0.2.0 the drafter lost at 16 agents there (M4 Pro 4k: 65 vs 73 tok/s). Since 9dd55ad (8-bit
+context rings, verify scratch sized for the real rows) it wins: an external M4 Pro 48 GB measured 69.0 vs 63.2 tok/s at 16
+agents x 4k (verify step at block 4: 732 vs 1,331 ms before), with a slower median first token (14 s vs 6.8 s without it).
+Leave it on unless first-token latency matters more than throughput.
 
 Snapshots (`run.sh`'s fifth argument): about 2 × the agent count. With thinking off, a turn is snapshotted while it
 decodes (when a step ends on a block boundary, at most every 64 tokens, and at its end when that falls on one), so an

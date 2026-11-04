@@ -199,7 +199,13 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
   tokens and buffer checksums (non-determinism there exposed the scratch overflow).
 - **Still wrong on the M4, off the default path:** `NAX_MPP=0` (`attn_paged_nax`). **Not rerouted, probably wrong
   there (untested):** bf16 checkpoints (`mlx_gemm`) and the Neural Engine split's K-slice GEMM (forces `mlx_qmm`).
-- **Not tested on the M4:** 32k and longer contexts under load, 16+ agents with the drafter, the SSD tier,
+- **External M4 Pro MacBook Pro (48 GB), 9dd55ad, 4 Nov:** 16 agents x 4k follow-ups with the drafter 69.0 tok/s total
+  (0ef3457: 35.3; no drafter 63.2), verify step at block 4 732 ms (was 1,331), median first token 14 s (was 64; no drafter
+  6.8). Drafter memory 6.0 -> 2.9 GiB (8-bit rings). Open: drafter-on totals at 1 / 4 / 8 agents 19.5 / 46.9 / 57.3 vs
+  25.2 / 54.0 / 67.3 on the older build, with single-stream speed, step times and acceptance (3.62 vs 3.76) unchanged:
+  being repeated before it counts as a regression. Top-1 matched at every batch size to 1,536 rows; 2 of 64 prompts just
+  under cos 0.999 (the 0.995 gate passes).
+- **Not tested on the M4:** 32k and longer contexts under load, the SSD tier,
   vision, long uptime, other models, Flash-Next, 8-bit and bf16 checkpoints, the base M4. (An M4 Max has since run
   the full self-test set; see the next section.)
   Some no-drafter single-user requests at 4k/16k errored or stopped after two tokens before the fixes; not re-checked.
