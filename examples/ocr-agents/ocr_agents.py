@@ -4,7 +4,7 @@ each, fields extracted as JSON and checked against the known ground truth.
 
     python3 ocr_agents.py                    # the demo: effort none, max_context sized per image
     python3 ocr_agents.py --compare 2        # the test behind it: none / low / medium, 2 rounds each
-Needs Pillow (pip install pillow) and a checkpoint with the vision tower (e.g. lmstudio-community 4-bit).
+Needs Pillow (pip install pillow) and a checkpoint with the vision tower (mlx-community 4-bit rev 10c35caa+, lmstudio-community 4-bit, 8-bit).
 """
 import base64, io, json, math, os, re, sys, threading, time, urllib.error, urllib.request
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -90,9 +90,15 @@ def extract(kind, effort, max_context):
     req = urllib.request.Request(URL + "/chat/completions", json.dumps(body).encode(), {"Content-Type": "application/json"})
     try:
         r = json.load(urllib.request.urlopen(req, timeout=900))
+        text = r["choices"][0]["message"]["content"] or ""
     except urllib.error.HTTPError as e:
-        return {"kind": kind, "error": json.load(e)["error"]["message"], "secs": time.time() - t}
-    text = r["choices"][0]["message"]["content"]
+        try:
+            msg = json.load(e)["error"]["message"]
+        except Exception:
+            msg = ""
+        return {"kind": kind, "error": f"HTTP {e.code} {msg}".strip(), "secs": time.time() - t}
+    except Exception as e:  # connection refused, timeout, a malformed reply: a failed request, never a crash
+        return {"kind": kind, "error": f"{type(e).__name__}: {e}", "secs": time.time() - t}
     m = re.search(r"\{.*\}", text, re.S)
     try:
         got = json.loads(m.group(0)) if m else {}
@@ -107,11 +113,30 @@ def extract(kind, effort, max_context):
 def run_all(effort, sizing):
     """All four documents concurrently. sizing(kind) -> max_context."""
     out = {}
-    ths = [threading.Thread(target=lambda k=k: out.__setitem__(k, extract(k, effort, sizing(k)))) for k in DOCS]
+
+    def one(k):
+        try:
+            out[k] = extract(k, effort, sizing(k))
+        except Exception as e:  # a bug here must still count as a failed document
+            out[k] = {"kind": k, "error": f"{type(e).__name__}: {e}", "secs": 0.0}
+
+    ths = [threading.Thread(target=one, args=(k,)) for k in DOCS]
     t = time.time()
     [th.start() for th in ths]
     [th.join() for th in ths]
     return out, time.time() - t
+
+
+def failures(res):
+    """-> [(kind, reason)] for every document whose request failed or whose fields were not all correct."""
+    bad = []
+    for k in DOCS:
+        r = res.get(k, {"error": "no result"})
+        if "error" in r:
+            bad.append((k, f"request failed: {r['error']}"))
+        elif r["ok"] < r["n"]:
+            bad.append((k, f"{r['ok']}/{r['n']} fields, wrong: {', '.join(r['wrong'])}"))
+    return bad
 
 
 TEXT_TOKENS = 110  # template + instruction: prompt_tokens - image tokens measured 67-74, +28 for effort low's line
@@ -124,7 +149,10 @@ def sized(effort):
     return rule
 
 
+# Exit status (examples/run_all.sh counts it): 0 only when every request succeeded and every field matched; any failed
+# request or wrong field prints a "FAIL" line and exits 1 (an earlier version printed "ERROR" and exited 0).
 if len(sys.argv) > 2 and sys.argv[1] == "--compare":
+    nfail = 0
     print(f"{'effort':<7} {'round':>5} {'fields ok':>9} {'wall s':>7}  output tokens {list(DOCS)}  wrong")
     for effort in ("none", "low", "medium"):
         for rnd in range(int(sys.argv[2])):
@@ -133,14 +161,17 @@ if len(sys.argv) > 2 and sys.argv[1] == "--compare":
             outs = [res[k]["usage"]["completion_tokens"] if "usage" in res[k] else "err" for k in DOCS]
             wrong = {k: r.get("wrong") or r.get("error") for k, r in res.items() if r.get("wrong") or r.get("error")}
             print(f"{effort:<7} {rnd + 1:>5} {ok:>4}/{n:<4} {wall:>7.1f} {str(outs):>22}  {wrong or ''}")
+            for k, why in failures(res):
+                print(f"  FAIL {effort} round {rnd + 1} {k}: {why}"); nfail += 1
             if rnd == 0 and effort != "none":
-                print(f"        max output this round: {max(o for o in outs if o != 'err')} tokens")
+                print(f"        max output this round: {max((o for o in outs if o != 'err'), default='err')} tokens")
             if rnd == 0 and effort == "none":
                 for k, r in res.items():
                     _, w, h = render(k)
                     print(f"        {k}: {w}x{h} px -> {image_tokens(w, h)} image tokens (estimate), "
-                          f"prompt_tokens {r['usage']['prompt_tokens']}")
-    sys.exit()
+                          f"prompt_tokens {r['usage']['prompt_tokens'] if 'usage' in r else 'err'}")
+    print(f"\n{'PASS' if not nfail else 'FAIL'} compare: {nfail} failed document runs")
+    sys.exit(1 if nfail else 0)
 
 EFFORT = "none"
 rule = sized(EFFORT)
@@ -148,10 +179,15 @@ print(f"4 OCR agents in parallel, effort {EFFORT}; max_context = image tokens + 
 res, wall = run_all(EFFORT, rule)
 for k, r in res.items():
     if "error" in r:
-        print(f"{k}: ERROR {r['error']}"); continue
+        print(f"{k:<15} request failed: {r['error']}"); continue
     u = r["usage"]
     print(f"{k:<15} max_context {rule(k):>5}  used {u['prompt_tokens']}+{u['completion_tokens']}  "
           f"{r['ok']}/{r['n']} fields  {r['secs']:.1f}s  finish={r['finish']}")
     print("   " + json.dumps(r["got"], ensure_ascii=False))
 total = sum(r.get("ok", 0) for r in res.values()); n = sum(len(DOCS[k][1]) for k in DOCS)
 print(f"\n{total}/{n} fields correct, {wall:.1f}s wall for all four")
+bad = failures(res)
+for k in DOCS:
+    why = dict(bad).get(k)
+    print(f"  {'FAIL' if why else 'PASS'} {k}" + (f": {why}" if why else ""))
+sys.exit(1 if bad else 0)

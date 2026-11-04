@@ -10,7 +10,8 @@ cd "$(dirname $0)"
 M=$1; export INFERD_URL=${2:-http://127.0.0.1:8300/v1}
 [[ -z $M ]] && { echo "usage: run_all.sh MACHINE [URL]"; exit 2; }
 PY=${PY:-python3}; R=results/$M; mkdir -p $R
-: ${LANGBENCH:=~/dev/incept5-ai/languages-benchmark}; export LANGBENCH
+# LANGBENCH (a languages-benchmark checkout) passes through to coding-smoke, which clones one into
+# ~/.cache/inferd/languages-benchmark when it is unset.
 run() {  # name command...
   [[ -n $ONLY && ",$ONLY," != *",$1,"* ]] && return
   local t0=$EPOCHREALTIME
@@ -54,6 +55,10 @@ run users-at-once        $PY users-at-once/users_at_once.py --url $INFERD_URL
     c=-; (( p + f )) && c="$p/$((p + f))"
     printf "%-20s %-6s %8s %5s %8s\n" $n $res "$t" $rc $c
     grep -E '^ *(FAIL|SKIP) ' $R/$n.txt | sed 's/^ */    /'
+    if [[ $n == coding-smoke-* && $rc == 2 ]]; then  # coding_smoke.sh exits 2 when a toolchain is missing
+      why=$(grep -m1 '^coding-smoke needs' $R/$n.txt)
+      [[ $why == *tsx* ]] && echo "    tsx missing: $why" || echo "    toolchain missing: ${why:-exit 2}"
+    fi
   done
   echo; echo "$((${#NAMES} - bad))/${#NAMES} demos passed on $M"
 } > $R/summary.txt
