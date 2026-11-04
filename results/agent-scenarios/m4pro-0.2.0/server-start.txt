@@ -1,0 +1,9 @@
+up on 127.0.0.1:8320 (inferd pid 7569, front end pid 7616, socket <tmp>)
+inferd: memory: GPU budget 51.8 GiB; model + state + scratch 24.2, drafter 0.0, PF8 0.0, KV 26.2 (auto) -> 50.3 allocated
+inferd: 8-bit KV, 26374 KV blocks (26 GiB, 0.8M tokens), 64 slots (9.2 GiB state), max ctx 65536
+inferd: PF8: off (auto: no neural accelerators; KV room after copies 3.4 GiB, need 65.0 for 32 x 65536 tokens), copies 22.72 GiB (not made), KV 26.2 GiB
+inferd: SSD tier in /tmp/rel020spill/inferd-spill (48 GiB, 1.0 MiB per block + 147 MiB state per context)
+inferd: warm-up: 637 + 24-token prompts, 8 tokens each (17 steps; PF8 off, no drafter), 21 pipelines created (4 ms), 5.94 s (WARMUP=0 disables)
+inferd: listening on <tmp>
+inferd: vocabulary for structured output: 248077 tokens
+run.sh: stopped 2 process(es) on port 8320
