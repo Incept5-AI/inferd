@@ -15,3 +15,14 @@ Qwen3.8-27B 4-bit (mlx-community) + DFlash2 (incoai).
 Self-tests (`examples/run_all.sh`, server `run.sh 8320 16 1024 0 8 32768` with the SSD tier and `VISION=1`): 13 / 13
 PASS. agent-team reports SKIP for its comparison: with the SSD tier on, the workers stayed cached even without the
 API, so there was no memory pressure to compare (the README explains how to force it).
+
+Fleet numbers (`bench/studio/conc.py --mode followup`, 512-token replies, server `run.sh 8320 16 1024 0 8 32768`
+with the SSD tier), total tok/s, 0 errors, `conc-followup.*`:
+
+| contexts | 1 agent | 4 | 8 | 16 |
+|---|---:|---:|---:|---:|
+| 4k | 27.4 | 74.4 | 94.9 | 111.4 |
+| 16k | 25.2 | 66.6 | 65.8 | 64.4 |
+
+The KV pool on 32 GB holds about four 16k contexts, so at 8 and 16 agents the turns are re-read or restored from the
+SSD tier (first tokens 17–102 s); that is the documented limit of this machine, not of the release.
