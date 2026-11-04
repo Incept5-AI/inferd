@@ -12,6 +12,29 @@ Primary model: **Qwen3.8-27B** (4-bit) with the **incoai Qwen3.8-27B-DFlash2** d
 
 <p align="center"><img src="docs/img/overview-fleet.svg" alt="Total tok/s with 1-32 agents on 16k contexts: inferd, Splash, Kapitsa, mlx-serve" width="720"></p>
 
+## Download
+
+Prebuilt for Apple Silicon, no Xcode needed: pick the file for **your macOS**, from the
+[v0.2.0 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.2.0).
+
+| Your Mac runs | Download | Checksum | Status |
+|---|---|---|---|
+| **macOS 27** | [inferd-0.2.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.2.0/inferd-0.2.0-macos27-arm64.tar.gz) | [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.2.0/inferd-0.2.0-macos27-arm64.tar.gz.sha256) | tested on Mac Studio M5 Ultra and Mac mini M6 / M5 Pro / M4 Pro |
+| **macOS 26** | [inferd-0.2.0-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.2.0/inferd-0.2.0-macos26-arm64.tar.gz) | [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.2.0/inferd-0.2.0-macos26-arm64.tar.gz.sha256) | **beta**: built for macOS 26; a source build ran on an M4 Max with macOS 26. Run the release gate once (below) |
+
+Use the one that matches: the macOS 27 build refuses to start on macOS 26, and the macOS 26 build must not be used on
+macOS 27 (its kernels compute wrong logits there at prefill chunks of 256+ rows).
+
+```bash
+(cd ~/Downloads && shasum -a 256 -c inferd-0.2.0-macos27-arm64.tar.gz.sha256)   # or the macos26 file: prints OK
+git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.2.0 && cd engine
+tar xzf ~/Downloads/inferd-0.2.0-macos27-arm64.tar.gz        # unpacks build/ here; skip ./build.sh
+zsh tools/release_gate.sh ~/models/Qwen3.8-27B-4bit ~/models/Qwen3.8-27B-DFlash2   # optional check, a few minutes
+```
+
+Then start the server as in the [Quick start](#quick-start) (from `python3 -m venv` on). Building from source works on
+macOS 26 and 27.
+
 ## Where it stands (4 November 2026, release 0.2.0)
 
 Same model, same weights, same drafter for every engine, on the same machine and harness. Methodology, every table and
@@ -38,16 +61,15 @@ strict-JSON replies valid on the first attempt. Overview with charts: [OVERVIEW.
 
 ## Quick start
 
-Needs Apple Silicon. The **prebuilt** binaries need **macOS 27**; on **macOS 26, build from source** (an external
-tester's M4 Max on macOS 26 built and ran it: server, self-tests, logits checks). M5-class and newer GPUs (with neural
+Needs Apple Silicon and macOS 26 or 27 (prebuilt files for each under [Download](#download); an external tester's M4
+Max on macOS 26 built from source and ran the server, self-tests and logits checks). M5-class and newer GPUs (with neural
 accelerators) are the main target; the M3/M4 family runs on its own kernel path and is lightly tested; M1/M2 are
 untested. Python 3.12 for the OpenAI front end.
 
-**Prebuilt** (no Xcode needed): download `inferd-<version>-macos27-arm64.tar.gz` from
-[Releases](https://github.com/Incept5-AI/inferd/releases), check it against its `.sha256`, unpack it into `engine/`
-of a checkout of the same tag, and skip `./build.sh`. It is **macOS 27 only**: on macOS 26 `inferd` stops at startup
-with "metallib core.metallib: This library is using a deployment target (0x00020009) that is not supported on this
-OS". Build from source there instead.
+**Prebuilt** (no Xcode needed): see [Download](#download) for the macOS 27 and macOS 26 files. Unpack the one for
+your macOS into `engine/` of a checkout of the same tag and skip `./build.sh`. (The macOS 27 file on macOS 26 stops at
+startup with "metallib core.metallib: This library is using a deployment target (0x00020009) that is not supported
+on this OS".)
 
 **From source** (needs Xcode with its Metal toolchain; the kernels are Metal 4 and must be built on the machine's own
 macOS, 26 or 27). Recent Xcode releases (e.g. 26.6) ship **without the Metal compiler**: if `./build.sh` stops with
