@@ -8,5 +8,10 @@ MIT License. The vendored sources are in engine/third_party/mlx (licence: engine
 file list and the local patches: engine/third_party/mlx/README). Kernels instantiating them are
 engine/kernels/mlx_*.metal and engine/kernels/qmm_splitk.metal.
 
+It includes code adapted from oMLX (https://github.com/jundot/omlx), Copyright 2025 oMLX contributors, licensed under
+the Apache License, Version 2.0: engine/kernels/qa8.metal (the QA8 int8-activation prefill GEMM) is a modified
+adaptation of oMLX's oq_a8_qmm_t_nax_v8 kernel and its Stage-A activation quantizer (oq_a8_nax.metal, oq_a8.metal,
+fast.py at v0.7.4.dev1, commit 4213c32). Licence, source files and the list of changes: engine/third_party/omlx/.
+
 Benchmark results in docs/, results/ and reports/ include third-party measurements and published figures; each is
 attributed where it appears. Model weights are not distributed with this repository and carry their own licences.

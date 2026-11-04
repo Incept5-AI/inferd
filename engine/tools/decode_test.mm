@@ -179,6 +179,87 @@ int main(int argc, char** argv) {
           std::sort(t.begin(), t.end());
           printf("followup L=%6d B=%2d chunk %4d: %8.1f ms per step (median of 5)\n", L, B, c, t[2] * 1e3);
         }
+    } else if (mode == "gemmcmp") {
+      // gemmcmp <model> <M list>: QA8 vs the default route on each 4-bit shape (first layer's weights), random
+      // activations (normal plus a few outlier channels): cosine and max abs error of the bf16 outputs, then timing of
+      // both routes over every layer's weights of the shape (mode 0, bf16 out).
+      std::vector<int> Ms = int_list(argv[3]);
+      int Mmax = *std::max_element(Ms.begin(), Ms.end());
+      Qwen35 m(g, ck, Mmax, Mmax, 1, 1, 1);
+      if (m.qa8_kmax == 0) { m.qa8_on = 1; m.qa8_prepare(); }
+      struct Sh { const char* name; std::vector<QLinear*> ws; };
+      std::vector<Sh> shapes = {{"gdn.in_proj", {}}, {"gdn.out_proj", {}}, {"attn.in_proj", {}}, {"attn.o_proj", {}},
+                                {"mlp.gate_up", {}}, {"mlp.down", {}}};
+      for (auto& l : m.L) {
+        shapes[l.linear ? 0 : 2].ws.push_back(&l.in_proj);
+        shapes[l.linear ? 1 : 3].ws.push_back(&l.out_proj);
+        shapes[4].ws.push_back(&l.gate_up);
+        shapes[5].ws.push_back(&l.down);
+      }
+      int Kmax = 0;
+      for (auto& sh : shapes) for (auto* q : sh.ws) Kmax = std::max(Kmax, q->K);
+      size_t Nmax = 0;
+      for (auto& sh : shapes) for (auto* q : sh.ws) Nmax = std::max<size_t>(Nmax, q->N);
+      BufRef A = g.alloc((size_t)Mmax * Kmax * 2), C0 = g.alloc((size_t)Mmax * Nmax * 4), C1 = g.alloc((size_t)Mmax * Nmax * 4);
+      {
+        uint32_t h = 12345;
+        auto rnd = [&]() { h ^= h << 13; h ^= h >> 17; h ^= h << 5; return (h & 0xffffff) / 16777216.0; };
+        uint16_t* a = A.ptr<uint16_t>();
+        for (size_t i = 0; i < (size_t)Mmax * Kmax; i++) {
+          double u1 = std::max(rnd(), 1e-9), u2 = rnd();
+          float v = (float)(sqrt(-2 * log(u1)) * cos(6.2831853 * u2));
+          if ((i % Kmax) % 997 == 3) v *= 30;  // outlier channels
+          uint32_t b; memcpy(&b, &v, 4);
+          a[i] = (uint16_t)((b + 0x7fff + ((b >> 16) & 1)) >> 16);
+        }
+      }
+      const int q_on = m.qa8_on;
+      auto run1 = [&](const QLinear& W, const BufRef& C, int M, int mode, bool qa8, int reps, const std::vector<QLinear*>* ws) {
+        m.qa8_on = qa8 ? 1 : 0;
+        int pf = m.pf8_on;
+        if (qa8) m.pf8_on = 0;
+        id<MTLCommandBuffer> cb = [g.queue commandBuffer];
+        Enc e(g, cb);
+        for (int r = 0; r < reps; r++) m.gemm(e, A, ws ? *(*ws)[r % ws->size()] : W, C, M, mode);
+        e.end();
+        [cb commit];
+        [cb waitUntilCompleted];
+        m.pf8_on = pf;
+        return (cb.GPUEndTime - cb.GPUStartTime) / reps;
+      };
+      for (int M : Ms) {
+        double t0s = 0, t1s = 0;
+        for (auto& sh : shapes) {
+          if (sh.ws.empty()) continue;
+          const QLinear& W = *sh.ws[0];
+          if (!m.qa8_route(W, M) && !(m.qa8_on = 1, m.qa8_route(W, M))) { printf("M=%4d %-12s N=%6d K=%6d: not routable\n", M, sh.name, W.N, W.K); continue; }
+          run1(W, C0, M, 0, false, 1, nullptr);  // bf16 outputs (MLX's qmm has no float epilogue)
+          run1(W, C1, M, 0, true, 1, nullptr);
+          auto bfv = [](uint16_t u) { uint32_t x = (uint32_t)u << 16; float f; memcpy(&f, &x, 4); return f; };
+          const uint16_t *c0 = C0.ptr<uint16_t>(), *c1 = C1.ptr<uint16_t>();
+          double dot = 0, n0 = 0, n1 = 0, mx = 0, ref = 0;
+          for (size_t i = 0; i < (size_t)M * W.N; i++) {
+            const double a0 = bfv(c0[i]), a1 = bfv(c1[i]);
+            dot += a0 * a1, n0 += a0 * a0, n1 += a1 * a1;
+            mx = std::max(mx, fabs(a0 - a1)), ref = std::max(ref, fabs(a0));
+          }
+          std::vector<double> ta, tb;
+          int reps = std::max<int>(sh.ws.size(), 4);
+          for (int i = 0; i < 5; i++) {
+            ta.push_back(run1(W, C0, M, 0, false, reps, &sh.ws));
+            tb.push_back(run1(W, C1, M, 0, true, reps, &sh.ws));
+          }
+          std::sort(ta.begin(), ta.end());
+          std::sort(tb.begin(), tb.end());
+          const double a = ta[2], b = tb[2];
+          t0s += a * sh.ws.size(), t1s += b * sh.ws.size();
+          printf("M=%4d %-12s N=%6d K=%6d  cos %.6f  maxerr %.3g (max |ref| %.3g)  default %7.3f ms (%5.1f TOPS)  QA8 %7.3f ms (%5.1f TOPS)  x%zu\n",
+                 M, sh.name, W.N, W.K, dot / sqrt(n0 * n1 + 1e-30), mx, ref, a * 1e3, 2.0 * M * W.N * W.K / a / 1e12, b * 1e3,
+                 2.0 * M * W.N * W.K / b / 1e12, sh.ws.size());
+        }
+        printf("M=%4d all 4-bit linears: default %.1f ms, QA8 %.1f ms per step (%.2fx)\n", M, t0s * 1e3, t1s * 1e3, t0s / t1s);
+      }
+      m.qa8_on = q_on;
     } else if (mode == "gemm") {
       std::vector<int> Ms = int_list(argv[3]);
       int Mmax = *std::max_element(Ms.begin(), Ms.end());

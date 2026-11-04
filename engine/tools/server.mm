@@ -318,6 +318,21 @@ int main(int argc, char** argv) {
     // accelerators and the KV pool left after the int8 copies still holds PF8_KV_FRAC (1.0) x max_running x max_ctx
     // tokens (auto KV), or the budget keeps 8% headroom beside an explicit pool. 64 GB Macs: the 27B's 22.7 GiB of
     // copies would take most of a ~28 GiB pool, so it stays off there unless forced.
+    // QA8 (int8 activations x the packed 4-bit weights, Qwen35::qa8; no copy): QA8=0/1 forces; auto = on with neural
+    // accelerators unless PF8=1 forces PF8, off for Flash-Next. Decided before PF8 (an auto PF8 stays off where QA8 is on:
+    // QA8 is faster on the Studio and needs no copies) and before the KV pool, so its activation scratch is counted.
+    std::string qa8_why;
+    {
+      const bool forced = m.qa8_on >= 0;
+      if (!forced) m.qa8_on = m.qa8_auto();
+      if (m.qa8_on > 0) m.qa8_prepare();
+      char buf[192];
+      if (forced) snprintf(buf, sizeof buf, "%s (QA8=%d)", m.qa8_on > 0 ? "on" : "off", m.qa8_on);
+      else snprintf(buf, sizeof buf, "%s (auto: %s)", m.qa8_on > 0 ? "on" : "off",
+                    !m.g.nax ? "no neural accelerators" : m.cfg.qwen4 ? "not for Flash-Next" : m.pf8_on > 0 ? "PF8=1 forces PF8"
+                    : m.qa8_on > 0 ? "neural accelerators, no weight copy" : "no flipped 4-bit linears (W4A8=0 or not 4-bit)");
+      qa8_why = buf;
+    }
     std::string pf8_why;
     {
       const double copies = m.pf8_estimate() / gib;
@@ -328,6 +343,9 @@ int main(int argc, char** argv) {
       if (m.pf8_on < 0 && m.cfg.qwen4) {  // Flash-Next: opt-in (32k tail KL 0.0229 vs 0.0205 off, top-1 94.8 vs 95.5%)
         m.pf8_on = 0;
         snprintf(buf, sizeof buf, "off (Flash-Next default; PF8=1 to enable)");
+      } else if (m.pf8_on < 0 && m.qa8_on > 0) {  // QA8 does the large steps without the copies
+        m.pf8_on = 0;
+        snprintf(buf, sizeof buf, "off (auto: QA8 is on; PF8=1 to force)");
       } else if (m.pf8_on < 0) {
         // the same margin the auto KV sizing below keeps (KV_MARGIN_GIB, the ANE split, VISION_MARGIN_GIB for a vision
         // tower in the front end), so PF8 never takes room a vision checkpoint needs
@@ -362,6 +380,8 @@ int main(int argc, char** argv) {
            m.n_slots * (double)m.slot_bytes() / (1ull << 30), max_ctx);
     printf("inferd: PF8: %s, copies %.2f GiB%s, KV %.1f GiB\n", pf8_why.c_str(), (m.pf8_on > 0 ? m.pf8_bytes : m.pf8_estimate()) / gib,
            m.pf8_on > 0 ? "" : " (not made)", n_blocks * (double)block_bytes / gib);
+    printf("inferd: QA8 (int8-activation prefill GEMM on the packed 4-bit weights): %s, scratch %.2f GiB, steps >= %d rows\n",
+           qa8_why.c_str(), m.qa8_on > 0 ? m.qa8_bytes() / gib : 0.0, m.qa8_min);
     if (!getenv("CB_SPLIT")) m.cb_split = 16;
     Scheduler sch(m, g, max_running, step_tokens, 16, drafter, mtp);
     sch.ctx_limit = max_ctx;

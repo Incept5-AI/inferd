@@ -26,7 +26,8 @@ xcrun metal -std=metal4.0 -O3 -I third_party/mlx -c kernels/mlx_gather.metal -o 
 xcrun metal -std=metal4.0 -O3 -I third_party/mlx -c kernels/fnp_gather.metal -o build/fnp_gather.air
 xcrun metal -std=metal4.0 -O3 -c kernels/tree.metal -o build/tree.air
 xcrun metal -std=metal4.0 -O3 -c kernels/pf8.metal -o build/pf8.air
-xcrun metallib build/tree.air build/qmvb.air build/qwen4.air build/mlx_gather.air build/moe.air build/w4a8.air build/lane.air build/ane.air build/attn_mpp.air build/qmst.air build/core.air build/mlx_qmm.air build/mlx_qmm_sg.air build/qmm_splitk.air build/spec.air build/mlx_attn.air build/attn_paged.air build/mlx_gemm.air build/mlx_gemm_splitk.air build/fnp_gather.air build/pf8.air -o build/core.metallib
+xcrun metal -std=metal4.0 -O3 -I third_party/mlx -c kernels/qa8.metal -o build/qa8.air
+xcrun metallib build/tree.air build/qmvb.air build/qwen4.air build/mlx_gather.air build/moe.air build/w4a8.air build/lane.air build/ane.air build/attn_mpp.air build/qmst.air build/core.air build/mlx_qmm.air build/mlx_qmm_sg.air build/qmm_splitk.air build/spec.air build/mlx_attn.air build/attn_paged.air build/mlx_gemm.air build/mlx_gemm_splitk.air build/fnp_gather.air build/pf8.air build/qa8.air -o build/core.metallib
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/decode_test.mm -o build/decode_test
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/server.mm -o build/inferd
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/spec_test.mm -o build/spec_test
@@ -34,6 +35,7 @@ clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framew
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/qsa_bench.mm -o build/qsa_bench
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/fn_gemm.mm -o build/decode_test_fngemm
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/qsa_stats.mm -o build/decode_test_qsastats
+clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/qa8_dbg.mm -o build/qa8_dbg  # QA8 kernel vs CPU
 clang++ -std=c++20 -O2 tools/tree_sim.cc -o build/tree_sim
 clang++ -std=c++20 -O2 tools/grammar_test.cc -o build/grammar_test  # host-only: src/grammar.h (structured output)
 # Host-only tests (Codex review 2026-11-02, S07/S08): strict JSON reader, safetensors header validation, SSD tier.

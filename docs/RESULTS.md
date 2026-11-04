@@ -1117,6 +1117,23 @@ Logits gate (decode_test check, M6): KV4 off byte-identical to the previous buil
 on one of two 1,536-token sequences at chunks 256/1536 (the other flips). Step time KV4 = KV8 within 1% (4k/16k,
 1-8 sequences, 1-8 rows).
 
+## (r) QA8: int8 prefill on the packed 4-bit weights, no weight copy (4 November)
+
+A new prefill GEMM (adapted from oMLX 0.7.4.dev1's `oq_a8_nax.metal`, Apache-2.0; see NOTICE) reads the checkpoint's
+4-bit weights directly with int8 activations (one scale per row per 64-group). Auto-on on GPUs with neural accelerators
+for the 27B (steps of 256+ rows); `QA8=0` restores the previous path exactly. Qwen3.8-27B 4-bit:
+
+| machine | measurement | before | QA8 |
+|---|---|---|---|
+| Mac Studio | server prefill at 16k (tok/s) | 2,385 (PF8, +22.7 GiB copies) | **2,650** (no copies; KV pool 132 → 155 GiB) |
+| Mac mini M6 | server first token, 4k / 16k prompt | 14.8 / 62.4 s | **9.1 / 39–40.5 s** |
+| Mac mini M5 Pro | server first token, 4k / 16k prompt | 9.3 / 39.7 s | **5.9 / 25.7 s** |
+
+Gates: with QA8=0 logits byte-identical to the previous build; with QA8=1 top-1 matches mlx_lm at chunks 1/24/256/1536
+(cos 0.9992–0.9998 at 256/1536); long-context KL 0.00123 vs PF8's 0.00144. Splash's M6 prefill lead drops from ~1.9x
+to ~1.2x. Open: an M6 decode run measured 4–7% slower in the QA8 arm (QA8 never runs on decode steps; probably heat),
+being re-run in the opposite order.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

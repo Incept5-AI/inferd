@@ -1,0 +1,14 @@
+oMLX (https://github.com/jundot/omlx), Apache License 2.0 (LICENSE, copied unmodified from the repository at tag
+v0.7.4.dev1, commit 4213c3284abc7b3746a91464a7af7ccc3732b759).
+
+Nothing from oMLX is vendored verbatim. kernels/qa8.metal is an adaptation (2026-11-04) of
+  omlx/custom_kernels/quant_matmul/csrc/oq_a8_nax.metal  (kernel oq_a8_qmm_t_nax_v8)
+  omlx/custom_kernels/quant_matmul/csrc/oq_a8.metal      (kernel oq_a8_quantize, Stage A)
+  omlx/custom_kernels/quant_matmul/fast.py               (oq_a8_stage_a_v8: the permuted activation K order)
+Taken from them: the register-fragment INT8 GEMM design (packed 4-bit codes decoded into 16x32x16 matmul2d
+cooperative tensors, int32 accumulation per 64-group, fp32 affine correction per group) and the per-lane K schedule
+with its matching activation permutation. Changed: activations scaled per row per 64-group only (oMLX's ACT_MODE 1;
+inferd does not use per-row scales); MLX row-major weights possibly flipped in place (q ^ 8); scales/biases read from
+the checkpoint's N-major layout through a double-buffered threadgroup stage instead of a transposed metadata copy;
+the activation permutation is written by the quantizer itself; inferd's epilogues (bf16 / residual add / float);
+partial column tiles (N % 32); host-chosen grid order. The modified file carries a notice saying so (Apache-2.0 4(b)).

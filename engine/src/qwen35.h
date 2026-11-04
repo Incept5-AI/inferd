@@ -993,9 +993,20 @@ struct Qwen35 {
     pf8_list.assign(ws.begin() + 1, ws.end());
     if (getenv("PF8_HC") && atoi(getenv("PF8_HC")))
       for (auto& l : L) for (QLinear* q : {&l.ahc.dn, &l.ahc.up, &l.mhc.dn, &l.mhc.up, &l.ple_kv}) if (q->N > 0) pf8_list.push_back(q);
-    if (pf8_on < 0 && !pf8_defer)  // tools; Flash-Next opt-in (PF8=1), as in the server
-      pf8_on = !cfg.qwen4 && g.nax && g.dev.recommendedMaxWorkingSetSize >= (uint64_t)40 << 30;
+    if (qa8_on < 0 && !pf8_defer) qa8_on = qa8_auto();  // tools; the server decides the same way (tools/server.mm)
+    if (pf8_on < 0 && !pf8_defer)  // tools; Flash-Next opt-in (PF8=1), as in the server; off where QA8 is on
+      pf8_on = !cfg.qwen4 && g.nax && qa8_on <= 0 && g.dev.recommendedMaxWorkingSetSize >= (uint64_t)40 << 30;
     if (pf8_on > 0) pf8_prepare(pf8_list);
+    if (qa8_on > 0) qa8_prepare();
+  }
+  // QA8 auto: on with neural accelerators for the 27B-class models unless PF8 is forced (PF8=1). It beats both MLX's
+  // bf16 qmm and PF8 on the Studio (16k prefill 1,842 / 2,432 / 2,680 tok/s) without PF8's int8 copies, so an auto
+  // PF8 stays off where QA8 is on.
+  // Needs the flipped 4-bit linears flip_weights lists (W4A8=0 skips it, and an 8-bit checkpoint has none): auto is off.
+  int qa8_auto() const {
+    bool has4 = false;
+    for (const QLinear* q : pf8_list) has4 |= q->bits == 4 && q->K % 256 == 0;
+    return g.nax && !cfg.qwen4 && pf8_on <= 0 && has4 ? 1 : 0;
   }
   // PF8 (kernels/pf8.metal, engine-pf 2026-11-02): for steps of >= PF8_MIN rows (default 512) the linears run as
   // one int8 x int8 matmul2d over all of K on Hadamard-rotated, per-row-scaled copies (activations rotated and
@@ -1064,6 +1075,49 @@ struct Qwen35 {
     snprintf(nm, sizeof nm, "pf8_%dx%ds%d_m%d", TM, TN, NS, mode);
     e.k(nm).buf(0, pf8_a).buf(1, W.r8).buf(2, pf8_sx).buf(3, W.r8s).buf(4, C).args(5, ga);
     e.groups(S3((M + TM - 1) / TM, (W.N + TN - 1) / TN), S3(32 * NS));
+  }
+  // QA8 (kernels/qa8.metal, engine-a8 2026-11-04; after oMLX 0.7.4's oq_a8_nax, Apache-2.0): prefill GEMMs of >= QA8_MIN
+  // rows as int8 activations (one scale per row per 64-group, as W4A8) x the checkpoint's own packed 4-bit weights,
+  // decoded in registers into 16x32x16 int8 matmul2d fragments. No weight copy (PF8 needs +22.7 GiB on the 27B).
+  // QA8=0/1 forces; -1 = auto (decided by the server / the tools in qa8_auto). PF8 takes precedence where it is on.
+  // Not for Flash-Next (qwen4: mixed 4/8-bit, PF8 cost it quality there; not gated).
+  int qa8_on = getenv("QA8") ? atoi(getenv("QA8")) : -1;
+  int qa8_min = getenv("QA8_MIN") ? atoi(getenv("QA8_MIN")) : 256;
+  int qa8_tile = getenv("QA8_TILE") ? atoi(getenv("QA8_TILE")) : -1;  // index into kQa8Tiles; -1: per machine
+  int qa8_rf = getenv("QA8_RF") ? atoi(getenv("QA8_RF")) : -1;         // 1: row tiles fastest (weight tile shared), 0: columns
+  static constexpr int kQa8Tiles[][2] = {{1, 2}, {2, 2}, {4, 2}, {2, 4}, {4, 4}, {1, 4}, {8, 2}};  // (WM, WN): 32 WM x 32 WN
+  BufRef qa8u, qa8x;
+  int qa8_kmax = 0;
+  bool qa8_route(const QLinear& W, int M) const {
+    return qa8_on > 0 && g.nax && !cfg.qwen4 && W.bits == 4 && !W.ldk && W.K % 256 == 0 && W.N % 32 == 0 && M >= qa8_min &&
+           M <= max_tokens && !a8_ready && W.K <= qa8_kmax;
+  }
+  void qa8_prepare() {  // activation scratch for the widest 4-bit linear (int8 [T, K] + float2 [K/64, T])
+    int mk = 0;
+    for (QLinear* q : pf8_list) if (q->bits == 4) mk = std::max(mk, q->K);
+    if (mk <= qa8_kmax) return;
+    qa8u = g.alloc((size_t)max_tokens * mk);
+    qa8x = g.alloc((size_t)max_tokens * (mk / 64) * 8);
+    qa8_kmax = mk;
+  }
+  size_t qa8_bytes() const { return (size_t)max_tokens * qa8_kmax + (size_t)max_tokens * (qa8_kmax / 64) * 8; }
+  void qa8(Enc& e, const BufRef& A, const QLinear& W, const BufRef& C, int M, int mode) {
+    struct { int M, K, lda; } qa{M, W.K, W.K};
+    e.k("qa8_quant").buf(0, A).buf(1, qa8u).buf(2, qa8x).args(3, qa);
+    e.threads(S3(W.K / 64 * 32, M), S3(256));
+    // Default tile per GPU size, column tiles fastest (decode_test gemmcmp at 2,048 rows, x MLX's bf16 qmm; NOTES
+    // 2026-11-04): Studio (80 cores) 128x64 1.61 (field 1.40-1.61); M5 Pro (20) 64x64 1.60 (1.46-1.60); M6 (12) 64x64
+    // 2.22 (1.85-2.30; 128x64 is its worst). The tile does not change the results (each output's sums run in order).
+    const int ti = qa8_tile >= 0 && qa8_tile < (int)(sizeof kQa8Tiles / sizeof kQa8Tiles[0]) ? qa8_tile : g.cores >= 30 ? 2 : 1;
+    const bool rf = qa8_rf >= 0 ? qa8_rf : false;
+    const int WM = kQa8Tiles[ti][0], WN = kQa8Tiles[ti][1];
+    const int BM = 32 * WM, BN = 32 * WN, tm = (M + BM - 1) / BM, tn = (W.N + BN - 1) / BN;  // N % 32 == 0
+    struct { int M, N, K; uint32_t xr; int tiles_x; } ga{M, W.N, W.K, W.flipped ? 0x88888888u : 0u, tm};
+    char nm[40];
+    snprintf(nm, sizeof nm, "qa8_%dx%d_m%d_rf%d", WM, WN, mode, rf ? 1 : 0);
+    e.k(nm).buf(0, qa8u).buf(1, W.wq).buf(2, W.s).buf(3, W.b).buf(4, qa8x).buf(5, C).args(6, ga);
+    if (rf) e.groups(S3(tm * tn), S3(32 * WM * WN));
+    else e.groups(S3(tn, tm), S3(32 * WM * WN));
   }
   // Flip quantized weights in place for the integer tensor path (each underlying matrix exactly once).
   // qmst (kernels/qmst.metal): small-batch 4-bit GEMM on repacked weights (QMST=1). The repack is a copy for now.
@@ -1288,6 +1342,7 @@ struct Qwen35 {
     if (W.ldk && (M <= qmv_max || W.bits == 16 || a8_ready)) { fprintf(stderr, "K-slice view off the qmm path\n"); exit(1); }
     if (W.ldk) { mlx_qmm(e, A, W, C, M, mode, M <= 32 ? 32 : 64); return; }  // K-slice views: MLX's qmm only
     if (pf8_route(W, M)) { pf8(e, A, W, C, M, mode); return; }
+    if (qa8_route(W, M)) { qa8(e, A, W, C, M, mode); return; }
     if (wide_route(W, M) && !a8_ready) { qmv_wide(e, A, W, C, M, mode); return; }
     if (lane_route(W, M) && !a8_ready) { lane(e, A, W, C, M, mode); return; }
     if (qmst_route(W, M) && !a8_ready) { qmst(e, A, W, C, M, mode); return; }

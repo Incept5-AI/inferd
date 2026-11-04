@@ -173,6 +173,9 @@ max_running x 16 sizing), `SNAP_GEN` (decode snapshot interval, 128; 0 off), `SN
 every `SNAP_GEN`; 0, default: cost 4-6%), `SNAP_REDUNDANT` (evict snapshots superseded on their chain first, 1), `PREFIX_ANY` (pure-attention models resume at any cached block without a snapshot slot, 1),
 `TREE` (token-tree verification for one greedy decoder: nodes per tree, 16; 0 = chains), `TREE_SEQS` (decoders that
 get trees, 1), `TREE_GPU` (build the trees on the GPU, 0), `TREE_TEMP` (1.5), `TREE_KIDS` (4).
+`QA8` (int8-activation prefill GEMMs on the checkpoint's packed 4-bit weights, no copy; adapted from oMLX's
+`oq_a8_nax`, see NOTICE; -1 auto = on with neural accelerators except Flash-Next, and an auto `PF8` then stays off;
+0/1 force), `QA8_MIN` (rows, 256), `QA8_TILE` (tile index; default 2 = 128x64 on 30+ GPU cores, 1 = 64x64 below), `QA8_RF` (grid order, 0 = column tiles fastest).
 `WARMUP` (inferd runs two throwaway requests before it listens, so the first real request does not pay for the
 GPU's first use of the weights; 1, 0 off), `PSO_LOG` (log every pipeline creation and its time).
 See `CLAUDE.md` in the project root for the rest.
