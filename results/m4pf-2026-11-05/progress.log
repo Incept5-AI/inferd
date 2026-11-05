@@ -1,0 +1,21 @@
+2026-11-05 02:48:24 m4pf start
+2026-11-05 02:51:55 m4pf base prefill: prefill L= 8192 chunk 1024: 65.32 s = 125 tok/s (GPU 65.31 s);prefill L= 8192 chunk 2048: 70.74 s = 116 tok/s (GPU 70.73 s);
+2026-11-05 02:55:21 m4pf new prefill: prefill L= 8192 chunk 1024: 67.05 s = 122 tok/s (GPU 66.87 s);prefill L= 8192 chunk 2048: 67.69 s = 121 tok/s (GPU 67.68 s);
+2026-11-05 02:55:35 m4pf base up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 18.3, drafter 2.4, PF8 0.0, KV 29.7 (auto) -> 50.3 allocated inferd: 8-bit KV, 29926 KV blocks (30 GiB, 1.0M tokens), 24 slots (3.4 GiB state), max ctx 40960 
+2026-11-05 03:09:24 m4pf base single:  2k 1 1 0 31.16 16.4 33.9; 8k 1 1 0 79.63 6.4 33.2; 32k 1 1 0 304.25 1.7 28.0; 2k 1 1 0 30.16 17.0 35.1; 8k 1 1 0 79.39 6.4 33.6; 32k 1 1 0 304.74 1.7 27.3;
+2026-11-05 03:35:46 m4pf base follow-ups:  8k 1 1 0 20.18 25.4; 8k 4 4 0 41.82 49.0; 8k 16 16 0 134.04 61.1;
+2026-11-05 03:36:18 m4pf new up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 18.3, drafter 2.4, PF8 0.0, KV 29.7 (auto) -> 50.3 allocated inferd: 8-bit KV, 29926 KV blocks (30 GiB, 1.0M tokens), 24 slots (3.4 GiB state), max ctx 40960 
+2026-11-05 04:10:25 m4pf cand up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 18.7, drafter 2.4, PF8 0.0, KV 28.8 (auto) -> 49.8 allocated inferd: 8-bit KV, 29015 KV blocks (29 GiB, 0.9M tokens), 24 slots (3.4 GiB state), max ctx 40960 
+inferd: Neural Engine FFN split: 13312 of 17408 channels (26 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+inferd: PF8: off (auto: no neural accelerators; KV room after copies 6.1 GiB, need 20.3 for 16 x 40960 tokens), copies 22.71 GiB (not made), KV 28.8 GiB
+inferd: QA8 (int8-activation prefill GEMM on the packed 4-bit weights): off (auto: no neural accelerators), scratch 0.00 GiB, steps >= 256 rows
+2026-11-05 04:20:17 m4pf cand single:  2k 1 1 0 27.35 18.7 35.3; 8k 1 1 0 61.25 8.4 28.9; 32k 1 1 0 211.32 2.4 25.7; 2k 1 1 0 27.44 18.7 34.0; 8k 1 1 0 58.6 8.7 31.1; 32k 1 1 0 206.6 2.5 27.5;
+2026-11-05 04:38:51 m4pf cand follow-ups:  8k 1 1 0 19.91 25.7; 8k 4 4 0 42.86 47.8; 8k 16 16 0 129.05 63.5;
+2026-11-05 04:40:00 m4pf mlx_lm p=2048: Trial 1:  prompt_tps=132.883, generation_tps=16.389, peak_memory=18.205, total_time=16.401 Trial 2:  prompt_tps=132.508, generation_tps=16.301, peak_memory=18.206, total_time=16.450 Averages: prompt_tps=132.695, generation_tps=16.345, peak_memory=18.205 
+2026-11-05 04:43:15 m4pf mlx_lm p=8192: Trial 1:  prompt_tps=130.631, generation_tps=15.759, peak_memory=19.219, total_time=63.738 Trial 2:  prompt_tps=130.638, generation_tps=15.795, peak_memory=19.219, total_time=63.733 Averages: prompt_tps=130.635, generation_tps=15.777, peak_memory=19.219 
+2026-11-05 04:57:07 m4pf mlx_lm p=32768: Trial 1:  prompt_tps=118.852, generation_tps=14.089, peak_memory=23.244, total_time=276.851 Trial 2:  prompt_tps=118.846, generation_tps=14.111, peak_memory=23.244, total_time=276.863 Averages: prompt_tps=118.849, generation_tps=14.100, peak_memory=23.244 
+2026-11-05 04:57:07 m4pf2 done
+2026-11-05 04:57:57 m4pf cand2 up: inferd: memory: GPU budget 51.8 GiB; model + state + scratch 18.7, drafter 2.4, PF8 0.0, KV 28.8 (auto) -> 49.8 allocated inferd: 8-bit KV, 29015 KV blocks (29 GiB, 0.9M tokens), 24 slots (3.4 GiB state), max ctx 40960 
+2026-11-05 04:58:56 m4pf cand2 single:  8k 1 1 0 59.23 8.6 30.8;
+2026-11-05 05:02:38 m4pf cand2 follow-ups:  8k 4 4 0 42.19 48.5;
+2026-11-05 05:02:53 m4pf3 done

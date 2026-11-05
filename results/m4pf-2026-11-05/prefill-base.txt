@@ -1,0 +1,3 @@
+loaded in 3.0 s
+prefill L=  8192 chunk  1024:   65.32 s  =     125 tok/s (GPU 65.31 s)
+prefill L=  8192 chunk  2048:   70.74 s  =     116 tok/s (GPU 70.73 s)

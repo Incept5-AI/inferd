@@ -574,7 +574,7 @@ fell on agent text), `DRAFT_SKIP` (timing only). Every embedding lookup must han
 
 On the small Macs a prefill chunk is compute-bound on the GPU while the Neural Engine sits idle; the Mac mini M6's ANE
 runs an int8-weight fp16 FFN at ~21–23 TFLOPS against its GPU's ~15 *(study log: "Neural Engine FFN split for prefill
-(2026-11-01 night)")*. With `ANE_UNITS` = n > 0 (default 0; the deployed setting is 24 on the M6), prefill steps of at
+(2026-11-01 night)")*. With `ANE_UNITS` = n > 0 (default 0, or 26 on an M4 / M4 Pro since 2026-11-05; the deployed setting is 24 on the M6), prefill steps of at
 least `ANE_MIN_ROWS` (1,024) rows split each layer's FFN by intermediate channel: the GPU computes channels `[0, Cg)`,
 the ANE the last n × 512 channels.
 
@@ -865,7 +865,7 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 
 | knob | default | effect |
 |---|---|---|
-| `ANE_UNITS` | 0 | 512-channel FFN units on the ANE (M6: 24) |
+| `ANE_UNITS` | 0 (26 on M4 / M4 Pro) | 512-channel FFN units on the ANE (M6: 24) |
 | `ANE_MIN_ROWS` | 1024 | smallest step that splits |
 | `ANE_A8` | 1 | rotated W8A8 for gate/up; 0 = W8A16 |
 | `ANE_A8D` | 0 | int8 intermediate for down (broken) |

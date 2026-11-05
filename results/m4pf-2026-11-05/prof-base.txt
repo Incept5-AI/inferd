@@ -1,0 +1,20 @@
+loaded in 1.6 s
+prefill L=  8192 chunk  2048:   69.41 s  =     118 tok/s (GPU 0.00 s)
+ 64086.49 ms  93.0%  mlx_qmm_sg_b4_altrue
+  2643.54 ms   3.8%  attn_shared_kv8
+  1162.72 ms   1.7%  gdn_step_r4
+   244.29 ms   0.4%  silu_mul
+   194.10 ms   0.3%  gdn_conv_pf
+   128.47 ms   0.2%  add_inplace
+   112.89 ms   0.2%  w_flip
+    85.63 ms   0.1%  rmsnorm
+    76.92 ms   0.1%  gdn_out_norm
+    65.37 ms   0.1%  q_pack_sh
+    40.77 ms   0.1%  attn_prep
+    39.72 ms   0.1%  gdn_prep
+    30.38 ms   0.0%  attn_combine
+    11.80 ms   0.0%  mlx_qmv_wide_b4_nv1_kl16
+     2.62 ms   0.0%  attn_gqa_row_g6_d256
+     0.94 ms   0.0%  embed4
+     0.87 ms   0.0%  gdn_conv_pf_state
+     0.03 ms   0.0%  rmsnorm_gather

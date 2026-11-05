@@ -1,0 +1,339 @@
+# release gate 2026-11-05 03:57:24 GMT
+machine: Apple M4 Pro, 64 GiB
+os: macOS 27.0.1 (26A434), 27.0.0
+xcode: 
+metallib: build/core.metallib sha256 f25785a34ed4c02d
+inferd: build/inferd sha256 79b6e5be0bc418d8
+source: no git checkout
+model: ~/models/Qwen3.8-27B-MLX-4bit (config sha256 14b65a0ee0651706)
+draft: ~/models/Qwen3.8-27B-DFlash2 (config sha256 873e3556509b0da0)
+python: ~/.venvs/inferd/bin/python (3.12.15 Pillow 12.3.0)
+== host: grammar
+freq codex 17-token (P(a) ~ 0.5025)     chi2    3.5 df 1 ok
+freq digits, full                       chi2    7.3 df 3 ok
+freq digits, top_k 2                    chi2    0.9 df 1 ok
+freq digits, top_k 3, temp 0.7          chi2    2.0 df 2 ok
+freq digits, top_p 0.6                  chi2    0.9 df 1 ok
+freq digits, top_p 0.9, top_k 3, temp 1.3 chi2    5.1 df 2 ok
+ufreq broad, top_k 0 (no limit), t 1    chi2 1546.7 df 1499 support 1500 ok
+ufreq broad, top_k 16                   chi2   12.5 df 15 support 16 ok
+ufreq broad, top_k 20                   chi2   18.4 df 19 support 20 ok
+ufreq broad, top_k 20, t 0.6            chi2   11.3 df 19 support 20 ok
+ufreq broad, top_p 0.3                  chi2   15.5 df 23 support 24 ok
+ufreq broad, top_p 0.95 (deep tail)     chi2 1220.8 df 1227 support 1228 ok
+ufreq broad, top_p 0.9, top_k 20        chi2   14.7 df 17 support 18 ok
+ufreq 20 equal, top_k 20                chi2   13.0 df 19 support 20 ok
+freq digits 0-4 of 2200 (1100 allowed), top_k 0 chi2 1059.1 df 1099 ok
+105/105 passed
+   ok
+== host: json
+json_test: 96/96 passed
+   ok
+== host: spill
+spill: checksum mismatch in /tmp/spill_test.zaFfSL/inferd-spill/ba86c5c5d71154d83: discarding it
+spill: checksum mismatch in /tmp/spill_test.zaFfSL/inferd-spill/s75bfafe081c5a043: discarding it
+spill_test: 39/39 passed
+   ok
+== host: weights
+ok   valid                    exit 0 (want 0)
+ok   valid with metadata      exit 0 (want 0)
+ok   header length past EOF   exit 1 (want 1)
+ok   header length 2^64-1     exit 1 (want 1)
+ok   header length 0          exit 1 (want 1)
+ok   truncated header         exit 1 (want 1)
+ok   header not JSON          exit 1 (want 1)
+ok   header not an object     exit 1 (want 1)
+ok   offsets past data        exit 1 (want 1)
+ok   offsets reversed         exit 1 (want 1)
+ok   offset 2^64-1            exit 1 (want 1)
+ok   negative offset          exit 1 (want 1)
+ok   shape/range mismatch     exit 1 (want 1)
+ok   dtype size mismatch      exit 1 (want 1)
+ok   shape product overflow   exit 1 (want 1)
+ok   negative dim             exit 1 (want 1)
+ok   fractional dim           exit 1 (want 1)
+ok   unknown dtype            exit 1 (want 1)
+ok   missing offsets          exit 1 (want 1)
+ok   three offsets            exit 1 (want 1)
+ok   tensor not an object     exit 1 (want 1)
+weights_test: 21/21 passed
+ok   ngram I64[3]                   exit 0 (want 0)
+ok   ngram I64[32] (R01 repro)      exit 1 (want 1)
+ok   ngram F64[3]                   exit 1 (want 1)
+ok   ngram I64[2] short             exit 1 (want 1)
+ok   ngram_size 5                   exit 1 (want 1)
+ok   ngram heads 0                  exit 1 (want 1)
+ok   qlinear 4-bit                  exit 0 (want 0)
+ok   qlinear 8-bit                  exit 0 (want 0)
+ok   qlinear F32 scales             exit 1 (want 1)
+ok   qlinear biases shape           exit 1 (want 1)
+ok   qlinear rank-3 weight          exit 1 (want 1)
+ok   qlinear 5-bit                  exit 1 (want 1)
+ok   qlinear I32 weight             exit 1 (want 1)
+ok   qlinear bf16                   exit 0 (want 0)
+ok   qlinear bf16 rank 1            exit 1 (want 1)
+ok   qlinear_any 5-bit              exit 0 (want 0)
+ok   qlinear_w 5-bit                exit 0 (want 0)
+ok   qlinear_any 4-bit g32          exit 0 (want 0)
+ok   qlinear_any scales too wide    exit 1 (want 1)
+ok   qlinear_any scales rows        exit 1 (want 1)
+ok   qlinear_any bits 0             exit 1 (want 1)
+ok   qlinear_any group 0            exit 1 (want 1)
+ok   qlinear_any group 48           exit 1 (want 1)
+ok   qlinear_any bits string        exit 1 (want 1)
+ok   qlinear_any 0 rows             exit 1 (want 1)
+ok   qlinear_any 3-bit partial row  exit 1 (want 1)
+ok   qlinear_any F32 biases         exit 1 (want 1)
+ok   bf16 rows                      exit 0 (want 0)
+ok   bf16 rows K mismatch           exit 1 (want 1)
+ok   bf16 rows quantized            exit 0 (want 0)
+ok   bf16 rows scales too wide      exit 1 (want 1)
+ok   bf16_q8                        exit 0 (want 0)
+ok   bf16_q8 K 100                  exit 1 (want 1)
+ok   bf16_q8 rank 3                 exit 1 (want 1)
+ok   moe                            exit 0 (want 0)
+ok   moe 2-D                        exit 0 (want 0)
+ok   moe rank-1 weight              exit 1 (want 1)
+ok   moe scales K (2-bit)           exit 1 (want 1)
+ok   moe scales N                   exit 1 (want 1)
+ok   moe scales E                   exit 1 (want 1)
+ok   moe scales rank                exit 1 (want 1)
+ok   moe F32 biases                 exit 1 (want 1)
+ok   ple                            exit 0 (want 0)
+ok   ple shard scales too wide      exit 1 (want 1)
+ok   ple uneven shards              exit 1 (want 1)
+ok   config                         exit 0 (want 0)
+ok   config kv heads 0              exit 1 (want 1)
+ok   config heads 3/2               exit 1 (want 1)
+ok   config layers 0                exit 1 (want 1)
+ok   config linear heads 0          exit 1 (want 1)
+ok   config head_dim string         exit 1 (want 1)
+ok   config vocab 2^31              exit 1 (want 1)
+ok   config eps 0                   exit 1 (want 1)
+ok   config layer_types short       exit 1 (want 1)
+ok   config experts 512             exit 0 (want 0)
+ok   config experts 513 (R02 repro) exit 1 (want 1)
+ok   config experts 65536           exit 1 (want 1)
+ok   config experts 8               exit 0 (want 0)
+ok   config conv kernel 3           exit 1 (want 1)
+ok   config conv kernel 5           exit 1 (want 1)
+ok   config linear key dim 64       exit 1 (want 1)
+ok   config linear key dim 256      exit 1 (want 1)
+ok   config head_dim 512            exit 0 (want 0)
+ok   config head_dim 1024           exit 1 (want 1)
+weights_test loaders: 64/64 passed
+   ok
+== gpu: speculative sampler = the sampling contract
+top-16 ok on 4 rows; normaliser rel err 3.3e-09
+top-64 ok on 4 rows; normaliser rel err 3.3e-09
+broad, t1 top_k 20                                   chi2    28.4 df  19 ok
+broad, t0.7 top_k 20 top_p 0.95, unlikely draft      chi2    17.5 df  17 ok
+broad, t1 top_k 64                                   chi2    69.7 df  63 ok
+broad, t1 top_k 16                                   chi2    19.2 df  15 ok
+peaked, t1 top_k off top_p 0.95                      chi2     2.4 df   5 ok
+peaked, t0.6 top_k off top_p 0.8, draft off-nucleus  chi2     0.8 df   1 ok
+flat 30, t1 top_k 20 (ties)                          chi2    14.6 df  19 ok
+flat 30, t1 top_k off top_p 0.5                      chi2    21.6 df  17 ok
+very broad, top_k off top_p 0.9: host                host rows 40000/40000 ok
+spec_sample_test: 41/41 passed
+   ok
+== front end: test_hardening
+............................................
+----------------------------------------------------------------------
+Ran 44 tests in 6.236s
+
+OK
+   ok
+== front end: test_structured
+test_deep_reply (__main__.Bounded.test_deep_reply) ... ok
+test_patterns_refused (__main__.Bounded.test_patterns_refused) ... ok
+test_review_case_is_linear (__main__.Bounded.test_review_case_is_linear) ... ok
+test_same_as_re_where_defined (__main__.Bounded.test_same_as_re_where_defined) ... ok
+test_schemas_accepted (__main__.Bounded.test_schemas_accepted) ... ok
+test_schemas_refused (__main__.Bounded.test_schemas_refused) ... ok
+test_unique_items_linear (__main__.Bounded.test_unique_items_linear) ... ok
+test_validation_is_bounded (__main__.Bounded.test_validation_is_bounded) ... ok
+test_bare (__main__.Extract.test_bare) ... ok
+test_failures (__main__.Extract.test_failures) ... ok
+test_fenced (__main__.Extract.test_fenced) ... ok
+test_first_valid_candidate_wins (__main__.Extract.test_first_valid_candidate_wins) ... ok
+test_prose_around (__main__.Extract.test_prose_around) ... ok
+test_instruction_on_last_user_turn (__main__.ParseFormat.test_instruction_on_last_user_turn) ... ok
+test_kinds (__main__.ParseFormat.test_kinds) ... ok
+test_bad_format_400 (__main__.StructuredChat.test_bad_format_400) ... ok
+test_constrained_routing (__main__.StructuredChat.test_constrained_routing) ... ok
+test_first_try (__main__.StructuredChat.test_first_try) ... ok
+test_gives_up_with_422 (__main__.StructuredChat.test_gives_up_with_422) ... ok
+test_reasoning_kept_content_cleaned (__main__.StructuredChat.test_reasoning_kept_content_cleaned) ... ok
+test_retries_knob (__main__.StructuredChat.test_retries_knob) ... ok
+test_retry_with_error_fed_back (__main__.StructuredChat.test_retry_with_error_fed_back) ... ok
+test_stream_buffers_then_sends (__main__.StructuredChat.test_stream_buffers_then_sends) ... ok
+test_text_passthrough (__main__.StructuredChat.test_text_passthrough) ... ok
+test_tool_call_passes_through (__main__.StructuredChat.test_tool_call_passes_through) ... ok
+test_arrays (__main__.Validate.test_arrays) ... ok
+test_combinators (__main__.Validate.test_combinators) ... ok
+test_enum_const (__main__.Validate.test_enum_const) ... ok
+test_nested_and_ref (__main__.Validate.test_nested_and_ref) ... ok
+test_person (__main__.Validate.test_person) ... ok
+test_types (__main__.Validate.test_types) ... ok
+
+----------------------------------------------------------------------
+Ran 31 tests in 1.251s
+
+OK
+   ok
+== front end: test_tools
+test_after_stop_nothing (__main__.StopStrings.test_after_stop_nothing) ... ok
+test_cut (__main__.StopStrings.test_cut) ... ok
+test_held_prefix_released (__main__.StopStrings.test_held_prefix_released) ... ok
+test_keep_and_multi (__main__.StopStrings.test_keep_and_multi) ... ok
+test_parse (__main__.StopStrings.test_parse) ... ok
+test_stop_inside_one_piece (__main__.StopStrings.test_stop_inside_one_piece) ... ok
+test_stop_straddles_pieces (__main__.StopStrings.test_stop_straddles_pieces) ... ok
+test_unicode (__main__.StopStrings.test_unicode) ... ok
+test_content_before_and_two_calls (__main__.ToolCalls.test_content_before_and_two_calls) ... ok
+test_history_arguments_decoded_for_template (__main__.ToolCalls.test_history_arguments_decoded_for_template) ... ok
+test_malformed_left_as_text (__main__.ToolCalls.test_malformed_left_as_text) ... ok
+test_multiline_value_and_unknown_tool (__main__.ToolCalls.test_multiline_value_and_unknown_tool) ... ok
+test_no_closing_tool_call_tag (__main__.ToolCalls.test_no_closing_tool_call_tag) ... ok
+test_plain_text_untouched (__main__.ToolCalls.test_plain_text_untouched) ... ok
+test_single_call (__main__.ToolCalls.test_single_call) ... ok
+test_string_param_stays_string (__main__.ToolCalls.test_string_param_stays_string) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.000s
+
+OK
+   ok
+== front end: test_stream
+test_holds_partial_utf8_until_complete (__main__.Detokenizer.test_holds_partial_utf8_until_complete) ... skipped 'no Qwen tokenizer found (set TOKENIZER=<dir>)'
+test_linear_time (__main__.Detokenizer.test_linear_time) ... skipped 'no Qwen tokenizer found (set TOKENIZER=<dir>)'
+test_matches_full_decode (__main__.Detokenizer.test_matches_full_decode) ... skipped 'no Qwen tokenizer found (set TOKENIZER=<dir>)'
+test_after_reasoning_nothing_held (__main__.Split.test_after_reasoning_nothing_held) ... ok
+test_partial_think_end_at_terminal (__main__.Split.test_partial_think_end_at_terminal) ... ok
+test_review_case_flushed (__main__.Split.test_review_case_flushed) ... ok
+test_streamed_equals_whole (__main__.Split.test_streamed_equals_whole) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.002s
+
+OK (skipped=3)
+   ok
+== front end: test_image_decode
+......~/.venvs/inferd/lib/python3.12/site-packages/PIL/Image.py:3578: DecompressionBombWarning: Image size (10000 pixels) exceeds limit of 9999 pixels, could be decompression bomb DOS attack.
+  warnings.warn(
+...
+----------------------------------------------------------------------
+Ran 9 tests in 1.483s
+
+OK
+   ok
+== front end: test_vision
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+[transformers] PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+test_every_digest_bit_matters (__main__.Keys.test_every_digest_bit_matters) ... ok
+test_identity_covers_pixels_size_grid_and_prep (__main__.Keys.test_identity_covers_pixels_size_grid_and_prep) ... ok
+test_old_residue_collision_now_distinct (__main__.Keys.test_old_residue_collision_now_distinct) ... ok
+test_range_and_determinism (__main__.Keys.test_range_and_determinism) ... ok
+test_bad_base64_and_non_base64 (__main__.Limits.test_bad_base64_and_non_base64) ... ok
+test_formats_allowlist (__main__.Limits.test_formats_allowlist) ... ok
+test_ocr_samples (__main__.Limits.test_ocr_samples) ... ok
+test_ok (__main__.Limits.test_ok) ... ok
+test_oversize_base64_rejected_before_decode (__main__.Limits.test_oversize_base64_rejected_before_decode) ... ok
+test_pixel_limit (__main__.Limits.test_pixel_limit) ... ok
+test_request_budgets (__main__.Limits.test_request_budgets) ... ok
+test_urls_and_files_off_by_default (__main__.Limits.test_urls_and_files_off_by_default) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.562s
+
+OK
+   ok
+== logits gate fails on bad logits (fixtures)
+........
+----------------------------------------------------------------------
+Ran 8 tests in 0.605s
+
+OK
+   ok
+== reference tokens: 4 x 2048 (seq 0 repetitive, 1-3 real text)
+   ok
+== logits, chunk 1
+loaded in 1.5 s
+wrote 4 x 248320 logits (chunk 1)
+   ok
+== compare, chunk 1
+compare: T 2048: cos >= 0.995 / KL <= 0.03 (seq 0: 0.99 / 0.05)
+seq 0: cos 0.99880  max|diff| 1.297  KL 0.00074  top1 ok  top5 overlap 4/5  (' dog')
+seq 1: cos 0.99981  max|diff| 0.250  KL 0.00145  top1 ok  top5 overlap 5/5  ('),')
+seq 2: cos 0.99984  max|diff| 0.266  KL 0.00092  top1 ok  top5 overlap 5/5  (' ')
+seq 3: cos 0.99983  max|diff| 0.312  KL 0.00213  top1 ok  top5 overlap 5/5  (' of')
+compare: 4/4 sequences pass
+   ok
+== logits, chunk 24
+loaded in 1.5 s
+wrote 4 x 248320 logits (chunk 24)
+   ok
+== compare, chunk 24
+compare: T 2048: cos >= 0.995 / KL <= 0.03 (seq 0: 0.99 / 0.05)
+seq 0: cos 0.99920  max|diff| 1.008  KL 0.00010  top1 ok  top5 overlap 4/5  (' dog')
+seq 1: cos 0.99981  max|diff| 0.268  KL 0.00144  top1 ok  top5 overlap 5/5  ('),')
+seq 2: cos 0.99984  max|diff| 0.352  KL 0.00119  top1 ok  top5 overlap 5/5  (' ')
+seq 3: cos 0.99985  max|diff| 0.227  KL 0.00201  top1 ok  top5 overlap 5/5  (' of')
+compare: 4/4 sequences pass
+   ok
+== logits, chunk 256
+inferd: Neural Engine FFN split: 13312 of 17408 channels (26 units), functions 512..1024 rows, W8A8 gate/up (rotated)
+loaded in 7.9 s
+wrote 4 x 248320 logits (chunk 256)
+   ok
+== compare, chunk 256
+compare: T 2048: cos >= 0.995 / KL <= 0.03 (seq 0: 0.99 / 0.05)
+seq 0: cos 0.99878  max|diff| 1.344  KL 0.00080  top1 ok  top5 overlap 4/5  (' dog')
+seq 1: cos 0.99976  max|diff| 0.321  KL 0.00161  top1 ok  top5 overlap 5/5  ('),')
+seq 2: cos 0.99949  max|diff| 0.445  KL 0.00188  top1 ok  top5 overlap 5/5  (' ')
+seq 3: cos 0.99971  max|diff| 0.359  KL 0.00241  top1 ok  top5 overlap 5/5  (' of')
+compare: 4/4 sequences pass
+   ok
+== logits, chunk 1536
+inferd: Neural Engine FFN split: 13312 of 17408 channels (26 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+loaded in 1.6 s
+wrote 4 x 248320 logits (chunk 1536)
+   ok
+== compare, chunk 1536
+compare: T 2048: cos >= 0.995 / KL <= 0.03 (seq 0: 0.99 / 0.05)
+seq 0: cos 0.99863  max|diff| 1.125  KL 0.00050  top1 ok  top5 overlap 4/5  (' dog')
+seq 1: cos 0.99971  max|diff| 0.336  KL 0.00174  top1 ok  top5 overlap 5/5  ('),')
+seq 2: cos 0.99970  max|diff| 0.344  KL 0.00199  top1 ok  top5 overlap 5/5  (' ')
+seq 3: cos 0.99982  max|diff| 0.252  KL 0.00216  top1 ok  top5 overlap 5/5  (' of')
+compare: 4/4 sequences pass
+   ok
+gpu budget: 51.8 GiB
+== bench
+loaded in 1.7 s
+B=  1 L=  2048 R=1  step   63.05 ms (GPU   62.51)  =    15.9 rows/s total,   15.9/stream
+B= 16 L=  2048 R=1  step  192.81 ms (GPU  192.25)  =    83.0 rows/s total,    5.2/stream
+B= 64 L=  2048 R=1  step  632.24 ms (GPU  631.61)  =   101.2 rows/s total,    1.6/stream
+   ok
+== reference tokens: 4 x 24 (speculative check)
+   ok
+== speculative = plain (near-ties within 0.5 logits pass; sequences 0 not judged)
+drafter loaded in 0.5 s
+plain: host 93.3 ms per cycle, 93.1 ms of it in commit+wait, 0.2 ms submit->GPU start
+plain: 922 kernel dispatches per cycle
+plain: 516 tokens in 11.95 s = 43.2 tok/s total over 4 seqs, 1.01 tokens per cycle, 92.8 ms GPU per cycle
+spec : host 598.7 ms per cycle, 598.2 ms of it in commit+wait, 0.2 ms submit->GPU start
+spec : 1101 kernel dispatches per cycle
+spec : 847 tokens in 10.78 s = 78.6 tok/s total over 4 seqs, 11.76 tokens per cycle, 597.8 ms GPU per cycle
+  commit histogram (tokens: cycles): 1:6 2:2 3:1 4:2 6:2 8:3 9:2 10:3 11:2 12:5 13:7 14:7 15:13 16:17
+seq 0 diverges after 69 generated tokens (plain 271 vs spec 37550)
+seq 1 diverges after 117 generated tokens (plain 331 vs spec 727)
+outputs: <tmp>
+lossless check: 2/4 sequences identical over 128 tokens
+lossless: 2/4 identical, 2 diverged: seqs 0,1
+== tie check on the diverging sequences
+seq 0 @ 93: plain 271 (18.000)  spec 37550 (16.500)  gap 1.500  ref top3 [(271, 18.0), (37550, 16.5), (10919, 14.5)]  ignored (not judged)
+seq 1 @ 141: plain 331 (21.625)  spec 727 (21.625)  gap 0.000  ref top3 [(727, 21.625), (331, 21.625), (1302, 21.375)]  near-tie (<= 0.5)
+tie_check: 2 diverged, 1 judged, 0 above the 0.5 gap
+   ok
+gate passed: gate-20261105-0357.log

@@ -1252,6 +1252,52 @@ Gates: 27B `decode_test check` byte-identical to main at chunks 1/24/256/1536 (4
 147 / 485 / 718 tok/s, slowest first token at 32 1.69 vs 1.74 s; `frontend/test_gen_snap.py` checks the probe on both
 tokenizers.
 
+## (v) M4 Pro prefill: the Neural Engine split on by default (5 November)
+
+Mac mini M4 Pro (20-core GPU, no GPU neural accelerators, 64 GB, macOS 27.0.1), Qwen3.8-27B 4-bit (mlx-community) +
+DFlash2. Raw rows: [results/m4pf-2026-11-05/](../results/m4pf-2026-11-05/).
+
+**Where prefill went before** (`decode_test prefill`, 8,192 tokens, 2,048-row chunks, `PROF_KERNELS=1`): MLX's
+quantized GEMM (`mlx_qmm_sg`) 93.0%, attention (`attn_shared_kv8`) 3.8%, GDN (`gdn_step_r4`) 1.7%, everything else
+under 1% each. The GEMM already ran at ~6.2 TFLOPS, so inferd's engine was level with mlx_lm (125 vs 130.6 tok/s at
+8k). A faster GPU kernel had little to win: an fp16-fragment GEMM (half x half -> float simdgroup MMA, 128 x 64 tiles)
+was 122 / 121 vs 125 / 116 tok/s at 1,024 / 2,048-row chunks and was dropped. The Neural Engine runs the FFN beside
+the GPU at ~10.3 TFLOPS (`tools/ane_probe`, 2,048 rows), so the FFN split (`ANE_UNITS`, until now used on the M6)
+is the lever. It is now on by default on M4 / M4 Pro: 26 of the 34 FFN units (`Qwen35::ane_units_default`).
+
+Engine prefill by units on the Neural Engine (8,192 tokens, tok/s, chunks of 1,024 / 2,048 rows):
+
+| `ANE_UNITS` | 0 | 14 | 18 | 22 | **26** | 28 | 30 | 32 | 34 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| tok/s | 122 / 114 | 159 / 160 | 181 / 184 | 201 / 208 | **212 / 218** | 205 / 207 | 197 / 202 | 190 / 196 | 187 / 194 |
+
+Through the server (`run.sh 8300 16 1024 0 8 40960`, DFlash2, `conc.py --mode cold` for one agent, two runs each;
+follow-ups `--mode followup` at 8k), before = 19805b9 (engine identical to 0.3.0), after = the split on by default:
+
+| | before | **after** | mlx_lm 0.32.2 (same Mac, `mlx_lm.benchmark`) |
+|---|---:|---:|---:|
+| first token, 2k prompt (s) | 16.05 / 15.57 | **12.83 / 12.37** | prompt 132.7 tok/s |
+| first token, 8k prompt (s) | 64.19 / 64.16 | **43.54 / 42.12** (~190 tok/s) | 130.6 tok/s |
+| first token, 32k prompt (s) | 285.95 / 285.96 | **191.43 / 188.01** (~173 tok/s) | 118.8 tok/s |
+| one-agent decode after the prompt, 2k / 8k / 32k (tok/s) | 33.8–33.9 / 33.1–33.6 / 27.3–28.0 | 33.9–35.2 / 28.9–31.0 / 25.7–27.5 | 16.3 / 15.8 / 14.1 |
+| 8k follow-ups, total tok/s at 1 / 4 / 16 agents | 25.4 / 49.0 / 61.1 | 25.7 / 47.8 / 63.5 | – |
+| 8k follow-ups, first token at 16 agents, median / max (s) | 17.6 / 19.4 | 13.2 / 15.2 | – |
+
+The follow-up totals are level. A follow-up turn adds the previous answer and a short question (a few hundred rows):
+alone, or with 4 agents, that stays below `ANE_MIN_ROWS` = 1,024 and never uses the split; at 16 agents the turns
+batch into larger steps that do, which is where the first token fell (17.6 -> 13.2 s median); the one-agent
+decode rows after a cold prompt vary with drafter acceptance on the generated text. The split's margin comes out of the
+auto-sized KV pool (29.7 -> 28.8 GiB). Gates: `tools/release_gate.sh` with the drafter on the M4 Pro with the split on
+by default passed (logits vs mlx_lm on 4 x 2,048 tokens at chunks 1 / 24 / 256 / 1,536: top-1 4/4, cos >= 0.9995 and
+KL <= 0.0024 on sequences 1-3; bench B = 1 / 16 / 64 63.1 / 192.8 / 632.2 ms per step; speculative = plain except a
+0.000-logit tie); on an M5 Max the output is byte-identical to main at the same chunks (the default is 0 there).
+
+The same change rebased on main (logprobs and vLLM-compatibility commits): 8k first token 42.6 s, 4-agent follow-ups 48.5
+tok/s total.
+
+Not measured: M1-M3, the base M4, the M4 Max (twice the GPU, so a smaller share for the Neural Engine; try
+`ANE_UNITS` 14-26). Splash 1.5 on an M3 Max read 32k at 242 tok/s (section (l)); it also splits the FFN.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

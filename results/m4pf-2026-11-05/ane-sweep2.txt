@@ -1,0 +1,12 @@
+ANE_UNITS 28
+prefill L=  8192 chunk  1024:   39.91 s  =     205 tok/s (GPU 0.02 s)
+prefill L=  8192 chunk  2048:   39.66 s  =     207 tok/s (GPU 0.01 s)
+ANE_UNITS 30
+prefill L=  8192 chunk  1024:   41.53 s  =     197 tok/s (GPU 0.02 s)
+prefill L=  8192 chunk  2048:   40.60 s  =     202 tok/s (GPU 0.01 s)
+ANE_UNITS 32
+prefill L=  8192 chunk  1024:   43.12 s  =     190 tok/s (GPU 0.02 s)
+prefill L=  8192 chunk  2048:   41.80 s  =     196 tok/s (GPU 0.01 s)
+ANE_UNITS 34
+prefill L=  8192 chunk  1024:   43.76 s  =     187 tok/s (GPU 0.02 s)
+prefill L=  8192 chunk  2048:   42.23 s  =     194 tok/s (GPU 0.01 s)
