@@ -76,7 +76,7 @@ hf download incoai/Qwen3.8-27B-DFlash2      --local-dir /Volumes/External/models
 ```
 
 **Keep weights, SSD-tier directories and results on an external drive.** Keep the internal SSD nearly empty. A
-Hugging Face cache layout (`models--org--name/snapshots/<hash>`) works too: point `MODEL` at the snapshot directory.
+Hugging Face cache layout (`models--org--name/snapshots/<hash>`) works too: point `MODEL` at the snapshot directory (`install.sh` and `run.sh start --model` find it there themselves: README, "Models you already have").
 
 The other models (Qwen3.5-9B, Qwen3.6-35B-A3B, Muse Glimmer 30B, Gemma-4-31B) load from their MLX 4-bit builds. The
 family is chosen from `config.json`'s `model_type`. They're untuned smoke ports with no drafter

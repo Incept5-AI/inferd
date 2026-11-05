@@ -24,7 +24,9 @@ Model: **Qwen3.8-27B** (mlx-community 4-bit, 8-bit or bf16) with the **incoai Qw
 ## Run
 
 ```bash
-./install.sh --model 27b                 # venv ~/.venvs/inferd + requirements; the 27B + drafter into ~/models
+./install.sh --model 27b                 # venv ~/.venvs/inferd + requirements; the 27B + drafter into ~/models,
+                                         # unless a complete copy is already in ~/models, the HF cache or LM Studio
+./install.sh --list                      # what each model name finds, and where (also ./run.sh models)
 ./run.sh start --model 27b               # sized from the Mac's memory (docs/MACHINES.md); --dry-run prints it
 # or the explicit form, unchanged:
 python3 -m venv ~/.venvs/inferd && ~/.venvs/inferd/bin/pip install -r requirements.txt
@@ -42,8 +44,20 @@ holding its GPU memory. `stop` signals only the processes recorded in its pid fi
 own inferd / front end found on the port or the old `/tmp` socket): SIGTERM, a wait of up to `STOP_WAIT` (60 s;
 inferd writes the SSD tier on SIGTERM), then SIGKILL. Anything else on the port is reported and left alone. Starting
 on a port first does the same stop. `./test_run.sh` checks stop / status / argument handling with fake processes (no
-model needed); `./test_run_start.sh` checks the named start (options, memory-based sizing, `--dry-run`) and that the
-positional form, stop and status behave as before.
+model needed); `./test_run_start.sh` checks the named start (options, memory-based sizing, `--dry-run`, where a model
+is found, install.sh's use of a found copy) and that the positional form, stop and status behave as before.
+
+**Where a named model is found** (`tools/models.zsh`, shared by `install.sh` and `run.sh start`): the first complete
+copy of the exact repo id in `$INFERD_MODELS/<dir>` (default `~/models`), then the Hugging Face cache
+(`$HF_HUB_CACHE`, else `$HF_HOME/hub`, else `~/.cache/huggingface/hub`; `models--<org>--<name>/snapshots/<rev>`, the
+one `refs/main` names, else the newest complete one; links into `blobs/` are followed), then LM Studio
+(`$LMSTUDIO_MODELS/<org>/<name>`, default `~/.lmstudio/models`, then `~/.cache/lm-studio/models`). Complete:
+`config.json` and every shard in `model.safetensors.index.json` present and non-empty (or `model.safetensors`).
+`--equivalent` / `INFERD_EQUIVALENT=1` adds the known equivalent builds per name (`MI_EQUIV`, `MI_DRAFT_EQUIV`); every
+candidate's `config.json` must match `MI_FACTS` (architecture, layers, hidden size, quantization bits and group size),
+so an 8-bit checkpoint is refused for `27b`. The dry run and the start print the chosen copy and why; skipped copies
+are reported as notes. `install.sh --download` forces `hf download` into the models directory. JSON is read with
+JavaScript for Automation (`osascript`), so the search needs no Python.
 
 **API:** a drop-in for vLLM's OpenAI-compatible server ([docs/API-COMPAT.md](../docs/API-COMPAT.md): every vLLM endpoint
 and request field, and what inferd does with each). `/v1/chat/completions` and `/v1/completions` (streaming and not,

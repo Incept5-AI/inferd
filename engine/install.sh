@@ -1,10 +1,20 @@
 #!/bin/zsh
 # Set up inferd's front end, and optionally download a model. Safe to run again: it reuses what is already there.
-#   ./install.sh [--model 27b|27b-8bit|flash-next]... [--venv DIR] [--python PATH] [--models-dir DIR]
-#   --model       download the checkpoint and its drafter with `hf download` into the models directory, unless they are
-#                 already complete there (27b: mlx-community/Qwen3.8-27B-4bit + incoai/Qwen3.8-27B-DFlash2; 27b-8bit:
-#                 mlx-community/Qwen3.8-27B-8bit + the same drafter; flash-next: Jundot/Qwen3.8-Flash-Next-oQ4e-mtp,
-#                 which drafts with its own MTP head). Repeat for more than one.
+#   ./install.sh [--model 27b|27b-8bit|flash-next]... [--download] [--equivalent] [--venv DIR] [--python PATH]
+#                [--models-dir DIR]
+#   ./install.sh --list [--equivalent] [--models-dir DIR]
+#   --model       the checkpoint and its drafter (27b: mlx-community/Qwen3.8-27B-4bit + incoai/Qwen3.8-27B-DFlash2;
+#                 27b-8bit: mlx-community/Qwen3.8-27B-8bit + the same drafter; flash-next:
+#                 Jundot/Qwen3.8-Flash-Next-oQ4e-mtp, which drafts with its own MTP head). Repeat for more than one.
+#                 A complete copy already on this Mac is used where it is, with no download and no copy: the models
+#                 directory first, then the Hugging Face cache, then LM Studio (`run.sh start --model` looks in the same
+#                 places; tools/models.zsh). Otherwise `hf download` puts it in the models directory.
+#   --download    download into the models directory even when a copy exists elsewhere (hf download resumes or
+#                 checks what is already there)
+#   --equivalent  also accept the known equivalent builds of the same weights (e.g. 27b: lmstudio-community/ or
+#                 Qwen/Qwen3.8-27B-MLX-4bit), checked against config.json: architecture, size, bits and group size.
+#                 Without it only the exact repo ids count. Start with `run.sh start --equivalent` too.
+#   --list        show what was found for every model name, and where, then exit
 #   --venv        the virtual environment (default INFERD_VENV or ~/.venvs/inferd, where run.sh looks for it)
 #   --python      the interpreter to build it from (default: the first Python 3.12 found)
 #   --models-dir  where models go (default INFERD_MODELS or ~/models, where `run.sh start --model` looks)
@@ -12,14 +22,18 @@
 emulate -L zsh
 setopt no_unset pipe_fail
 cd "${0:A:h}" || exit 1
+ORIG_MODELS=${INFERD_MODELS:-}
 
 die() { print -u2 -r -- "install.sh: $*"; exit 1; }
 say() { print -r -- "install.sh: $*"; }
-VENV=${INFERD_VENV:-$HOME/.venvs/inferd} MROOT=${INFERD_MODELS:-$HOME/models} PYTHON= models=()
+VENV=${INFERD_VENV:-$HOME/.venvs/inferd} MROOT=${INFERD_MODELS:-$HOME/models} PYTHON= models=() LIST=0 DOWNLOAD=0
 while (( $# )); do
   [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
   case $1 in
     -h|--help) sed -n '2,/^emulate/p' "${0:A}" | sed '$d' | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --list) LIST=1; shift; continue ;;
+    --download) DOWNLOAD=1; shift; continue ;;
+    --equivalent) INFERD_EQUIVALENT=1; shift; continue ;;
     --model|--venv|--python|--models-dir) (( $# >= 2 )) && [[ -n $2 ]] || die "$1 needs a value" ;;
     *) die "unknown option '$1' (./install.sh --help)" ;;
   esac
@@ -30,6 +44,12 @@ while (( $# )); do
   shift 2
 done
 source tools/models.zsh || die "tools/models.zsh is missing"
+INFERD_MODELS=$MROOT  # where model_find looks first
+if (( LIST )); then
+  (( $#models == 0 )) || die "--list shows every model; drop --model"
+  models_list
+  exit 0
+fi
 for m in $models; do
   model_info $m || die "unknown model '$m': use ${(j:, :)INFERD_MODEL_NAMES}"
 done
@@ -89,40 +109,38 @@ else
   print -r -- $want > $stamp
 fi
 
-# Models
-have_weights() {  # dir: config.json and every weight file (the shards a safetensors index names, or one *.safetensors)
-  [[ -f $1/config.json ]] || return 1
-  if [[ -f $1/model.safetensors.index.json ]]; then
-    "$VENV/bin/python" -I -c 'import json, os, sys
-d = sys.argv[1]; m = json.load(open(os.path.join(d, "model.safetensors.index.json")))["weight_map"]
-sys.exit(0 if all(os.path.isfile(os.path.join(d, f)) for f in set(m.values())) else 1)' "$1"
-  else
-    local w=($1/*.safetensors(N))
-    (( $#w ))
+# Models: a complete copy anywhere model_find looks is used where it is; otherwise hf download into MROOT
+notes() { local n; for n in $FOUND_NOTES; do say "note: $n"; done; [[ -z $FOUND_HINT ]] || say "note: found $FOUND_HINT" }
+fetch() {  # model|draft repo dir facts
+  if (( ! DOWNLOAD )); then
+    if model_find $1; then
+      notes; say "$2 is already on this Mac: $FOUND ($FOUND_WHY); no download"; return 0
+    fi
+    notes
   fi
-}
-fetch() {  # repo dir
-  if have_weights $2; then say "$1 is already in $2"; return 0; fi
-  [[ -x $VENV/bin/hf ]] || die "$VENV/bin/hf is missing (it comes with huggingface_hub): pip install huggingface_hub"
-  say "downloading $1 into $2 (resumes if interrupted; run ./install.sh again)"
-  mkdir -p -- "$2" || die "cannot create $2"
-  "$VENV/bin/hf" download "$1" --local-dir "$2" || die "hf download $1 failed"
-  have_weights $2 || die "$2 is still incomplete after the download"
+  local hf=$VENV/bin/hf
+  [[ -x $hf ]] || hf=${commands[hf]:-}
+  [[ -n $hf ]] || die "$VENV/bin/hf is missing (it comes with huggingface_hub): pip install huggingface_hub"
+  say "downloading $2 into $3 (resumes if interrupted; run ./install.sh again)"
+  mkdir -p -- "$3" || die "cannot create $3"
+  "$hf" download "$2" --local-dir "$3" || die "hf download $2 failed"
+  ckpt_check $3 $4 || die "$3 is not a complete $2 after the download: $REPLY"
 }
 for m in $models; do
   model_info $m
   (( ram >= MI_MIN_GB )) || say "warning: $m needs a Mac with at least $MI_MIN_GB GB of memory; this one has $ram GB"
-  fetch $MI_REPO $MROOT/$MI_DIR
-  [[ -n $MI_DRAFT_REPO ]] && fetch $MI_DRAFT_REPO $MROOT/$MI_DRAFT_DIR
+  fetch model $MI_REPO $MROOT/$MI_DIR "$MI_FACTS"
+  [[ -n $MI_DRAFT_REPO ]] && fetch draft $MI_DRAFT_REPO $MROOT/$MI_DRAFT_DIR "$MI_DRAFT_FACTS"
 done
 
 # What next
 [[ $VENV == ${INFERD_VENV:-$HOME/.venvs/inferd} ]] || pyenv="PY=${(q-)VENV}/bin/python "
-[[ $MROOT == ${INFERD_MODELS:-$HOME/models} ]] || menv="INFERD_MODELS=${(q-)MROOT} "
+[[ ${INFERD_EQUIVALENT:-0} == 1 ]] && eqv=" --equivalent"
+[[ $MROOT == ${ORIG_MODELS:-$HOME/models} ]] || menv="INFERD_MODELS=${(q-)MROOT} "
 print
 if (( $#models )); then
   say "done. Start the server with:"
-  print -r -- "  cd ${(q-)PWD} && ${pyenv:-}${menv:-}./run.sh start --model ${models[1]}"
+  print -r -- "  cd ${(q-)PWD} && ${pyenv:-}${menv:-}./run.sh start --model ${models[1]}${eqv:-}"
 else
   say "done. Download a model with ./install.sh --model 27b, or start one you have with:"
   print -r -- "  cd ${(q-)PWD} && ${pyenv:-}./run.sh start --model /path/to/checkpoint [--draft /path/to/drafter]"

@@ -1,15 +1,19 @@
 #!/bin/zsh
 # Start, stop or inspect inferd + the OpenAI front end on one port.
 #   run.sh start --model 27b|27b-8bit|flash-next|<dir> [--draft <dir>|none] [--port 8300] [--agents N] [--context N]
-#                [--kv GiB] [--snapshots N] [--spill <dir>|off] [--dry-run]
-#                               named start: a model name resolves to INFERD_MODELS (default ~/models, as install.sh
-#                               downloads it) with its drafter, and the sizing comes from the Mac's memory
+#                [--kv GiB] [--snapshots N] [--spill <dir>|off] [--equivalent] [--dry-run]
+#                               named start: a model name resolves, with its drafter, to the first complete copy in
+#                               INFERD_MODELS (default ~/models, where install.sh downloads), the Hugging Face cache,
+#                               then LM Studio (tools/models.zsh: the search order and the same-weights rule; exact
+#                               repo ids only, --equivalent or INFERD_EQUIVALENT=1 also takes the known equivalent
+#                               builds of the same weights), and the sizing comes from the Mac's memory
 #                               (docs/MACHINES.md; INFERD_RAM_GB overrides the detected GB). --dry-run prints the
 #                               engine and front-end command lines and starts nothing. PY defaults to the install.sh
 #                               venv (INFERD_VENV, default ~/.venvs/inferd) when it exists. Below 256 GB the SSD
 #                               tier is on, in ~/Library/Caches/inferd/spill-<port> (SPILL_DIR/--spill override).
 #                               Options override the sizing; DRAFT/SPILL_DIR/SPILL_GIB/MTP from the env are kept.
 # A release tarball (tools/package.sh) carries build/BUILD-INFO: any start refuses a build for another macOS major.
+#   run.sh models [--equivalent]   where each model name resolves (as install.sh --list)
 #   run.sh [port=8300] [max_running=64] [step_tokens=2048] [kv_gib=96] [snapshots=96] [max_ctx=131072]   start
 #   run.sh stop [port=8300]     stop exactly what run.sh started on that port (pid files: SIGTERM, wait up to
 #                               STOP_WAIT s, then SIGKILL); exit 0 when nothing is running
@@ -58,7 +62,13 @@ sizing() {  # RAM GB -> RUNNING STEP KV SNAPS MAXCTX, SPILL_DEF (SSD tier GiB, 0
 }
 usage() { sed -n '2,/^emulate/p' "$SELF" | sed '$d' | sed 's/^# \{0,1\}//'; }
 CMD=start
-if [[ ${1:-} == (stop|status) ]]; then
+if [[ ${1:-} == models ]]; then
+  [[ $# == 1 || ( $# == 2 && $2 == --equivalent ) ]] || die "usage: run.sh models [--equivalent]"
+  (( $# == 2 )) && INFERD_EQUIVALENT=1
+  source tools/models.zsh || die "tools/models.zsh is missing"
+  models_list
+  exit 0
+elif [[ ${1:-} == (stop|status) ]]; then
   CMD=$1
   (( $# <= 2 )) || die "usage: run.sh $CMD [port]"
   PORT=${2:-8300}
@@ -73,6 +83,7 @@ elif [[ ${1:-} == start ]]; then
     [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
     case $1 in
       --dry-run) DRY=1; shift; continue ;;
+      --equivalent) INFERD_EQUIVALENT=1; shift; continue ;;
       --model|--draft|--port|--agents|--context|--kv|--snapshots|--spill) ;;
       *) die "start: unknown option '$1' (run.sh --help)" ;;
     esac
@@ -89,9 +100,15 @@ elif [[ ${1:-} == start ]]; then
   done
   [[ $o_model == */* && $o_model != /* ]] && o_model=${${:-$ORIG_PWD/$o_model}:a}
   source tools/models.zsh || die "tools/models.zsh is missing"
-  MROOT=${INFERD_MODELS:-$HOME/models} MNAME=
+  MROOT=${INFERD_MODELS:-$HOME/models} MNAME= mwhy= dwhy= mmiss=0 dmiss=0
+  notes() {  # what model_find skipped or saw, on stderr
+    local n; for n in $FOUND_NOTES; do print -u2 -r -- "run.sh: note: $n"; done
+    [[ -z $FOUND_HINT ]] || print -u2 -r -- "run.sh: note: found $FOUND_HINT"
+  }
   if [[ -n $o_model ]] && model_info "$o_model"; then
-    MNAME=$o_model MODEL=$MROOT/$MI_DIR
+    MNAME=$o_model
+    if model_find model; then MODEL=$FOUND mwhy=$FOUND_WHY; else MODEL=$MROOT/$MI_DIR mmiss=1; fi
+    notes
   elif [[ -n $o_model ]]; then
     [[ $o_model == /* || ! -d $ORIG_PWD/$o_model ]] || o_model=${${:-$ORIG_PWD/$o_model}:a}
     [[ $o_model == /* ]] ||
@@ -106,6 +123,7 @@ elif [[ ${1:-} == start ]]; then
   if [[ -n $MNAME ]]; then
     (( RAM_GB >= MI_MIN_GB )) || need "$MNAME needs a Mac with at least $MI_MIN_GB GB of memory (this one: $RAM_GB GB)"
     mhint=": run ./install.sh --model $MNAME, or set INFERD_MODELS to where your models are"
+    (( mmiss )) && need "no complete copy of $MI_REPO in INFERD_MODELS ($MROOT), the Hugging Face cache or LM Studio${mhint}"
     if [[ $MNAME == flash-next ]]; then  # the Studio setting of every Flash-Next result (MTP drafts, 64 GiB of KV)
       RUNNING=32 STEP=2048 KV=64 SNAPS=32 MAXCTX=65536 SPILL_DEF=0 SIZING="$SIZING, Flash-Next"
     fi
@@ -116,8 +134,10 @@ elif [[ ${1:-} == start ]]; then
   elif [[ -n $o_draft ]]; then
     DRAFT=$o_draft
   elif [[ -z ${DRAFT:-} && -n $MNAME && -n ${MI_DRAFT_DIR:-} ]]; then
-    DRAFT=$MROOT/$MI_DRAFT_DIR
+    if model_find draft; then DRAFT=$FOUND dwhy=$FOUND_WHY; else DRAFT=$MROOT/$MI_DRAFT_DIR dmiss=1; fi
+    notes
     dhint=": run ./install.sh --model $MNAME, or start with --draft none (no speculation)"
+    (( dmiss )) && need "no complete copy of the drafter $MI_DRAFT_REPO in INFERD_MODELS ($MROOT), the Hugging Face cache or LM Studio${dhint}"
   fi
   [[ -n $MNAME && $o_draft != none ]] && (( ${MI_MTP:-0} )) && MTP=${MTP:-1}
   PORT=${o_port:-8300}
@@ -231,8 +251,8 @@ int_in snapshots "$SNAPS" 0 1048576
 int_in max_ctx "$MAXCTX" 256 16777216
 
 [[ -n ${MODEL:-} ]] || die "set MODEL to the checkpoint directory (e.g. MODEL=~/models/Qwen3.8-27B-4bit)"
-[[ -d $MODEL && -f $MODEL/config.json ]] || need "MODEL=$MODEL is not a checkpoint directory (no config.json)${mhint:-}"
-[[ -z ${DRAFT:-} || -f $DRAFT/config.json ]] || need "DRAFT=$DRAFT is not a drafter directory (no config.json)${dhint:-}"
+(( ${mmiss:-0} )) || [[ -d $MODEL && -f $MODEL/config.json ]] || need "MODEL=$MODEL is not a checkpoint directory (no config.json)${mhint:-}"
+(( ${dmiss:-0} )) || [[ -z ${DRAFT:-} || -f $DRAFT/config.json ]] || need "DRAFT=$DRAFT is not a drafter directory (no config.json)${dhint:-}"
 [[ -x build/inferd && -f build/core.metallib ]] || need "build/inferd or its metallib is missing: run ./build.sh"
 if [[ -f build/BUILD-INFO ]]; then  # a release tarball (tools/package.sh): its kernels are for one macOS major
   built=$(sed -n 's/^macos_target //p' build/BUILD-INFO) host=${INFERD_MACOS:-${$(sw_vers -productVersion)%%.*}}
@@ -255,7 +275,9 @@ if (( NAMED )); then  # what a named start resolved to, for the dry run and the 
 fi
 if (( DRY )); then  # print what a start would run, and start nothing
   print -r -- "model     $MODEL"
+  [[ -n $mwhy ]] && print -r -- "          ($mwhy)"
   print -r -- "drafter   $drafter"
+  [[ -n $dwhy && $drafter == $DRAFT ]] && print -r -- "          ($dwhy)"
   print -r -- "sizing    for a $SIZING (this Mac: $RAM_GB GB): agents $RUNNING, step tokens $STEP, KV $kvs, snapshots $SNAPS, max context $MAXCTX"
   print -r -- "SSD tier  $spill"
   print -r -- "engine    cd ${(q-)PWD} && $env_line ./build/inferd ${(q-)MODEL} ${(q-)SOCK} $RUNNING $STEP $KV $SNAPS $MAXCTX"
@@ -272,6 +294,8 @@ chmod 700 "$RUN" || die "cannot set $RUN to mode 700"
 (( ${#SOCK} < 104 )) || die "socket path $SOCK is too long for a Unix socket; set INFERD_RUN_DIR to a shorter path"
 
 stop_all
+(( NAMED )) && [[ -n $mwhy ]] && print -r -- "run.sh: model $MODEL ($mwhy)"
+(( NAMED )) && [[ -n $dwhy && $drafter == $DRAFT ]] && print -r -- "run.sh: drafter $DRAFT ($dwhy)"
 (( NAMED )) && print -r -- "run.sh: $MODEL, drafter $drafter; sized for a $SIZING: agents $RUNNING, KV $kvs, snapshots $SNAPS, max context $MAXCTX, SSD tier $spill"
 if [[ -e $SOCK || -L $SOCK ]]; then  # a stale socket would let the front end start before inferd listens
   [[ -S $SOCK && -O $SOCK && ! -L $SOCK ]] || die "$SOCK exists and is not a socket owned by $USER; refusing"

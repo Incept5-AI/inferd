@@ -1,5 +1,7 @@
 #!/bin/zsh
 # run.sh's named start (`run.sh start --model ...`): option parsing, the RAM-based sizing (INFERD_RAM_GB), --dry-run, and
+# where a named model is found (INFERD_MODELS, the Hugging Face cache, LM Studio: fake trees under HOME / HF_HUB_CACHE /
+# LMSTUDIO_MODELS), install.sh's use of a copy it finds (a stub `hf` records any download), and
 # a check that the positional form, stop and status behave exactly as in the run.sh before the named form
 # (BASE, default 19805b9: main just before the named start, after status learnt the start's log dir; read with git show). It runs copies of run.sh against a fake build/inferd and a fake front end
 # in a temporary directory: no model, no GPU, no network. Ports 18397 and 18398 must be free. Cleans up only what it
@@ -12,7 +14,8 @@ cd "${0:A:h}" || exit 1
 BASE=${BASE:-19805b9}
 P1=18398 P2=18397
 for p in $P1 $P2; do lsof -nP -t -iTCP:$p -sTCP:LISTEN >/dev/null && { print "port $p is in use"; exit 1; }; done
-unset MODEL DRAFT PY SPILL_DIR SPILL_GIB MTP INFERD_RAM_GB INFERD_MACOS VISION 2>/dev/null
+unset MODEL DRAFT PY SPILL_DIR SPILL_GIB MTP INFERD_RAM_GB INFERD_MACOS VISION INFERD_EQUIVALENT 2>/dev/null
+unset HF_HUB_CACHE HF_HOME XDG_CACHE_HOME LMSTUDIO_MODELS 2>/dev/null  # the fake HOME below holds the default places
 T=$(mktemp -d /tmp/inferd-st.XXXXXX) || exit 1
 T=${T:A}  # /private/tmp: run.sh resolves its own directory
 E=$T/new O=$T/old M=$T/models REC=$T/rec
@@ -37,10 +40,28 @@ trap cleanup EXIT
 # Two engine directories: this run.sh and the one at BASE, each with the same fake build
 mkdir -p $E/build $E/tools $O/build $M/{Qwen3.8-27B-4bit,Qwen3.8-27B-8bit,Qwen3.8-27B-DFlash2,Qwen3.8-Flash-Next-oQ4e-mtp} \
   "$T/my ckpt" $T/mydraft $T/venv/bin $REC
-cp run.sh $E/ && cp tools/models.zsh $E/tools/ || exit 1
+cp run.sh install.sh requirements.txt $E/ && cp tools/models.zsh $E/tools/ || exit 1
 git show "${BASE}:engine/run.sh" > $O/run.sh 2>/dev/null || { print "cannot read run.sh at $BASE (git show)"; exit 1; }
 chmod +x $O/run.sh
-for d in $M/* "$T/my ckpt" $T/mydraft; do print '{}' > "$d/config.json"; done
+export HOME=$T/home  # after git show: no real HF cache or LM Studio is ever seen
+mkdir -p $HOME
+F4="Qwen3_5ForConditionalGeneration 64 5120 4 64" F8="Qwen3_5ForConditionalGeneration 64 5120 8 64"
+FD="DFlash2DraftModel 5 5120 - -" FN="Qwen4ExpForConditionalGeneration 48 2560 4 64"
+mkckpt() {  # dir "arch layers hidden bits group" [blobs dir: files become symlinks into it, as in the HF cache]
+  local d=$1 f=(${=2}) b=${3:-} q= n
+  mkdir -p $d
+  [[ ${f[4]} != - ]] && q=', "quantization": {"group_size": '${f[5]}', "bits": '${f[4]}', "mode": "affine"}'
+  print -r -- '{"architectures": ["'${f[1]}'"], "text_config": {"num_hidden_layers": '${f[2]}', "hidden_size": '${f[3]}', "rope_scaling": null}'$q'}' > $d/config.json
+  print -r -- '{"metadata": {}, "weight_map": {"a.weight": "model-00001-of-00002.safetensors", "b.weight": "model-00002-of-00002.safetensors", "c.weight": "model-00001-of-00002.safetensors"}}' > $d/model.safetensors.index.json
+  print w > $d/model-00001-of-00002.safetensors; print w > $d/model-00002-of-00002.safetensors
+  if [[ -n $b ]]; then  # move every file into blobs/ and link it back, relative, as huggingface_hub does
+    mkdir -p $b
+    for n in $d/*(.); do mv $n $b/${d:t}-${n:t}; ln -s ../../blobs/${d:t}-${n:t} $n; done
+  fi
+}
+mkckpt $M/Qwen3.8-27B-4bit "$F4"; mkckpt $M/Qwen3.8-27B-8bit "$F8"; mkckpt $M/Qwen3.8-27B-DFlash2 "$FD"
+mkckpt $M/Qwen3.8-Flash-Next-oQ4e-mtp "$FN"
+for d in "$T/my ckpt" $T/mydraft; do print '{}' > "$d/config.json"; done
 for d in $E $O; do
   print 'metallib' > $d/build/core.metallib
   # fake engine: records its arguments and environment, then listens on the socket and prints what run.sh waits for
@@ -148,6 +169,112 @@ out=$(INFERD_MACOS=27 INFERD_RAM_GB=32 $R start --port $P1 --model 27b --dry-run
 check "... and the matching one passes" eval '[[ $out != *warning* ]]'
 rm -f $E/build/BUILD-INFO
 check "no errors created a log or run directory" eval '[[ ! -e $T/logs && ! -e $T/run ]]'
+
+# --- where a named model is found (tools/models.zsh): INFERD_MODELS, the Hugging Face cache, LM Studio
+H=$T/hub L=$T/lms X=$T/empty
+hfsnap() {  # repo rev facts: a snapshot of REPO in the fake cache H, files linked into blobs/
+  local r=$H/models--${1//\//--}
+  mkdir -p $r/snapshots $r/refs
+  mkckpt $r/snapshots/$2 "$3" $r/blobs
+}
+HM=$H/models--mlx-community--Qwen3.8-27B-4bit
+hfsnap mlx-community/Qwen3.8-27B-4bit aaa "$F4"; touch -t 202601010000 $HM/snapshots/aaa
+hfsnap mlx-community/Qwen3.8-27B-4bit bbb "$F4"; touch -t 202602010000 $HM/snapshots/bbb
+hfsnap mlx-community/Qwen3.8-27B-4bit ccc "$F4"  # the newest, but one shard's blob is empty
+: > $HM/blobs/ccc-model-00002-of-00002.safetensors
+print aaa > $HM/refs/main
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$H $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
+check "HF cache: the exact repo, the snapshot refs/main points to" eval '[[ $(line "model     ") == $HM/snapshots/aaa ]] && has "(mlx-community/Qwen3.8-27B-4bit, in the Hugging Face cache (the snapshot refs/main points to))"'
+check "... the engine and front end get the snapshot (links into blobs/ followed)" eval '[[ $(line "engine    ") == *" ./build/inferd $HM/snapshots/aaa "* && $(line "front end ") == *"--model $HM/snapshots/aaa "* ]]'
+print ccc > $HM/refs/main
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$H $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
+check "HF cache: refs/main incomplete (an empty shard) -> the newest complete snapshot" eval '[[ $(line "model     ") == $HM/snapshots/bbb ]] && has "(snapshot bbb)"'
+check "... and says why it skipped refs/main's" eval 'has "note: skipped $HM/snapshots/ccc (mlx-community/Qwen3.8-27B-4bit): incomplete: model-00002-of-00002.safetensors is missing or empty"'
+rm $HM/blobs/bbb-model-00001-of-00002.safetensors  # now a dangling link
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$H $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
+check "HF cache: a dangling shard link is incomplete too -> the older complete one" eval '[[ $(line "model     ") == $HM/snapshots/aaa ]] && has "skipped $HM/snapshots/bbb"'
+out=$(INFERD_RAM_GB=32 HF_HUB_CACHE=$H $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
+check "precedence: INFERD_MODELS before the HF cache" eval '[[ $(line "model     ") == $M/Qwen3.8-27B-4bit ]] && has "(mlx-community/Qwen3.8-27B-4bit, in INFERD_MODELS)"'
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HOME=$T/hfhome $R start --port $P1 --model 27b --draft none --dry-run 2>&1); rc=$?
+check "HF_HOME/hub replaces the default cache (empty here: not found)" eval '(( rc == 0 )) && has "warning (dry run): no complete copy of mlx-community/Qwen3.8-27B-4bit"'
+mkdir -p $T/hfhome; ln -s $H $T/hfhome/hub
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HOME=$T/hfhome $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
+check "... and found there" eval '[[ $(line "model     ") == $T/hfhome/hub/models--mlx-community--Qwen3.8-27B-4bit/snapshots/aaa ]]'
+
+# LM Studio: LMSTUDIO_MODELS/<org>/<name> (default ~/.lmstudio/models), and the older ~/.cache/lm-studio/models
+mkckpt $L/mlx-community/Qwen3.8-27B-8bit "$F8"
+out=$(INFERD_RAM_GB=64 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$L $R start --port $P1 --model 27b-8bit --draft none --dry-run 2>&1)
+check "LM Studio: LMSTUDIO_MODELS/<org>/<name>" eval '[[ $(line "model     ") == $L/mlx-community/Qwen3.8-27B-8bit ]] && has "in LM Studio"'
+mkckpt $HOME/.lmstudio/models/mlx-community/Qwen3.8-27B-8bit "$F8"
+out=$(INFERD_RAM_GB=64 INFERD_MODELS=$X HF_HUB_CACHE=$X $R start --port $P1 --model 27b-8bit --draft none --dry-run 2>&1)
+check "LM Studio: ~/.lmstudio/models by default" eval '[[ $(line "model     ") == $HOME/.lmstudio/models/mlx-community/Qwen3.8-27B-8bit ]]'
+mkckpt $HOME/.cache/lm-studio/models/Jundot/Qwen3.8-Flash-Next-oQ4e-mtp "$FN"
+out=$(INFERD_RAM_GB=256 INFERD_MODELS=$X HF_HUB_CACHE=$X $R start --port $P1 --model flash-next --dry-run 2>&1)
+check "LM Studio: the older ~/.cache/lm-studio/models layout" eval '[[ $(line "model     ") == $HOME/.cache/lm-studio/models/Jundot/Qwen3.8-Flash-Next-oQ4e-mtp && $(line "engine    ") == *" MTP=1 "* ]]'
+
+# the same-weights rule: exact repo ids by default; --equivalent adds the listed builds, only when config.json matches
+mkckpt $L/Qwen/Qwen3.8-27B-MLX-4bit "$F4"
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$L $R start --port $P2 --model 27b --draft none 2>&1); rc=$?
+check "an equivalent build is not used by default, but named" eval '(( rc != 0 )) && has "note: found Qwen/Qwen3.8-27B-MLX-4bit (an equivalent build of mlx-community/Qwen3.8-27B-4bit) is $L/Qwen/Qwen3.8-27B-MLX-4bit: use it with --equivalent" && has "run ./install.sh --model 27b"'
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$L $R start --port $P1 --model 27b --draft none --equivalent --dry-run 2>&1)
+check "--equivalent: the equivalent build, and why" eval '[[ $(line "model     ") == $L/Qwen/Qwen3.8-27B-MLX-4bit ]] && has "an equivalent build of mlx-community/Qwen3.8-27B-4bit (--equivalent): Qwen3_5ForConditionalGeneration, 64 layers x 5120, 4-bit, group size 64"'
+out=$(INFERD_RAM_GB=32 INFERD_EQUIVALENT=1 INFERD_MODELS=$X HF_HUB_CACHE=$H LMSTUDIO_MODELS=$L $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
+check "INFERD_EQUIVALENT=1 still prefers the exact repo" eval '[[ $(line "model     ") == $HM/snapshots/aaa ]]'
+rm -rf $L/Qwen/Qwen3.8-27B-MLX-4bit; mkckpt $L/lmstudio-community/Qwen3.8-27B-MLX-4bit "$F8"  # mislabelled: 8-bit
+mkckpt $T/lms8/mlx-community/Qwen3.8-27B-4bit "$F8"
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$L $R start --port $P2 --model 27b --draft none --equivalent 2>&1); rc=$?
+check "an 8-bit build is refused for 27b" eval '(( rc != 0 )) && has "skipped $L/lmstudio-community/Qwen3.8-27B-MLX-4bit (lmstudio-community/Qwen3.8-27B-MLX-4bit): config.json says Qwen3_5ForConditionalGeneration, 64 layers x 5120, 8-bit, group size 64, not Qwen3_5ForConditionalGeneration, 64 layers x 5120, 4-bit, group size 64" && has "no complete copy of mlx-community/Qwen3.8-27B-4bit"'
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$T/lms8 $R start --port $P2 --model 27b --draft none 2>&1); rc=$?
+check "... even under the exact repo id" eval '(( rc != 0 )) && has "skipped $T/lms8/mlx-community/Qwen3.8-27B-4bit (mlx-community/Qwen3.8-27B-4bit): config.json says Qwen3_5ForConditionalGeneration, 64 layers x 5120, 8-bit"'
+
+# the drafter: in the default HF cache (~/.cache/huggingface/hub), and its byte-identical z-lab twin
+D=$HOME/.cache/huggingface/hub/models--incoai--Qwen3.8-27B-DFlash2
+mkdir -p $D/refs; mkckpt $D/snapshots/d1 "$FD" $D/blobs; print d1 > $D/refs/main
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$H $R start --port $P1 --model 27b --dry-run 2>&1)
+check "HF_HUB_CACHE replaces the default cache" eval '[[ $(line "drafter   ") != $D/snapshots/d1 ]]'
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X $R start --port $P1 --model 27b --dry-run 2>&1)
+check "the drafter in the default HF cache: found, and the engine gets it" eval '[[ $(line "drafter   ") == $D/snapshots/d1 && $(line "engine    ") == *" DRAFT=$D/snapshots/d1 "* ]] && has "(incoai/Qwen3.8-27B-DFlash2, in the Hugging Face cache (the snapshot refs/main points to))"'
+rm -rf $D; Z=$H/models--z-lab--Qwen3.8-27B-DFlash2; mkdir -p $Z/refs; mkckpt $Z/snapshots/z1 "$FD" $Z/blobs; print z1 > $Z/refs/main
+out=$(INFERD_RAM_GB=32 HF_HUB_CACHE=$H INFERD_MODELS=$X $R start --port $P1 --model 27b --equivalent --dry-run 2>&1)
+check "--equivalent: the z-lab drafter" eval '[[ $(line "drafter   ") == $Z/snapshots/z1 ]] && has "z-lab/Qwen3.8-27B-DFlash2, in the Hugging Face cache"'
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$H $R start --port $P2 --model 27b 2>&1); rc=$?
+check "... and without it, refused with the hint" eval '(( rc != 0 )) && has "found z-lab/Qwen3.8-27B-DFlash2" && has "no complete copy of the drafter incoai/Qwen3.8-27B-DFlash2"'
+out=$(INFERD_MODELS=$X HF_HUB_CACHE=$H LMSTUDIO_MODELS=$L $R models --equivalent 2>&1); rc=$?
+check "run.sh models lists each name with its path" eval '(( rc == 0 )) && has "27b: $HM/snapshots/aaa" && has "27b drafter: $Z/snapshots/z1" && has "flash-next: $HOME/.cache/lm-studio/models/Jundot/Qwen3.8-Flash-Next-oQ4e-mtp"'
+check "no model search created a log or run directory" eval '[[ ! -e $T/logs && ! -e $T/run ]]'
+
+# --- install.sh: uses a copy it finds, downloads (a stub hf on PATH) only what it does not find
+mkdir -p $T/bin $T/ivenv/bin
+print -r -- '#!/bin/zsh
+[[ $* == *version_info* ]] && { print 3.12; exit 0 }
+exit 0' > $T/ivenv/bin/python
+shasum -a 256 < $E/requirements.txt | cut -d' ' -f1 > $T/ivenv/.inferd-requirements.sha256
+typeset -f mkckpt > $T/mkckpt.zsh
+print -r -- '#!/bin/zsh
+print -r -- "$*" >> '$REC'/hf-calls.txt
+source '$T'/mkckpt.zsh
+case $2 in *DFlash2) f="'$FD'" ;; *8bit) f="'$F8'" ;; *) f="'$F4'" ;; esac
+mkckpt ${@[-1]} "$f"' > $T/bin/hf
+chmod +x $T/ivenv/bin/python $T/bin/hf
+I=$E/install.sh
+inst() { env PATH=$T/bin:$PATH INFERD_VENV=$T/ivenv INFERD_RAM_GB=64 INFERD_MODELS=$1 HF_HUB_CACHE=$H LMSTUDIO_MODELS=$L "${@:2}" }
+rm -f $REC/hf-calls.txt
+out=$(inst $X $I --model 27b --equivalent 2>&1); rc=$?
+check "install.sh: both found, no download" eval '(( rc == 0 )) && [[ ! -e $REC/hf-calls.txt ]] && has "mlx-community/Qwen3.8-27B-4bit is already on this Mac: $HM/snapshots/aaa" && has "incoai/Qwen3.8-27B-DFlash2 is already on this Mac: $Z/snapshots/z1"'
+check "... and its start line carries --equivalent" eval 'has "./run.sh start --model 27b --equivalent"'
+out=$(inst $T/dl $I --model 27b 2>&1); rc=$?
+check "install.sh: only the missing drafter is downloaded, into the models directory" eval '(( rc == 0 )) && [[ $(<$REC/hf-calls.txt) == "download incoai/Qwen3.8-27B-DFlash2 --local-dir $T/dl/Qwen3.8-27B-DFlash2" ]] && has "found z-lab/Qwen3.8-27B-DFlash2"'
+rm -f $REC/hf-calls.txt
+out=$(inst $T/dl $I --model 27b 2>&1); rc=$?
+check "install.sh again: nothing to download" eval '(( rc == 0 )) && [[ ! -e $REC/hf-calls.txt ]] && has "is already on this Mac: $T/dl/Qwen3.8-27B-DFlash2 (incoai/Qwen3.8-27B-DFlash2, in INFERD_MODELS)"'
+out=$(inst $T/dl $I --model 27b --download 2>&1); rc=$?
+want="download mlx-community/Qwen3.8-27B-4bit --local-dir $T/dl/Qwen3.8-27B-4bit
+download incoai/Qwen3.8-27B-DFlash2 --local-dir $T/dl/Qwen3.8-27B-DFlash2"
+check "install.sh --download: fetches both into the models directory" eval '(( rc == 0 )) && [[ $(<$REC/hf-calls.txt) == $want ]]'
+out=$(inst $T/dl $I --list 2>&1); rc=$?
+check "install.sh --list" eval '(( rc == 0 )) && has "27b: $T/dl/Qwen3.8-27B-4bit" && has "27b drafter: $T/dl/Qwen3.8-27B-DFlash2" && has "27b-8bit: $L/mlx-community/Qwen3.8-27B-8bit"'
+out=$(inst $T/dl $I --list --model 27b 2>&1); rc=$?
+check "install.sh --list with --model is refused" eval '(( rc != 0 )) && has "drop --model"'
 
 # --- a real start through the fakes: the named start runs what its dry run printed
 out=$(INFERD_RAM_GB=32 $R start --model 27b --port $P1 --dry-run 2>&1); dry=$(line "engine    ")

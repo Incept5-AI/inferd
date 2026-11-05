@@ -45,7 +45,8 @@ git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.3
 <details><summary><b>2. Install</b>: <code>./install.sh --model 27b</code></summary>
 
 One command sets up the small Python front end and downloads Qwen3.8-27B with its draft model into
-`~/models` (about 17 GB). Safe to run again.
+`~/models` (about 17 GB). Safe to run again. Already have the model in LM Studio or the Hugging Face cache?
+`install.sh` finds it and skips the download.
 
 ```bash
 ./install.sh --model 27b
@@ -93,6 +94,17 @@ print(reply.choices[0].message.content)
 - Other models: `--model 27b-8bit` (64 GB and up), `--model flash-next` (Mac Studio, 256 GB), or
   `--model <checkpoint dir>` with `--draft <drafter dir>`. `install.sh --model 27b` downloads
   `mlx-community/Qwen3.8-27B-4bit` and `incoai/Qwen3.8-27B-DFlash2`.
+- **Models you already have.** `install.sh --model` and `run.sh start --model` look for each repo, in order, in
+  `~/models` (`INFERD_MODELS`), the Hugging Face cache (`HF_HUB_CACHE`, else `HF_HOME/hub`, else
+  `~/.cache/huggingface/hub`: the snapshot `refs/main` points to, else the newest complete one) and LM Studio
+  (`LMSTUDIO_MODELS`, else `~/.lmstudio/models`, then `~/.cache/lm-studio/models`), and use the first complete copy
+  where it is: no copy, no download. Complete means `config.json` plus every shard the index lists, non-empty. Same
+  weights only: by default just the exact repo id counts; `--equivalent` (on both scripts) also accepts the known
+  equivalent builds in `tools/models.zsh` (for `27b`: `lmstudio-community/` and `Qwen/Qwen3.8-27B-MLX-4bit`; for the
+  drafter: `z-lab/Qwen3.8-27B-DFlash2`, byte-identical). Every candidate's `config.json` must match the
+  architecture, size, bits and group size, so an 8-bit build never stands in for `27b`. Both scripts say which copy
+  they chose and why, and what they skipped; `./install.sh --list` (or `./run.sh models`) shows what each name finds,
+  and `./install.sh --download` downloads into `~/models` anyway.
 - The vLLM-style API (completions, logprobs, guided output, `/metrics`, …): [docs/API-COMPAT.md](docs/API-COMPAT.md).
 - Optional check of the build on your Mac, a few minutes with no other model running:
   `PY=~/.venvs/inferd/bin/python tools/release_gate.sh ~/models/Qwen3.8-27B-4bit ~/models/Qwen3.8-27B-DFlash2`.

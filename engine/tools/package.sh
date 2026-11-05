@@ -83,6 +83,7 @@ on another macOS use the matching download or build from source (https://github.
 
 \`\`\`bash
 ./install.sh --model 27b          # Python 3.12 venv in ~/.venvs/inferd, then Qwen3.8-27B 4-bit + its drafter into ~/models
+                                  # (a complete copy in the Hugging Face cache or LM Studio is used instead: ./install.sh --list)
 ./run.sh start --model 27b        # sized from this Mac's memory; --dry-run prints the command lines; ./run.sh --help
 curl localhost:8300/v1/chat/completions -H 'Content-Type: application/json' \\
   -d '{"model":"qwen3.8-27b","messages":[{"role":"user","content":"Hello"}]}'
