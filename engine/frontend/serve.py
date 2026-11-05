@@ -45,7 +45,8 @@ ap.add_argument("--host", default="127.0.0.1", help="anything but loopback requi
 ap.add_argument("--port", type=int, default=8300)
 ap.add_argument("--name", default="qwen3.8-27b",
                 help="served model name(s), comma-separated (vLLM's --served-model-name): the first is the id")
-ap.add_argument("--max-model-len", type=int, default=0, help="the engine's context cap (run.sh passes it); 0: unknown")
+ap.add_argument("--max-model-len", type=int, default=int(os.environ.get("INFERD_MAX_MODEL_LEN") or 0),
+                help="the engine's context cap (run.sh: INFERD_MAX_MODEL_LEN); 0: unknown")
 args = ap.parse_args()
 SERVED = [n.strip() for n in args.name.split(",") if n.strip()] or ["qwen3.8-27b"]
 args.name = SERVED[0]

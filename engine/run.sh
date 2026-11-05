@@ -292,8 +292,8 @@ grep -q "listening on" "$LOGS/inferd-$PORT.log" || { stop_pid $ipid inferd; die 
 [[ -S $SOCK && -O $SOCK ]] || { stop_pid $ipid inferd; die "inferd's socket $SOCK is missing or not ours"; }
 [[ $(stat -f %Lp "$SOCK") == 600 ]] || print -u2 "run.sh: warning: $SOCK is not mode 600 (its directory is 700)"
 
-nohup "$PY" -I frontend/serve.py --model "$MODEL" --socket "$SOCK" --host "$HOST" --port "$PORT" \
-  --max-model-len "$MAXCTX" > "$LOGS/serve-$PORT.log" 2>&1 < /dev/null &
+INFERD_MAX_MODEL_LEN=$MAXCTX nohup "$PY" -I frontend/serve.py --model "$MODEL" --socket "$SOCK" --host "$HOST" \
+  --port "$PORT" > "$LOGS/serve-$PORT.log" 2>&1 < /dev/null &  # the cap: /v1/models max_model_len (env: argv unchanged)
 print -r -- $! > "$SPID"
 spid=$!
 [[ $HOST == (0.0.0.0|::|\[::\]) ]] && CHECK=127.0.0.1 || CHECK=$HOST
