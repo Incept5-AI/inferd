@@ -13,7 +13,7 @@ Primary model: **Qwen3.8-27B** (4-bit) with the **incoai Qwen3.8-27B-DFlash2** d
 **Website: [inferd.incept5.ai](https://inferd.incept5.ai)**: what it is in plain language, the measurements as charts,
 and getting started.
 
-<p align="center"><img src="docs/img/overview-fleet.svg" alt="Total tok/s with 1-32 agents on 16k contexts: inferd, Splash, Kapitsa, mlx-serve" width="720"></p>
+<p align="center"><img src="docs/img/overview-fleet.svg" alt="Total tok/s with 1-128 agents on 16k contexts on one Mac Studio: Qwen3.8-Flash-Next and Qwen3.8-27B" width="720"></p>
 
 ## Getting started
 

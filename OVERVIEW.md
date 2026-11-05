@@ -19,7 +19,7 @@ Agents are how software is starting to use language models: not one conversation
 Chat engines are tuned for one person waiting for one reply. Agent fleets reward something else: keeping many streams
 moving, remembering what each one has already read, and never making the twentieth agent wait for the first nineteen.
 
-<p align="center"><img src="docs/img/overview-fleet.svg" alt="Total tok/s with 1-32 agents on 16k contexts: inferd, Splash, Kapitsa, mlx-serve" width="720"></p>
+<p align="center"><img src="docs/img/overview-fleet.svg" alt="Total tok/s with 1-128 agents on 16k contexts on one Mac Studio: Qwen3.8-Flash-Next and Qwen3.8-27B" width="720"></p>
 
 <p align="center"><img src="docs/img/overview-wait.svg" alt="The last agent's wait with 1-32 agents on 64k contexts: inferd vs Splash" width="720"></p>
 
