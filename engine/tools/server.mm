@@ -5,6 +5,9 @@
 //    sampler, src/sampling.h),
 //    "max_context":C,"priority":R,"snap_at":[pos...],"gen_snap":1}   (optional: context cap, preemption priority, positions
 //    worth a prefix-cache snapshot, e.g. the end of the system prompt)
+//    OpenAI / vLLM extras (optional): "presence_penalty","frequency_penalty","repetition_penalty","min_p","min_tokens",
+//    "logit_bias":[[id,bias],...] (any of them: decoded on the host sampler, not speculated), "logprobs":N (0..20: token
+//    events carry ,"lp":[logprob,[id,logprob,...top N]] under the raw target logits)
 //   multimodal prompts add "mrope":[t,h,w per prompt token...],"rope_delta":D,"embeds":"<base64 bf16 [n, hidden]>"
 //   (rows with token id >= vocab take the next embeds row; see frontend/vision.py)
 //   {"op":"cancel","id":N}
@@ -17,7 +20,8 @@
 //   "json_schema" request: the vocabulary as bytes for structured output; "gen" then takes "json_schema":{...}
 //   (the token stream is constrained to it, src/grammar.h) and "think_end":ID (unconstrained until that token))
 // and writes events: {"id":N,"t":[tok]} per token, then {"id":N,"done":"stop|length|...","p":P,"c":C,"cached":K,"spec":0|1}
-// ("spec": admitted to speculative decoding; "spec_host": N speculative rows sampled on the host, present when N > 0). Every line that names an id ends in exactly one done event; a line that
+// ("spec": admitted to speculative decoding; "spec_host": N speculative rows sampled on the host, present when N > 0;
+// "stop_tok": the stop id that ended it). Every line that names an id ends in exactly one done event; a line that
 // does not parse and has no recoverable id drops the connection (all its requests end).
 // One client (the HTTP front end) at a time; it multiplexes requests by id.
 // usage: inferd <model_dir> <socket> [max_running=64] [step_tokens=2048] [kv_gib=96] [snapshots=96] [max_ctx=131072]
@@ -514,8 +518,13 @@ int main(int argc, char** argv) {
       auto out_progress = std::chrono::steady_clock::now();
       sch.emit = [&](const Event& e) {
         char b[384];
-        if (!e.done) {
+        if (!e.done && e.extra.empty()) {
           snprintf(b, sizeof b, "{\"id\":%llu,\"t\":[%d]}\n", (unsigned long long)e.id, e.tokens[0]);
+        } else if (!e.done) {  // a token with logprobs (",\"lp\":[...]")
+          snprintf(b, sizeof b, "{\"id\":%llu,\"t\":[%d]", (unsigned long long)e.id, e.tokens[0]);
+          out += b;
+          out += e.extra;
+          snprintf(b, sizeof b, "}\n");
         } else {
           snprintf(b, sizeof b, "{\"id\":%llu,\"done\":%s,\"p\":%d,\"c\":%d,\"cached\":%d",
                    (unsigned long long)e.id, Scheduler::jstr(e.reason).c_str(), e.prompt_tokens, e.completion_tokens, e.cached_tokens);
@@ -590,6 +599,18 @@ int main(int argc, char** argv) {
           for (auto& t : arr_field(v, "stop")) r.stop_ids.push_back(t.i());
           for (auto& t : arr_field(v, "snap_at")) r.snap_hints.push_back(t.i());
           if (v.has("gen_snap")) r.gen_snap = v["gen_snap"].i() != 0;  // decode snapshots (Scheduler::snap_gen)
+          // OpenAI / vLLM extras (Request: processing on the host sampler, logprobs); ranges checked by invalid()
+          if (v.has("presence_penalty")) r.presence_penalty = (float)num_field(v, "presence_penalty", -2, 2);
+          if (v.has("frequency_penalty")) r.frequency_penalty = (float)num_field(v, "frequency_penalty", -2, 2);
+          if (v.has("repetition_penalty")) r.repetition_penalty = (float)num_field(v, "repetition_penalty", 1e-3, 100);
+          if (v.has("min_p")) r.min_p = (float)num_field(v, "min_p", 0, 1);
+          if (v.has("min_tokens")) r.min_tokens = v["min_tokens"].i();
+          if (v.has("logprobs")) r.logprobs = v["logprobs"].i();
+          for (auto& e : arr_field(v, "logit_bias")) {  // [[id, bias], ...]
+            if (e.type != json::Value::Arr || e.a.size() != 2 || e.a[1].type != json::Value::Num)
+              throw std::runtime_error("logit_bias must be [[id, bias], ...]");
+            r.logit_bias.push_back({e.a[0].i(), (float)e.a[1].n});
+          }
           if (v.has("ctx")) {  // save a context: compute, snapshot, register (no output)
             r.prefill_only = true;
             r.ctx_name = str_field(v, "ctx");

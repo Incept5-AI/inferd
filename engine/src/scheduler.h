@@ -66,6 +66,20 @@ struct Request {
   // evicted after other cached prefixes (and goes to the SSD tier first when there is one).
   bool prefill_only = false, no_cache = false, ctx_pin = false, ctx_ssd = false;
   std::string ctx_name, session;
+  // OpenAI / vLLM extras (docs/API-COMPAT.md). Processing (logit_bias, min_tokens, the three penalties, min_p) is applied
+  // to the target's logits on the host sampler in vLLM's order: logit_bias and min_tokens (stop ids masked until
+  // min_tokens tokens), repetition_penalty (prompt + output tokens), frequency / presence (output tokens), temperature,
+  // min_p, top_k, top_p. A processed request is never speculated (one token per step; the GPU sampler cannot apply
+  // per-token state inside a block). logprobs >= 0: each token event carries the token's logprob under the raw target
+  // logits (vLLM's default "raw_logprobs") and the top N; speculated requests read them from the verify rows.
+  float presence_penalty = 0, frequency_penalty = 0, repetition_penalty = 1, min_p = 0;
+  std::vector<std::pair<int, float>> logit_bias;
+  int min_tokens = 0;
+  int logprobs = -1;
+  bool processed() const {
+    return presence_penalty != 0 || frequency_penalty != 0 || repetition_penalty != 1 || min_p > 0 ||
+           !logit_bias.empty() || min_tokens > 0;
+  }
 };
 
 // Engine → caller events. tokens: newly generated; done: finish reason "stop"/"length"/"error".
@@ -198,6 +212,10 @@ struct Scheduler {
     bool spec_ok = false;                      // greedy and a drafter is loaded: decode by draft + verify
     bool spec_at_submit = false;               // spec_ok as admitted (reported in the done event: "spec")
     int spec_host_rows = 0;                    // speculative rows sampled on the host (nucleus beyond K; "spec_host")
+    int stop_tok = -1;                         // the stop id that ended the request (done event: "stop_tok")
+    std::vector<std::pair<int, int>> out_n;    // processed requests: (token, count) of the output (penalties)
+    std::vector<uint8_t> seen;                 // repetition_penalty: tokens in prompt + output ([vocab], lazily)
+    std::vector<int> seen_ids;                 //   ... and their ids
     std::vector<Drafter::CtxRow> pend;         // last step's committed rows, to enter into the drafter context
     std::mt19937_64 rng;
     std::vector<int> ext_idx;  // per prompt position: image feature row, or -1 (empty for text-only prompts)
@@ -561,6 +579,13 @@ struct Scheduler {
     if (r.max_tokens < 0 || r.max_context < 0 || r.top_k < 0) return "bad request: negative max_tokens / max_context / top_k";
     if (!std::isfinite(r.temperature) || r.temperature < 0 || !std::isfinite(r.top_p) || r.top_p < 0 || r.top_p > 1)
       return "bad request: temperature must be >= 0 and top_p in [0, 1]";
+    auto fin = [](float x, float lo, float hi) { return std::isfinite(x) && x >= lo && x <= hi; };
+    if (!fin(r.presence_penalty, -2, 2) || !fin(r.frequency_penalty, -2, 2) || !fin(r.repetition_penalty, 1e-3f, 100) ||
+        !fin(r.min_p, 0, 1) || r.min_tokens < 0 || r.logprobs < -1 || r.logprobs > 20)
+      return "bad request: penalties in [-2, 2], repetition_penalty in (0, 100], min_p in [0, 1], min_tokens >= 0, "
+             "logprobs -1..20";
+    for (auto& [t, b] : r.logit_bias)
+      if (t < 0 || t >= V || !fin(b, -100, 100)) return "bad request: logit_bias ids in [0, vocab), biases in [-100, 100]";
     if (r.ctx_ssd && !spill) return "error: persist ssd needs the SSD tier (SPILL_DIR)";  // R05: never acknowledged
     return "";
   }
@@ -610,7 +635,12 @@ struct Scheduler {
                 (s.req.temperature <= 0 ||
                  (spec_sample && (sampling::spec_exact(s.req.temperature, s.req.top_k, s.req.top_p, m.vtop_k) ||
                                   s.req.spec_truncate))) &&
-                !(s.req.grammar && s.req.grammar->active && s.req.temperature > 0);  // see Request::grammar
+                !(s.req.grammar && s.req.grammar->active && s.req.temperature > 0) &&  // see Request::grammar
+                !s.req.processed();  // per-token logits processing: host sampler, one token per step
+    if (s.req.repetition_penalty != 1) {
+      s.seen.assign(m.cfg.vocab, 0);
+      for (int t : s.req.prompt) note_seen(s, t);
+    }
     s.spec_at_submit = s.spec_ok;
     if (debug) fprintf(stderr, "[%.3f s] ", std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
     if (debug)
@@ -1290,8 +1320,79 @@ struct Scheduler {
   }
 
 
+  static void note_seen(Seq& s, int t) {
+    if (t >= 0 && t < (int)s.seen.size() && !s.seen[t]) { s.seen[t] = 1; s.seen_ids.push_back(t); }
+  }
+
+  // A processed request's token (Request::processed): the row's logits in float, processed in vLLM's order, then
+  // the same contract as sampling::sample (argmax at temperature 0; min_p cuts below p_max * min_p before top_k/top_p).
+  int sample_processed(const uint16_t* lg, Seq& s) {
+    const int V = m.cfg.vocab;
+    const Request& r = s.req;
+    static thread_local std::vector<float> x;
+    x.resize(V);
+    for (int i = 0; i < V; i++) x[i] = sampling::bf16(lg[i]);
+    for (auto& [t, b] : r.logit_bias) x[t] += b;
+    if (s.generated < r.min_tokens)
+      for (int t : r.stop_ids) if (t >= 0 && t < V) x[t] = -INFINITY;
+    if (r.repetition_penalty != 1)
+      for (int t : s.seen_ids) x[t] = x[t] > 0 ? x[t] / r.repetition_penalty : x[t] * r.repetition_penalty;
+    for (auto& [t, n] : s.out_n) x[t] -= r.frequency_penalty * n + r.presence_penalty;
+    if (r.grammar) {  // the grammar's sampler takes bf16: round the processed logits back (nearest even)
+      static thread_local std::vector<uint16_t> h;
+      h.resize(V);
+      for (int i = 0; i < V; i++) {
+        uint32_t u;
+        memcpy(&u, &x[i], 4);
+        h[i] = std::isnan(x[i]) ? 0x7fc0 : (uint16_t)((u + 0x7fff + ((u >> 16) & 1)) >> 16);
+      }
+      return r.grammar->sample(h.data(), V, r.temperature, r.top_p, r.top_k, s.rng, r.stop_ids);
+    }
+    int best = 0;
+    for (int i = 1; i < V; i++) if (x[i] > x[best]) best = i;
+    if (r.temperature <= 0 || !std::isfinite(x[best])) return best;
+    float lo = x[best] - sampling::kSpan * r.temperature;
+    if (r.min_p > 0) lo = std::max(lo, x[best] + r.temperature * std::log(r.min_p));
+    static thread_local std::vector<std::pair<float, int>> c;
+    c.clear();
+    for (int i = 0; i < V; i++) if (x[i] >= lo) c.push_back({x[i], i});
+    const int t = sampling::draw(c, r.temperature, r.top_p, r.top_k, s.rng);
+    return t < 0 ? best : t;
+  }
+
+  // Logprobs of token t under the raw logits row lg (log-softmax over the whole vocabulary), plus the top n, as JSON
+  // members for its token event: ,"lp":[LP,[id,LP,...]]. -inf is written as -9999 (vLLM's convention).
+  std::string logprob_json(const uint16_t* lg, int t, int n) const {
+    const int V = m.cfg.vocab;
+    float mx = -INFINITY;
+    for (int i = 0; i < V; i++) mx = std::max(mx, sampling::bf16(lg[i]));
+    double Z = 0;
+    for (int i = 0; i < V; i++) Z += std::exp((double)sampling::bf16(lg[i]) - mx);
+    const double lz = mx + std::log(Z);
+    auto lp = [&](int i) {
+      const double v = sampling::bf16(lg[i]) - lz;
+      return std::isfinite(v) ? std::max(v, -9999.0) : -9999.0;
+    };
+    std::vector<std::pair<float, int>> top;  // the n largest, descending (ties: lower id first)
+    for (int i = 0; i < V && n > 0; i++) {
+      std::pair<float, int> e{sampling::bf16(lg[i]), i};
+      if ((int)top.size() == n && !sampling::desc(e, top.back())) continue;
+      top.insert(std::upper_bound(top.begin(), top.end(), e, sampling::desc), e);
+      if ((int)top.size() > n) top.pop_back();
+    }
+    char b[64];
+    snprintf(b, sizeof b, ",\"lp\":[%.7g,[", lp(t));
+    std::string o = b;
+    for (size_t k = 0; k < top.size(); k++) {
+      snprintf(b, sizeof b, "%s%d,%.7g", k ? "," : "", top[k].second, lp(top[k].second));
+      o += b;
+    }
+    return o + "]]";
+  }
+
   int sample(const uint16_t* lg, Seq& s) {  // src/sampling.h: the one contract (top_k 0 = the whole vocabulary)
     const int V = m.cfg.vocab;
+    if (s.req.processed()) return sample_processed(lg, s);
     if (s.req.grammar)
       return s.req.grammar->sample(lg, V, s.req.temperature, s.req.top_p, s.req.top_k, s.rng, s.req.stop_ids);
     return sampling::sample(lg, V, s.req.temperature, s.req.top_p, s.req.top_k, s.rng);
@@ -1304,7 +1405,8 @@ struct Scheduler {
       Event ev{s.req.id, {}, true, reason, (int)s.req.prompt.size(), s.generated, s.cached};
       if (!s.req.prefill_only)
         ev.extra = std::string(s.spec_at_submit ? ",\"spec\":1" : ",\"spec\":0") +
-                   (s.spec_host_rows ? ",\"spec_host\":" + std::to_string(s.spec_host_rows) : "");
+                   (s.spec_host_rows ? ",\"spec_host\":" + std::to_string(s.spec_host_rows) : "") +
+                   (reason == "stop" && s.stop_tok >= 0 ? ",\"stop_tok\":" + std::to_string(s.stop_tok) : "");
       emit(ev);
     }
     // A turn that ends on a block boundary hands its slot to the trie as the snapshot there (no copy): the next turn
@@ -1323,12 +1425,26 @@ struct Scheduler {
 
   // Emit generated tokens for sequence i, stopping at a stop token or max_tokens. Returns true when finished
   // (the finish reason goes to `why`).
-  bool deliver(Seq& s, const int* t, int n, std::string& why) {
+  // rows: each token's logits row (logprobs requests only; may be null otherwise).
+  bool deliver(Seq& s, const int* t, int n, std::string& why, const int* rows = nullptr) {
     for (int k = 0; k < n; k++) {
       s.tokens.push_back(t[k]);
       s.generated++;
-      if (std::find(s.req.stop_ids.begin(), s.req.stop_ids.end(), t[k]) != s.req.stop_ids.end()) { why = "stop"; return true; }
-      emit(Event{s.req.id, {t[k]}});
+      if (std::find(s.req.stop_ids.begin(), s.req.stop_ids.end(), t[k]) != s.req.stop_ids.end()) {
+        s.stop_tok = t[k];
+        why = "stop";
+        return true;
+      }
+      Event ev{s.req.id, {t[k]}};
+      if (s.req.logprobs >= 0 && rows)
+        ev.extra = logprob_json(m.logits.ptr<uint16_t>() + (size_t)rows[k] * m.cfg.vocab, t[k], s.req.logprobs);
+      emit(ev);
+      if (s.req.processed()) {
+        if (!s.seen.empty()) note_seen(s, t[k]);
+        auto it = std::find_if(s.out_n.begin(), s.out_n.end(), [&](auto& e) { return e.first == t[k]; });
+        if (it == s.out_n.end()) s.out_n.push_back({t[k], 1});
+        else it->second++;
+      }
       if (s.generated >= s.req.max_tokens) { why = "length"; return true; }
     }
     return false;
@@ -1402,7 +1518,7 @@ struct Scheduler {
       L--;
     // Token trees (TREE) for up to tree_seqs greedy decoders (DFlash2 only), in place of the tuner's chain block.
     bool any_greedy = false;
-    for (auto& r : running) any_greedy |= r.decoding() && r.spec_ok && r.req.temperature <= 0;
+    for (auto& r : running) any_greedy |= r.decoding() && r.spec_ok && r.req.temperature <= 0 && r.req.logprobs < 0;
     const bool tree_ok = d && tree_n > 1 && n_dec >= 1 && n_dec <= tree_seqs && any_greedy && m.tpath.buf;
     int tree_nodes = tree_ok ? tree_n : 0;
     if (tree_nodes) {  // every verify row needs an output row (Qwen35::max_out): trees only when theirs fit
@@ -1424,7 +1540,9 @@ struct Scheduler {
       while (L > 2 && n_dec * (L <= 5 ? 5 : L <= 8 ? 8 : L <= 12 ? 12 : 16) > d->max_rows) L--;
     // Token trees for a few greedy decoders (the drafter then drafts its full block for every sequence).
     const bool use_tree = tree_nodes > 1;
-    auto tree_for = [&](const Seq& s) { return use_tree && s.spec_ok && s.req.temperature <= 0 && !s.req.grammar; };
+    auto tree_for = [&](const Seq& s) {  // logprobs requests verify chains (row k scores committed token k)
+      return use_tree && s.spec_ok && s.req.temperature <= 0 && !s.req.grammar && s.req.logprobs < 0;
+    };
     if (use_tree) L = d->block;  // the drafter drafts its whole block; the tree takes what it needs
     for (auto& r : running) r.cdraft.clear();
     if (mtp && copy_on && (!copy_solo || n_dec == 1)) {  // context-copy chains (src/copydraft.h)
@@ -1802,6 +1920,9 @@ struct Scheduler {
           stat_spec_host_rows++;
         }
         if (s.req.temperature > 0) stat_spec_sampled_rows += c;
+        std::vector<int> lp_rows;  // logprobs: committed token k is scored by verify row k (chains only, tree_for)
+        if (s.req.logprobs >= 0)
+          for (int k = 0; k < c; k++) lp_rows.push_back(m.out_base.ptr<int>()[j] + (work[j].tree ? tp[k] : k));
         if (s.req.grammar) {  // structured output: the committed tokens must pass the grammar (src/grammar.h)
           const int* e = m.emit.ptr<int>() + j * kMaxBlock;
           const bool sampled = s.req.temperature > 0;
@@ -1812,12 +1933,12 @@ struct Scheduler {
             fix.push_back(sample(m.logits.ptr<uint16_t>() + (size_t)(m.out_base.ptr<int>()[j] + ok) * m.cfg.vocab, s));
             stat_grammar_fix++;
             s.mtp_fold = false;  // the GPU folded its next draft from the token just replaced
-            if (deliver(s, fix.data(), (int)fix.size(), why)) done.push_back({who[j], why});
+            if (deliver(s, fix.data(), (int)fix.size(), why, lp_rows.data())) done.push_back({who[j], why});
             else if (ok < c - 1) rollback.push_back(s.req.id);  // drafts past `ok` are in the state: re-prefill
             continue;
           }
         }
-        if (deliver(s, m.emit.ptr<int>() + j * kMaxBlock, c, why)) done.push_back({who[j], why});
+        if (deliver(s, m.emit.ptr<int>() + j * kMaxBlock, c, why, lp_rows.data())) done.push_back({who[j], why});
         continue;
       }
       s.computed += counts[j];
@@ -1826,9 +1947,10 @@ struct Scheduler {
       s.resumed = false;
       if (s.req.prefill_only) { done.push_back({who[j], "stop"}); continue; }  // a context: computed, nothing to sample
       int out = m.out_base.ptr<int>()[j];
-      int t = ((d || mtp) && s.req.temperature <= 0 && !s.req.grammar) ? m.pred.ptr<int>()[out]
-                                            : sample(m.logits.ptr<uint16_t>() + (size_t)out * m.cfg.vocab, s);
-      if (deliver(s, &t, 1, why)) done.push_back({who[j], why});
+      int t = ((d || mtp) && s.req.temperature <= 0 && !s.req.grammar && !s.req.processed())
+                  ? m.pred.ptr<int>()[out]
+                  : sample(m.logits.ptr<uint16_t>() + (size_t)out * m.cfg.vocab, s);
+      if (deliver(s, &t, 1, why, &out)) done.push_back({who[j], why});
     }
     // Decode-only steps (no prefill rows, no restores or snapshot copies) time the block choice.
     if (tune_i >= 0 && restores.empty() && snaps.empty() && zeros.empty()) {
