@@ -1496,6 +1496,26 @@ An external tester's MacBook Pro M3 Max (30-core GPU, no neural accelerators, 36
 Reading: 0.4.0 is a little faster than 1138540 on the M3 Max and as accurate. Long prompts remain the slow part there:
 the Neural Engine split that took about a third off the M4 Pro's 8k first token ((v)) is not on by default on M3 (untested).
 
+## (ac) Mac Studio, Qwen3.8-27B, 1–64 agents on 0.4.1 (5 November)
+
+Release 0.4.1 (`./run.sh 8341 64 2048 140 192 262144`: 64 running, 192 snapshots), Qwen3.8-27B 4-bit + DFlash2,
+`bench/studio/conc.py --mode followup`, 16k contexts, 512 tokens out per agent, 3 trials each on a fresh server, 0
+errors. Total tok/s, mean (min–max), against the same test on 0.3.0 (st030):
+
+| agents | 0.4.1 | 0.3.0 |
+|---:|---:|---:|
+| 1 | 149.9 (143–158) | 149.8 |
+| 4 | 389.7 (383–399) | 391.4 |
+| 8 | 515.6 (512–523) | 496.1 |
+| 16 | 622.0 (618–624) | 593.1 |
+| 32 | 737.7 (731–746) | 722.4 |
+| 48 | 742.1 (732–747) | 724.0 |
+| 64 | 893.9 (892–896) | 848.7 |
+
+Reading: level at 1–4 agents, 2–5% faster from 8 agents up (the drafter-attention kernel, (aa)). The trials agree within
+3%. Raw: [results/studio/st041-27b-16k-followups.jsonl](../results/studio/st041-27b-16k-followups.jsonl). The README
+chart now uses these for the 27B's 1–64 points.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
