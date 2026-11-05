@@ -228,7 +228,7 @@ See `CLAUDE.md` in the project root for the rest.
 
 ## Changes
 
-- **Unreleased (0.4.1)** — first-run fixes from an external tester's report: `build.sh` uses `/Applications/Xcode.app`
+- **0.4.1 (2026-11-05)** — engine unchanged from 0.4.0 (same kernels and binaries' code). First-run fixes from an external tester's report: `build.sh` uses `/Applications/Xcode.app`
   by itself when the Command Line Tools are the active developer directory (they have no Metal compiler) and otherwise
   says exactly what to install; `install.sh` works on a venv made by uv (no pip: `uv pip`, else `ensurepip`);
   `run.sh clean [port]` deletes a port's SSD tier, which persists across restarts by design; `examples/run_all.sh`

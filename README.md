@@ -21,19 +21,19 @@ Up and running in four steps (click a step to open it). You need a Mac with Appl
 its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
 **[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.0 release</summary>
+<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.1 release</summary>
 
-Download [inferd-0.4.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos27-arm64.tar.gz)
-and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos27-arm64.tar.gz.sha256)
-from the [v0.4.0 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.0). No Xcode needed.
+Download [inferd-0.4.1-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos27-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos27-arm64.tar.gz.sha256)
+from the [v0.4.1 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.1). No Xcode needed.
 
 ```bash
-cd ~/Downloads && shasum -a 256 -c inferd-0.4.0-macos27-arm64.tar.gz.sha256   # prints OK
-tar xzf inferd-0.4.0-macos27-arm64.tar.gz && cd inferd-0.4.0
+cd ~/Downloads && shasum -a 256 -c inferd-0.4.1-macos27-arm64.tar.gz.sha256   # prints OK
+tar xzf inferd-0.4.1-macos27-arm64.tar.gz && cd inferd-0.4.1
 ```
 
-On **macOS 26**, use [inferd-0.4.0-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos26-arm64.tar.gz)
-and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos26-arm64.tar.gz.sha256)
+On **macOS 26**, use [inferd-0.4.1-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz.sha256)
 the same way (built natively on macOS 26.6 with Xcode 26.5; an external tester's 128 GB Mac on macOS 26.6 passed the full
 release gate with it, the only macOS 26 machine it has run on so far). Or build it yourself, then carry on from step 2
 in `engine/`. That needs Xcode, not just the Command Line Tools, with its Metal toolchain (once:
@@ -41,7 +41,7 @@ in `engine/`. That needs Xcode, not just the Command Line Tools, with its Metal 
 Command Line Tools are the active developer directory (see [Building from source](#building-from-source)):
 
 ```bash
-git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.0 && cd engine
+git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.1 && cd engine
 ./build.sh                                   # under a minute
 ```
 
@@ -126,7 +126,7 @@ print(reply.choices[0].message.content)
 
 </details>
 
-## Where it stands (5 November 2026, release 0.4.0)
+## Where it stands (5 November 2026, release 0.4.1; the engine is 0.4.0's)
 
 **64 agents at once on one Mac Studio: 849 tok/s on Qwen3.8-27B, 1,331–1,346 tok/s on Qwen3.8-Flash-Next**, every agent
 on its own 16k context; the slowest agent's first token comes within 2 s on Flash-Next and 3.7 s on the 27B. And on a Mac mini, a fleet of agents doing real
