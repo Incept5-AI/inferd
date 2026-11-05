@@ -12,9 +12,12 @@ Model: **Qwen3.8-27B** (mlx-community 4-bit, 8-bit or bf16) with the **incoai Qw
 - An M5-class or newer GPU (the kernels use the Metal 4 tensor units). M4-family GPUs work but are only lightly
   tested (Mac mini M4 Pro, 2026-11-01). Tested on M5 Ultra (Mac Studio), M5 Max
   (MacBook Pro), M5 Pro (Mac mini, 64 GB) and M6 (Mac mini, 32 GB).
-- macOS 27 for the prebuilt `build/` (it refuses to start on macOS 26). On macOS 26 or 27 you can build from source with
-  Xcode's Metal toolchain (`./build.sh`; if it reports "missing Metal Toolchain", run
-  `xcodebuild -downloadComponent MetalToolchain` once, about 690 MB).
+- The macOS the prebuilt `build/` was made for (`build/BUILD-INFO`; a macOS 27 build refuses to start on macOS 26 and
+  the other way round). On macOS 26 or 27 you can build from source with Xcode (not just the Command Line Tools) and
+  its Metal toolchain (`./build.sh`; if it reports "missing Metal Toolchain", run
+  `xcodebuild -downloadComponent MetalToolchain` once, about 690 MB). With the Command Line Tools selected
+  (`xcode-select -p`), `./build.sh` uses `/Applications/Xcode.app` by itself; `sudo xcode-select -s
+  /Applications/Xcode.app/Contents/Developer` makes that permanent.
 - Python 3.12 with `fastapi uvicorn transformers` for the OpenAI front end, plus `mlx mlx-vlm pillow numpy` for images
   and `mlx-lm` for the release gate's logits reference, `tools/ref_logits.py` (`requirements.txt`: Pillow 13.0.0,
   which fixes decoder advisories in 12.3.0). `requirements-test.txt` is the host-test set (CI).
@@ -36,6 +39,7 @@ curl localhost:8300/v1/chat/completions -H 'Content-Type: application/json' \
   -d '{"model":"qwen3.8-27b","messages":[{"role":"user","content":"Hello"}]}'
 ./run.sh status 8300                     # pids, engine socket, log paths (exit 0 when both processes run, 3 if not)
 ./run.sh stop 8300                       # stop what run.sh started on 8300; exit 0 when nothing is running
+./run.sh clean 8300                      # delete 8300's SSD tier (it persists across restarts); not while running
 ```
 
 **Stopping:** always `./run.sh stop PORT`. The engine socket is no longer `/tmp/inferd-PORT.sock` (it lives in an
@@ -195,7 +199,11 @@ The full comparison is in [docs/RESULTS.md](../docs/RESULTS.md).
 - One model family (Qwen3.8 / Qwen3.5-style hybrid attention + Gated DeltaNet). The 4-bit mlx-community build has no
   MTP head (its current revision does have the vision tower).
 - One agent at 16k (142 vs 172) and at 256k (111 vs 132) trails Splash; prefill is ~10% behind it.
-- The SSD tier is a cache: it is cleared when the model, drafter or KV geometry changes.
+- The SSD tier is a cache: it is cleared when the model, drafter or KV geometry changes. Otherwise it **persists across
+  `run.sh stop` and restarts** (that is the point: agents' contexts come back from it), so it keeps its disk space
+  (up to `SPILL_GIB`, 64–96 GiB under `run.sh start`) in `~/Library/Caches/inferd/spill-<port>` or `SPILL_DIR`.
+  `./run.sh clean [port]` deletes that port's tier (`<dir>/inferd-spill` and its lock, in the directory the last start
+  used) and refuses while a server runs on the port.
 
 ## Tuning knobs (environment)
 
@@ -219,6 +227,13 @@ GPU's first use of the weights; 1, 0 off), `PSO_LOG` (log every pipeline creatio
 See `CLAUDE.md` in the project root for the rest.
 
 ## Changes
+
+- **Unreleased (0.4.1)** — first-run fixes from an external tester's report: `build.sh` uses `/Applications/Xcode.app`
+  by itself when the Command Line Tools are the active developer directory (they have no Metal compiler) and otherwise
+  says exactly what to install; `install.sh` works on a venv made by uv (no pip: `uv pip`, else `ensurepip`);
+  `run.sh clean [port]` deletes a port's SSD tier, which persists across restarts by design; `examples/run_all.sh`
+  defaults its machine name to the host name; `agents-at-once` writes its results under `$TMPDIR`, not the checkout.
+  macOS 26: the source build and the 0.4.0 macOS 26 prebuilt passed the full release gate on a 128 GB Mac on macOS 26.6.
 
 - **0.4.0 (2026-11-05)** — vLLM-compatible API: `/v1/completions`, logprobs (from the verify rows, speculation kept),
   presence/frequency/repetition penalties, `min_p`, `logit_bias`, `min_tokens`, `n`, guided JSON/choice/regex and

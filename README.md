@@ -21,7 +21,7 @@ Up and running in four steps (click a step to open it). You need a Mac with Appl
 its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
 **[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-<details><summary><b>1. Download and check</b>: the file for your macOS (27, or 26 beta) from the v0.4.0 release</summary>
+<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.0 release</summary>
 
 Download [inferd-0.4.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos27-arm64.tar.gz)
 and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos27-arm64.tar.gz.sha256)
@@ -34,9 +34,11 @@ tar xzf inferd-0.4.0-macos27-arm64.tar.gz && cd inferd-0.4.0
 
 On **macOS 26**, use [inferd-0.4.0-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos26-arm64.tar.gz)
 and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos26-arm64.tar.gz.sha256)
-the same way (**beta**: built natively on macOS 26.6 with Xcode 26.5, not yet run on a macOS 26 Mac's GPU; run the release
-gate once, below). Or build it yourself (needs Xcode with its Metal compiler: `xcodebuild -downloadComponent
-MetalToolchain`, once), then carry on from step 2 in `engine/`:
+the same way (built natively on macOS 26.6 with Xcode 26.5; an external tester's 128 GB Mac on macOS 26.6 passed the full
+release gate with it, the only macOS 26 machine it has run on so far). Or build it yourself, then carry on from step 2
+in `engine/`. That needs Xcode, not just the Command Line Tools, with its Metal toolchain (once:
+`xcodebuild -downloadComponent MetalToolchain`); `./build.sh` uses `/Applications/Xcode.app` by itself when the
+Command Line Tools are the active developer directory (see [Building from source](#building-from-source)):
 
 ```bash
 git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.0 && cd engine
@@ -92,8 +94,10 @@ print(reply.choices[0].message.content)
 
 - `./run.sh status` and `./run.sh stop` manage the server; `./run.sh --help` lists everything. `--dry-run` prints the
   command lines it resolves; `--agents`, `--context`, `--kv` and `--port` override the sizing
-  ([docs/MACHINES.md](docs/MACHINES.md)). Below 256 GB it also turns on the SSD tier, in `~/Library/Caches/inferd`
-  (up to 64–96 GiB; `--spill off` to disable).
+  ([docs/MACHINES.md](docs/MACHINES.md)). Below 256 GB it also turns on the SSD tier, in
+  `~/Library/Caches/inferd/spill-<port>` (up to 64–96 GiB; `--spill off` to disable). The tier **stays on disk after
+  `./run.sh stop`**, on purpose: agents' contexts come back from it after a restart. `./run.sh clean [port]` deletes it
+  (only that port's tier, and only while no server runs there).
 - Other models: `--model 27b-8bit` (64 GB and up), `--model flash-next` (Mac Studio, 256 GB), or
   `--model <checkpoint dir>` with `--draft <drafter dir>`. `install.sh --model 27b` downloads
   `mlx-community/Qwen3.8-27B-4bit` and `incoai/Qwen3.8-27B-DFlash2`.
@@ -113,9 +117,11 @@ print(reply.choices[0].message.content)
 - Optional check of the build on your Mac, a few minutes with no other model running:
   `PY=~/.venvs/inferd/bin/python tools/release_gate.sh ~/models/Qwen3.8-27B-4bit ~/models/Qwen3.8-27B-DFlash2`.
 - **macOS versions.** The macOS 27 file is tested on Mac Studio M5 Ultra, Mac mini M6, M5 Pro and M4 Pro, and MacBook Pro
-  M5 Max, M4 Max and M3 Max; it refuses to start on macOS 26 (`install.sh` and `run.sh` check). The macOS 26 file
-  (beta) was built on macOS 26 itself; a source build passed every check on an M4 Max with macOS 26. Never run a build made for macOS 26 on macOS 27: its kernels compute wrong logits there at
-  prefill chunks of 256+ rows.
+  M5 Max, M4 Max and M3 Max; it refuses to start on macOS 26 (`install.sh` and `run.sh` check). The macOS 26 file was
+  built on macOS 26 itself. On macOS 26 both it and a source build passed the full release gate on one Mac so far (an
+  external tester's 128 GB Mac on macOS 26.6, 5 Nov 2026: host, front-end and sampler tests, logits vs mlx_lm at
+  chunks 1/24/256/1,536, speculative = plain; [docs/MACHINES.md](docs/MACHINES.md)). Never run a build made for macOS 26
+  on macOS 27: its kernels compute wrong logits there at prefill chunks of 256+ rows.
 - Release 0.2.0's files hold only `build/`: unpack one into `engine/` of a `v0.2.0` checkout instead.
 
 </details>
@@ -203,9 +209,14 @@ strict-JSON replies valid on the first attempt. Overview with charts: [OVERVIEW.
 
 ## Building from source
 
-Works on macOS 26 and 27, and needs Xcode with its Metal toolchain: the kernels are Metal 4 and must be built on the
-machine's own macOS. Recent Xcode releases (e.g. 26.6) ship **without the Metal compiler**: if `./build.sh` stops with
-"missing Metal Toolchain", install it once with `xcodebuild -downloadComponent MetalToolchain` (about 690 MB).
+Works on macOS 26 and 27, and needs **Xcode** (not just the Command Line Tools) with its Metal toolchain: the kernels
+are Metal 4 and must be built on the machine's own macOS. Recent Xcode releases (e.g. 26.6) ship **without the Metal
+compiler**: install it once with `xcodebuild -downloadComponent MetalToolchain` (about 690 MB). If the Command Line
+Tools are the active developer directory (`xcode-select -p` prints `/Library/Developer/CommandLineTools`), `xcrun`
+finds no `metal` and `xcodebuild` refuses to run; `./build.sh` then uses `/Applications/Xcode.app` for the build by
+itself and says so. To make that permanent, and for `xcodebuild -downloadComponent`, select Xcode once:
+`sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` (or prefix a single command with
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`).
 
 ```bash
 git clone https://github.com/Incept5-AI/inferd && cd inferd/engine
@@ -217,7 +228,8 @@ git clone https://github.com/Incept5-AI/inferd && cd inferd/engine
 accelerators) are the main target; the M3/M4 family runs on its own kernel path and is lightly tested (the
 drafter pays there too since 9dd55ad; `--draft none` gives a faster first token at 16+ agents); M1/M2 are untested. The positional form still works
 (`MODEL=… DRAFT=… ./run.sh 8300 32 1024 0 32 65536`: port, max agents, step tokens, KV GiB with 0 = auto, snapshots,
-max context). From a checkout, `examples/run_all.sh` runs the self-tests and prints a PASS/FAIL table (they check that
+max context). From a checkout, `examples/run_all.sh my-mac` (with the server up) runs the self-tests into
+`examples/results/my-mac/` and prints a PASS/FAIL table (the name defaults to the Mac's short host name) (they check that
 inferd works on your machine; they are not benchmarks). Per-machine settings: [docs/MACHINES.md](docs/MACHINES.md).
 
 ## The agent API

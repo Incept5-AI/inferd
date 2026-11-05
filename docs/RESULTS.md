@@ -1465,6 +1465,37 @@ follow-ups, 3 trials with a fresh server each, 0 errors), total tok/s at 1 / 4 /
 160.2 / 339.2 / 532.0 / 791.2 / 1,061.5 / 1,214.2 / **1,339.6**; at 64 the trials gave 1,331.4 / 1,341.8 / 1,345.7 with
 the slowest first token at 1.75–1.94 s; at 48, 1,203.7 / 1,205.2 / 1,233.8. Raw: results/fn040/conc.jsonl.
 
+## (aa) The 27B gain of 0.4.0 under load is the drafter-attention kernel (`DRAFT_ATTN_MMA`), 5 November
+
+A/B by a colleague and an external tester on the same Mac, release 0.4.0, Qwen3.8-27B 4-bit + DFlash2, follow-ups on
+4k contexts, 512 tokens out, the server restarted with `DRAFT_ATTN_MMA=1 / 0 / 1 / 0` (alternating; two trials each),
+total tok/s:
+
+| agents | `DRAFT_ATTN_MMA=1` (default) | `DRAFT_ATTN_MMA=0` | 0.3.0-era main, earlier | per-stream median, =1 vs =0 |
+|---:|---:|---:|---:|---:|
+| 16 | **210.9 / 207.3** | 194.1 / 193.4 | 196.0 / 193.3 | 14.5 / 14.3 vs 13.1 / 13.2 |
+| 32 | **232.2 / 230.7** | 216.5 / 213.1 | | 8.0 / 8.0 vs 7.4 / 7.3 |
+
+First token 2.7–2.9 s median either way; one agent unchanged (~56 tok/s). Reading: the ~8% 27B gain of 0.4.0 under load
+(+8% at 16 and 32 agents) is entirely the drafter's attention on simdgroup matrices ((y)); with it off, 0.4.0 matches
+0.3.0. It does not change the 27B's output (the drafter only proposes; the target verifies).
+
+## (ab) External M3 Max, 36 GB: 0.4.0 vs 1138540 (5 November)
+
+An external tester's MacBook Pro M3 Max (30-core GPU, no neural accelerators, 36 GB), macOS 27.2, Xcode 27.2, release
+0.4.0 (eb32329) against an earlier build of theirs (1138540, 4 Nov). Qwen3.8-27B 4-bit + DFlash2, server
+`VISION=1 SPILL_GIB=64 ./run.sh 8300 16 1024 0 8 32768` (with `SPILL_DIR`). Single runs.
+
+- `examples/run_all.sh`: 15/15 passed. The 13 timed demos took 2,152 s on 0.4.0 vs 2,279 s on 1138540 (about 6% less).
+  Every accuracy check matched the earlier build: agent-handoff 19/19, agent-team 7/7 and 48/48 (x2), OCR 21/21,
+  OCR compare 9/9 rounds, agent-swarm 24/24, agent-followups 24/24.
+- coding-smoke: effort none 14.5/16 (http_client 0.50, file_tree_analysis 0.75), effort medium 15.5/16.
+- users-at-once (~8k-token prompts, 1,024 tokens out): one user's first word 50.4 s (was 54.3), then 46.0 tok/s; four
+  users 77.5 vs 61.4 tok/s total (+26%), the last user's first word 208 s (was 224).
+
+Reading: 0.4.0 is a little faster than 1138540 on the M3 Max and as accurate. Long prompts remain the slow part there:
+the Neural Engine split that took about a third off the M4 Pro's 8k first token ((v)) is not on by default on M3 (untested).
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

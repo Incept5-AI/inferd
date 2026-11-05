@@ -29,7 +29,9 @@ Coverage legend used throughout:
 | Other M5-family Macs (base M5, other memory sizes) | — | **Untested** | They should work: the kernels need the Metal 4 tensor units (NAX) found on M5-class and newer GPUs. |
 | Mac mini M4 Pro | 20-core GPU, 64 GB, no neural accelerators | **Light** | Works since 1 Nov 2026 (NAX kernels routed around; drafter scratch fix). Correct vs mlx_lm; 27B decode 24.7 tok/s with the drafter. **Not fully tested**: see the list in docs/MACHINES.md. |
 | Mac Studio M3 Ultra | 80-core GPU, 512 GB, no neural accelerators | **Light** | Works since 1 Nov 2026 with bf16-activation GEMMs (MLX `qmv_wide` / fitted `qmm` tiles, no W4A8). §3.1 smoke set and conc.py 16k × 1/4/8 only (the study log "M3 Ultra round 2"). |
-| MacBook Pro M4 Max | 40-core GPU, 64 GB, no neural accelerators | **Light** (external tester) | Source build on macOS 27.0 at 2d2a108 (4 Nov 2026): every host and front-end test, logits at 1/24/256/1,536 rows, the release gate, server smoke test and 15/15 demos pass. Numbers in docs/MACHINES.md. An M4 Max on macOS 26 also built from source earlier. |
+| MacBook Pro M4 Max | 40-core GPU, 64 GB, no neural accelerators | **Light** (external tester) | Source build on macOS 27.0 at 2d2a108 (4 Nov 2026): every host and front-end test, logits at 1/24/256/1,536 rows, the release gate, server smoke test and 15/15 demos pass. Numbers in docs/MACHINES.md. (Earlier notes said this M4 Max ran macOS 26; it ran macOS 27.0.) |
+| A 128 GB Mac on macOS 26.6 (chip not reported) | 128 GB | **Light** (external tester) | The first macOS 26 run (5 Nov 2026): the v0.4.0 source build and the macOS 26 prebuilt both passed the full release gate (host, front-end and sampler tests; logits at 1/24/256/1,536 rows on 4 × 2,048 tokens, top-1 ok, cos ≥ 0.9972; speculative = plain with one exact tie). Numbers in docs/MACHINES.md. |
+| MacBook Pro M3 Max | 30-core GPU, 36 GB, no neural accelerators | **Light** (external tester) | v0.4.0 on macOS 27.2 (5 Nov 2026): `examples/run_all.sh` 15/15, every accuracy check as on the earlier build; long prompts slow (no Neural Engine split by default on M3). RESULTS.md (ab). |
 | Other M4 Macs, other M3 Macs and older | — | **Untested** | M4 and M3 should behave like the M4 Pro / M3 Ultra (same Apple9 family). M2 and older are untested. |
 
 ### 1.2 Models and precisions
@@ -144,7 +146,7 @@ token ids.
   normal sequence is a bug.
 - **cos ≥ 0.999 (soft):** the full logit vectors point the same way. Sequences 1–3 typically measure 0.9995–0.99997
   at chunks 1 and 24 and 0.9992–0.9999 at 256- and 1,536-row chunks (the 0.2.0 release gates on four Macs, RESULTS.md
-  (n)); an external M4 Max on macOS 26 measured 0.9996–0.9997. A value in that range with top-1 and top-5 correct is a
+  (n)); an external M4 Max (macOS 27) measured 0.9996–0.9997. A value in that range with top-1 and top-5 correct is a
   pass, not a regression. Sequence 0 is "The quick
   brown fox…" repeated, a deliberately fragile, highly repetitive prompt. It has measured 0.996 / KL 0.003 since day 1
   because the reference uses MLX's prefill path and the engine a different one, and that gap grows on repetitive
@@ -190,7 +192,7 @@ run**, and turning off `ATTN_IQ` or 8-bit KV does not remove it (those are not t
 the gap is large. Check it with `tools/tie_check.py`, which prints the reference (mlx_lm) logits of the two competing
 tokens at the first differing position: a near-tie is a gap of about 0.5 or less. Expect a few such sequences in any
 `spec_test` run on repetitive prompts: the 0.2.0 gate on a Mac mini M6 had 2 of 4 diverge after 69 and 79 identical
-tokens, and an external M4 Max on macOS 26 had one. Like vLLM, the engine is not batch-invariant at the bit level.
+tokens, and an external M4 Max (macOS 27) had one. Like vLLM, the engine is not batch-invariant at the bit level.
 
 `spec_test` prints `lossless: <same>/<B> identical, <n> diverged[: seqs ...]` and writes both runs' tokens to
 `SPEC_OUT` (default: a fresh `$TMPDIR/spec_out-XXXXXX.txt`, printed as `outputs:`). It exits 0 either way unless

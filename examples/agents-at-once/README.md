@@ -25,6 +25,9 @@ AGENTS=128 CTX=16k ./agents_at_once.sh
 POWER_CMD='my-plug --watts' AGENTS=64 CTX=16k ./agents_at_once.sh
 ```
 
+Each run appends one JSON line to `$TMPDIR/agents_at_once.jsonl` (the script prints the path), outside the source tree;
+`OUT=<file>` writes elsewhere.
+
 **Measured on a Mac Studio M5 Ultra (256 GB), Qwen3.8-Flash-Next oQ4e + MTP, inferd 0.4.0 engine, 5 November 2026,**
 wall power from a smart plug at the socket (the whole machine; idle 13–15 W), 2 rounds each:
 

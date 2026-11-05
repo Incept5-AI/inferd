@@ -47,17 +47,25 @@ Start with these:
   a GPU without neural accelerators and routes around the MLX kernels that are wrong there (see docs/MACHINES.md).
   Tested on Mac Studio M5 Ultra, MacBook Pro M5 Max, Mac mini M5 Pro (64 GB) and Mac
   mini M6 (32 GB). The 27B at 4-bit needs about 15 GB of weights plus KV, so 32 GB is the practical minimum.
-- **macOS 27** (macOS 26 works when built from source: an external tester's M4 Max; the prebuilt binaries are macOS 27 only).
-- **Xcode 27 with the Metal toolchain**, to build. Check with `xcrun -f metal`. If the toolchain is missing, recent
-  Xcodes install it with `xcodebuild -downloadComponent MetalToolchain`. Some machines can't get it: Apple's catalog
-  has no toolchain for the Mac mini M5 Pro's macOS build. Build on another Mac and copy `build/` over (see
-  Workflow).
+- **macOS 27 or 26.** Each prebuilt file is for one macOS major. macOS 26 is checked on one Mac so far (an external
+  tester's 128 GB Mac on macOS 26.6: the source build and the macOS 26 prebuilt both passed the full release gate;
+  docs/MACHINES.md).
+- **Xcode with the Metal toolchain**, to build: the Command Line Tools alone have no Metal compiler. Check with
+  `xcrun metal --version`. If that says `unable to find utility "metal"`, the Command Line Tools are probably the
+  active developer directory (`xcode-select -p`); `./build.sh` then uses `/Applications/Xcode.app` by itself, and
+  `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer` makes it permanent (`xcodebuild` refuses to run
+  until Xcode is selected, or prefix one command with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`). If
+  Xcode's toolchain itself is missing, install it with `xcodebuild -downloadComponent MetalToolchain`. Some machines
+  can't get it: Apple's catalog has no toolchain for the Mac mini M5 Pro's macOS build. Build on another Mac and copy
+  `build/` over (see Workflow).
 - **Python 3.12** for the front end and the reference tools:
 
   ```bash
   python3.12 -m venv ~/.venvs/inferd
   ~/.venvs/inferd/bin/pip install -r engine/requirements.txt   # fastapi uvicorn transformers mlx mlx-vlm mlx-lm pillow numpy
   ```
+
+  (`engine/install.sh` does this, and also handles a venv made by uv, which has no pip.)
 
   The benchmark harnesses in `bench/` use only the standard library.
 

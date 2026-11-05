@@ -15,6 +15,8 @@ in the study log (summarised in [EXPERIMENTS.md](EXPERIMENTS.md)).
 | Mac Studio M3 Ultra (**lightly tested**) | 80-core, no neural accelerators | 512 GB | 464 GiB | not measured (decode step 27 ms) | Portability and non-NAX tuning (1 Nov 2026) |
 | Mac mini M4 Pro (**lightly tested**) | 20-core, no neural accelerators | 64 GB | 51.8 GiB | ~225 GB/s effective in plain decode (15 GB at 15 tok/s) | Portability check (1 Nov 2026) |
 | MacBook Pro M4 Max (**lightly tested**, external tester) | 40-core, no neural accelerators | 64 GB | not logged | not measured (decode step 34 ms) | First source build on an M4 Max with macOS 27 (2d2a108, 4 Nov 2026) |
+| MacBook Pro M3 Max (**lightly tested**, external tester) | 30-core, no neural accelerators | 36 GB | not logged | not measured | v0.4.0 self-tests 15/15 on macOS 27.2, Xcode 27.2 (5 Nov 2026; RESULTS.md (ab)) |
+| A 128 GB Mac on **macOS 26.6** (**lightly tested**, external tester; chip not reported) | not reported | 128 GB | not logged | not measured (decode step 34 ms) | First macOS 26 run: source build and the v0.4.0 macOS 26 prebuilt, full release gate (5 Nov 2026) |
 
 Sources: Studio bandwidth and working set, [results/micro-2026-10-29-r2.txt](../results/micro-2026-10-29-r2.txt); mini
 core counts, memory and effective decode bandwidth (one 16 GB weight pass per plain decode step: M6 100 ms, M5 Pro
@@ -216,6 +218,9 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
   margin from the KV pool (29.7 → 28.8 GiB auto). Release gate passed with it on (logits at chunks 1/24/256/1536, cos
   >= 0.9995 on seqs 1-3, KL <= 0.0024). Not measured on M1-M3 or the M4 Max (a 40-core GPU leaves the Neural Engine
   a smaller share; try `ANE_UNITS` 14-26 there). Tables: [RESULTS.md (v)](RESULTS.md).
+- **Long prompts are still slow on the M3 family.** The Neural Engine split's default covers M4 / M4 Pro only; on M3 it
+  is off and untested. An external M3 Max (30-core GPU, 36 GB, 0.4.0) took 50.4 s to the first word of one ~8k-token
+  prompt (RESULTS.md (ab)). Try `ANE_UNITS` (e.g. 14-26) there and check the release gate with it on.
 - **External M4 Pro MacBook Pro (48 GB), 9dd55ad, 4 Nov:** 16 agents x 4k follow-ups with the drafter 69.0 tok/s total
   (0ef3457: 35.3; no drafter 63.2), verify step at block 4 732 ms (was 1,331), median first token 14 s (was 64; no drafter
   6.8). Drafter memory 6.0 -> 2.9 GiB (8-bit rings). Open: drafter-on totals at 1 / 4 / 8 agents 19.5 / 46.9 / 57.3 vs
@@ -254,3 +259,24 @@ to v0.2.0). Model `mlx-community/Qwen3.8-27B-4bit` revision 10c35caa, drafter `i
 
   The `agent-followups` timings from that run are invalid (the Mac slept during it); its 24/24 answers were correct.
 
+## A 128 GB Mac on macOS 26.6: release gate, source build and prebuilt (5 November 2026)
+
+**Status: lightly tested, by an external tester.** The first run of inferd on macOS 26 (26.6). The Mac has 128 GB; the
+chip was not reported, so it is not named here. Both the source build of v0.4.0 and the v0.4.0 macOS 26 prebuilt
+(`inferd-0.4.0-macos26-arm64.tar.gz`, built on macOS 26.6 with Xcode 26.5) passed the full release gate
+(`tools/release_gate.sh` with the drafter):
+
+- host, front-end and sampler tests all ok;
+- logits vs mlx_lm on 4 x 2,048 tokens at chunks 1, 24, 256 and 1,536: top-1 ok, cos >= 0.9972;
+- speculative = plain: passed (one exact tie);
+- `decode_test bench`, 2,048 context, B = 1 / 16 / 64: 34.0 / 101.1 / 323.8 ms per step (source build) and
+  34.1 / 101.1 / 324.0 ms (prebuilt).
+
+Setup as a new user would do it: `./build.sh` took 43 s (after selecting Xcode: with the Command Line Tools as the active
+developer directory it stopped at the first `xcrun metal`, which `build.sh` now handles itself); `install.sh` into a
+fresh venv took 28 s and found both models in `~/models`; `run.sh start --model 27b` sized itself for 128 GB (16 agents,
+24 GiB KV, 147k max context, 96 GiB SSD tier) and answered a `curl` request. The setup problems this run found, and their
+fixes, are in engine/README.md "Changes" (Unreleased).
+
+(An earlier note in these docs said an M4 Max had run a source build on macOS 26. That M4 Max ran macOS 27.0, build
+26A428, as its report and the section above say; this 128 GB Mac is the first macOS 26 machine.)

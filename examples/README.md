@@ -20,7 +20,7 @@ README that holds the output of a real run.
 | [tools-web-search](tools-web-search/) | an OpenAI-style tool loop with a keyless Wikipedia `web_search` tool, 8k context, effort low | exit code | ~9 s |
 | [tools-shell](tools-shell/) | a `shell` tool restricted to read-only allow-listed commands in a sandbox, 4k context, effort none | exit code | ~8 s |
 | [structured-output](structured-output/) | OpenAI `response_format` (`json_object`, `json_schema`): validated JSON in `content`, retries with the validation error, HTTP 422 when the model cannot comply | exit code | ~11 s |
-| [coding-smoke](coding-smoke/) | languages-benchmark v1, Python + TypeScript (16 tests, 8 concurrent), effort none and medium | score (15.5-16/16) | 1-3 min each |
+| [coding-smoke](coding-smoke/) | languages-benchmark v1, Python + TypeScript (16 tests, 8 concurrent), effort none and medium | score: effort none 14.5-16/16, medium 15.5-16/16 (single runs vary by about a point) | 1-3 min each |
 | [ocr-agents](ocr-agents/) | four vision agents extracting JSON from synthetic scans; how to size `max_context` per image; effort none vs low vs medium | fields correct (21/21) | ~10 s; `--compare 3` ~2 min |
 | [agent-contexts](agent-contexts/) | the agent-context API: save a context once, fork agents from it, offload it and a parked agent to SSD and resume, one-off agents with `cache: drop` | exit code | ~50 s |
 | [agent-handoff](agent-handoff/) | a lead agent's whole conversation saved as a context and handed to agents with other settings (effort, `max_context`, priority, `cache: drop`); they start in under a second instead of re-reading; then DELETE and verify the cache let go | **PASS/FAIL** (19 checks) | ~1.5 min |
@@ -86,7 +86,8 @@ All scripts default to `http://127.0.0.1:8300/v1`; set `INFERD_URL` to point els
 ## Run them all: `run_all.sh`
 
 ```bash
-./run_all.sh my-mac                                  # server on http://127.0.0.1:8300/v1
+./run_all.sh my-mac                                  # server on http://127.0.0.1:8300/v1; results in results/my-mac/
+./run_all.sh                                         # the same, named after this Mac's short host name
 ./run_all.sh my-mac http://127.0.0.1:18300/v1        # e.g. through an ssh tunnel to another Mac
 ONLY=agent-team,agent-handoff ./run_all.sh my-mac    # re-run some; the summary keeps the others' latest results
 ```
@@ -130,6 +131,8 @@ number is a single run.
 - **Correctness**, the part that matters for a self-test: OCR 21/21 fields in every round on every machine; agent-swarm
   and agent-followups 24/24 answers with the catalogue's fact; agent-handoff 19/19 checks; coding-smoke 15.5 or 16 of
   16 (one TypeScript or Python test passing only after feedback costs half a point, and which one moves between runs).
+  Single runs vary by about a point: an external M3 Max run of 0.4.0 scored 14.5/16 with effort none (http_client 0.50,
+  file_tree_analysis 0.75) and 15.5/16 with effort medium.
 - **agent-team** printed `SKIP` for its comparison on all three standard servers (no pressure reached the team; what
   the plain run lost, 2-10 states per machine, the SSD tier restored). Its run against a deliberately small
   server (`run.sh 8300 8 1024 1 8 32768`, no SSD tier) is the one that shows the API: workers resumed in 1.2 s (M5 Pro),
