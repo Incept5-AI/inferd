@@ -21,7 +21,7 @@ Up and running in four steps (click a step to open it). You need a Mac with Appl
 its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
 **[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-<details><summary><b>1. Download and check</b>: the macOS 27 file from the v0.3.0 release (macOS 26: build it)</summary>
+<details><summary><b>1. Download and check</b>: the file for your macOS (27, or 26 beta) from the v0.3.0 release</summary>
 
 Download [inferd-0.3.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz)
 and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz.sha256)
@@ -32,8 +32,11 @@ cd ~/Downloads && shasum -a 256 -c inferd-0.3.0-macos27-arm64.tar.gz.sha256   # 
 tar xzf inferd-0.3.0-macos27-arm64.tar.gz && cd inferd-0.3.0
 ```
 
-On **macOS 26**, build it instead (needs Xcode with its Metal compiler: `xcodebuild -downloadComponent MetalToolchain`,
-once), then carry on from step 2 in `engine/`:
+On **macOS 26**, use [inferd-0.3.0-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos26-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos26-arm64.tar.gz.sha256)
+the same way (**beta**: built natively on macOS 26.6 with Xcode 26.5, not yet run on a macOS 26 Mac's GPU; run the release
+gate once, below). Or build it yourself (needs Xcode with its Metal compiler: `xcodebuild -downloadComponent
+MetalToolchain`, once), then carry on from step 2 in `engine/`:
 
 ```bash
 git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.3.0 && cd engine
@@ -109,9 +112,8 @@ print(reply.choices[0].message.content)
 - Optional check of the build on your Mac, a few minutes with no other model running:
   `PY=~/.venvs/inferd/bin/python tools/release_gate.sh ~/models/Qwen3.8-27B-4bit ~/models/Qwen3.8-27B-DFlash2`.
 - **macOS versions.** The macOS 27 file is tested on Mac Studio M5 Ultra, Mac mini M6, M5 Pro and M4 Pro, and MacBook Pro
-  M5 Max, M4 Max and M3 Max; it refuses to start on macOS 26 (`install.sh` and `run.sh` check). On macOS 26 the
-  kernels must be built on the Mac itself (a source build passed every check on an M4 Max with macOS 26); 0.2.0 has a
-  beta macOS 26 file. Never run a build made for macOS 26 on macOS 27: its kernels compute wrong logits there at
+  M5 Max, M4 Max and M3 Max; it refuses to start on macOS 26 (`install.sh` and `run.sh` check). The macOS 26 file
+  (beta) was built on macOS 26 itself; a source build passed every check on an M4 Max with macOS 26. Never run a build made for macOS 26 on macOS 27: its kernels compute wrong logits there at
   prefill chunks of 256+ rows.
 - Release 0.2.0's files hold only `build/`: unpack one into `engine/` of a `v0.2.0` checkout instead.
 
