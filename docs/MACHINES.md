@@ -206,7 +206,9 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
   (0ef3457: 35.3; no drafter 63.2), verify step at block 4 732 ms (was 1,331), median first token 14 s (was 64; no drafter
   6.8). Drafter memory 6.0 -> 2.9 GiB (8-bit rings). Open: drafter-on totals at 1 / 4 / 8 agents 19.5 / 46.9 / 57.3 vs
   25.2 / 54.0 / 67.3 on the older build, with single-stream speed, step times and acceptance (3.62 vs 3.76) unchanged:
-  being repeated before it counts as a regression. Top-1 matched at every batch size to 1,536 rows; 2 of 64 prompts just
+  repeated on a Mac mini M4 Pro (64 GB), 3 alternating trials each, 27B + DFlash2, 4k follow-ups x 1/4/8/16: v0.2.0
+  23.7–25.0 / 50.7–53.4 / 60.7–60.9 / 62.4–64.4 vs the 0.3.0 engine 23.0–23.2 / 50.5–52.2 / 60.1–61.1 / 62.9–64.4 tok/s:
+  level, so not a regression between those releases (the tester's older build is not in this repo). Top-1 matched at every batch size to 1,536 rows; 2 of 64 prompts just
   under cos 0.999 (the 0.995 gate passes).
 - **Not tested on the M4:** 32k and longer contexts under load, the SSD tier,
   vision, long uptime, other models, Flash-Next, 8-bit and bf16 checkpoints, the base M4. (An M4 Max has since run
