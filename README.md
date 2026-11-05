@@ -149,7 +149,7 @@ every table and the raw file behind each number: [docs/RESULTS.md](docs/RESULTS.
 |---|---|---:|---:|
 | M6, 32 GB | 27B agent fleet on 8k, turns per minute (back to back) | **13.3–13.5** | Splash 1.5: 8.8–8.9; TensorFold 1.2.2 cannot load the 27B on 32 GB |
 | M6, 32 GB | 9B, 16 agents on 16k, total tok/s | **164** (8-bit 117) | TensorFold 1.2.2: 23 (8-bit 8.7) |
-| M6, 32 GB | 27B, 8 / 16 agents on 16k, total tok/s (4-bit KV, `KV4=1`) | **95** / 85 | Splash 1.5: 86 / 89 |
+| M6, 32 GB | 27B, 8 / 16 agents on 16k, total tok/s (4-bit KV, `KV4=1`; main, 5 Nov) | **95** / 85 | Splash 1.5: 86 / 89 |
 | M5 Pro, 64 GB | 27B agent fleet, 16k / 32k, turns per minute (back to back) | **18.2–19.0 / 14.4–15.7** | Splash 1.5: 11.4–12.0 / 10.2–10.4 |
 | M5 Pro, 64 GB | 35B agent fleet, turns per minute (back to back) | **81–93** | Splash 1.5: 78–79 |
 | M5 Pro, 64 GB | 9B agent fleet, 32 agents, turns per minute (4-bit / 8-bit) | **57.4 / 46.9** | TensorFold 1.2.2: 7.7 / 3.0 |
@@ -187,7 +187,7 @@ one cold prompt sooner on the M5 Pro and M6. On M1–M4 GPUs leave the drafter o
 | 16 agents arriving at random, 2k–16k prompts: all done | **78.7 s** | TensorFold 1.2.2: 116.8 s |
 
 Where others lead on the Studio: one agent on its own (Splash, TensorFold and mlx-serve decode a single stream faster),
-and Flash-Next with 1–5 agents starting together (TensorFold 1.2.2 finishes sooner; with 16 arriving at random the two are
+and Flash-Next with 1–4 agents starting together (TensorFold 1.2.2 finishes sooner; level at 5, 105.9 vs 104.6 s; with 16 arriving at random the two are
 level on total time and TensorFold's p95 first token is lower, 9.2 vs 13.7 s). The MacBook Pro M3 Max (external tester):
 16 agents at 32k, the last agent's first token 28.4 s vs Splash 1.5's 113–115 s.
 

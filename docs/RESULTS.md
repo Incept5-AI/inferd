@@ -1409,6 +1409,57 @@ speculation at 8 sequences diverges from plain decode at MoE near-ties on main a
 27B `decode_test check` byte-identical to main at chunks 1 / 24 / 256 / 1,536; host tests pass; 27B follow-ups 4k at
 1 / 8 agents 51-57 / 157-158 (main) vs 50-51 / 162-174 tok/s.
 
+## (z) Current main on the Mac mini M6, the M4 Pro and the Mac Studio (5 November)
+
+Builds: main 853842d–876d73d (the v0.4.0 engine for these paths; the 35B fleet change 5e666a0 came later and is not in the
+M6 35B rows). Same weights and drafter for every engine; 0 errors in every cell unless stated.
+
+**Mac mini M6, 32 GB, Qwen3.8-27B 4-bit + DFlash2** (jobs 350, 380):
+
+| measure | inferd main | for reference |
+|---|---|---|
+| agent fleet on 8k (64-agent pool, 2 rounds), turns/min at 8 / 16 / 32 in flight | 13.97 / 13.81 / 13.38; back to back with Splash: 13.27 / 13.45 / 13.27 | Splash 1.5 (same session): 8.88 / 8.77 / 8.80; 0.2.0: 9.7 (GPU) |
+| follow-ups 16k, 1 / 4 / 8 / 16 agents, tok/s, 8-bit KV | 26.5 / 70.8 / 63.0 / 64.1 | the 32 GB KV pool holds about four 16k contexts |
+| the same with `KV4=1` | 33.9 / 72.9 / **95.1** / 85.1 (slowest first token at 16: 64.7 s) | Splash 1.5 (4 Nov, (o)): 32.6 / 69.6 / 86.4 / 88.6; KV4 on 1138540 (4 Nov): 92.6 / 88.2 at 8 / 16 |
+| one agent cold, first token at 4k / 16k | 9.0–9.6 s / 39.2–39.5 s | |
+| agent scenarios: 8 agents launched from a saved context / relaunched / resumed | 2.34 s / 1.72 s / 0.42 s | cold: 47.8 s |
+
+**Mac mini M6, Qwen3.5-9B** (job 351, no drafter): follow-ups 16k x 1 / 4 / 8 / 16 agents 28.4 / 68.0 / 113.3 / **164.5**
+tok/s (8-bit: 16.8 / 41.6 / 73.4 / 117.1); 8k fleets 31.4–33.0 turns/min (8-bit 23.3–25.7). 0.2.0 at 16 x 16k: 159.7
+(8-bit 115.1); TensorFold 1.2.2: 22.8 (8.7).
+
+**Mac mini M6, Qwen3.6-35B-A3B + DFlash2** (jobs 370, 371; before 5e666a0), follow-ups 16k at 4 / 8 / 16 agents: 24
+snapshots 95.7 / 103.2 / 104.8 (re-reads contexts: on 32 GB snapshots come out of the KV pool); 8 snapshots 129.5 / 162.3 /
+157.4; 8 snapshots + `KV4=1` 120.5 / 156.8 / 182.1 (slowest first token 3.4 s at 16). 4k x 16: 233.5. Fleet (KV4):
+38.1–44.1 turns/min. Splash 1.5 on this box (job 001-moe-m6): 16k 209.8 / 206.2 / 208.9, fleet 43.5–44.0.
+
+**Mac mini M4 Pro, 64 GB** (jobs 270, 330, 360; the Neural Engine split on by default): Qwen3.8-27B agent fleets 8.5–8.9
+(8k) and 5.8–6.0 (16k) turns/min; follow-ups 4k x 1 / 4 / 8 / 16 24.8 / 51.8 / 60.3 / 65.1 tok/s. Qwen3.6-35B-A3B, 4k
+follow-ups at 1 / 4 / 8 / 16 agents: with the drafter 107.1 / 83.1 / 96.2 / 133.3, without 85.8 / 152.1 / 152.4 / 211.4
+tok/s (so `--draft none` from 4 agents on M1–M4); 16k: 81.1 / 84.8 / 92.7 / 114.4 vs 73.1 / 99.1 / 120.6 / 141.4.
+
+**Mac Studio M5 Ultra, Qwen3.8-27B + DFlash2, follow-ups on main fea8080** (sw030, 2 trials; `run.sh 8332 64 2048 140 96
+262144`), total tok/s (slowest first token):
+
+| agents | 16k | 64k |
+|---|---|---|
+| 1 | 149.5 / 155.4 (0.12 s) | 140.1 / 126.9 (0.16–0.17 s) |
+| 4 | 384.2 / 386.9 | 327.8 / 287.3 (0.48–0.52 s) |
+| 8 | 514.5 / 500.2 | 369.2 / 372.6 (0.79–0.89 s) |
+| 16 | 592.6 / 596.3 | 404.1 / 415.0 (1.53–1.61 s) |
+| 32 | 730.6 / 722.3 (1.69–1.72 s) | 504.6 / 482.2 (**3.32–3.41 s**) |
+
+Splash 1.5 (30 Oct, (b1)): the last of 32 agents at 64k waited 48.9 s. The 16k column agrees with the v0.3.0 3-trial
+means (149.8 / 391.4 / 496.1 / 593.1 / 722.4; 48 / 64 agents 724.0 / 848.7, results/st030).
+
+**Mac Studio, the 35B fleet change on the 27B** (abe67: fea8080 vs e67f642, 2 trials, 16k follow-ups, 1 / 8 / 32 agents):
+152.1–159.0 / 490.6–493.6 / 721.6–723.4 vs 155.7–198.4 / 446.9–500.0 / 732.0 tok/s: level (the 27B's drafter now uses the
+simdgroup-matrix attention too).
+
+**Mac Studio, Qwen3.8-Flash-Next with 128 snapshots** (fnsnap, main fea8080, `run.sh 8333 64 2048 64 128 65536`, MTP=1, 2
+trials), 16k follow-ups at 32 / 48 / 64 agents: 991.6–1,012.0 / 1,190.7–1,213.1 / **1,289.2–1,322.6** tok/s, slowest first
+token 0.96–0.98 / 1.41–1.49 / 1.69–1.98 s. With 32 snapshots (v0.3.0, fn030) 64 agents had collapsed to 209–287 tok/s.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
