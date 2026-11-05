@@ -1298,6 +1298,47 @@ tok/s total.
 Not measured: M1-M3, the base M4, the M4 Max (twice the GPU, so a smaller share for the Neural Engine; try
 `ANE_UNITS` 14-26). Splash 1.5 on an M3 Max read 32k at 242 tok/s (section (l)); it also splits the FFN.
 
+## (w) Mac mini M5 Pro pairings on current main, 5 November
+
+Mac mini M5 Pro 64 GB, main fea8080 (the v0.3.0 engine plus the vLLM API work and the 35B template fix), each pairing run
+back to back on the same box with Splash 1.5; same weights and drafter; 0 errors in every cell.
+
+**Main vs the 0.3.0 engine (c5b1e48), Qwen3.8-27B + DFlash2, follow-ups, 2 trials alternating:** level in every cell
+(e.g. 16k x 16: 162.5–164.1 vs 165.3–167.6 tok/s). The vLLM API paths cost nothing for requests that do not use them.
+
+**Qwen3.8-27B agent fleets (64-agent pool, 2 rounds), completed turns per minute:**
+
+| contexts | engine | 8 in flight | 16 | 32 |
+|---|---|---:|---:|---:|
+| 16k | inferd main | **19.0** | **18.2** | **18.9** |
+| 16k | Splash 1.5 | 11.4 | 12.0 | 12.0 |
+| 32k | inferd main | **15.1** | **15.7** | **14.4** |
+| 32k | Splash 1.5 | 10.2 | 10.4 | 10.4 |
+
+**Qwen3.8-27B on 32k contexts, follow-ups, total tok/s (slowest first token at 16):** inferd 8-bit KV 48.5 / 109.2 /
+126.8 / 142.1 (7.5 s), KV4=1 63.9 / 126.5 / 141.6 / 153.4 (5.8 s); Splash 1.5 (job 180, same box class) 48.1 / 135.4 /
+134.0 / 146.2 (44.3 s), at 1 / 4 / 8 / 16 agents.
+
+**Qwen3.8-27B 8-bit + DFlash2, follow-ups on 16k contexts at 1 / 4 / 8 / 16 agents, total tok/s (slowest first token
+at 16):** inferd 46.0 / 98.5 / 119.8 / **157.4** (6.4 s); Splash 1.5 44.0 / **124.2** / **130.1** / 125.0 (49.2 s). One agent
+cold at 16k: Splash's first token 28.1–28.9 s, inferd's 40.9–41.8 s.
+
+**Qwen3.6-35B-A3B (mlx-community group 64) + DFlash2, follow-ups at 1 / 4 / 8 / 16 / 32 agents, total tok/s (slowest
+first token at 32):**
+
+| contexts | inferd main | Splash 1.5 |
+|---|---|---|
+| 4k | 129 / 219 / 295 / 353 / **414** (2.4 s) | 162 / **363** / **359** / 348 / 361 (40.8 s) |
+| 16k | 114 / 202 / 262 / 297 / **333** (4.3 s) | **237** / **315** / **306** / 299 / 299 (49.1 s) |
+
+35B fleet (8k, 64-agent pool): inferd 63.5–69.1 turns/min with 32 running, Splash 75.1–76.9. Qwen's official group-128
+build on main: 16k x 16 / 32 292.7 / 335.8 tok/s, the same as group 64; agents launched from a saved context 0.72 s,
+relaunched after unrelated load 0.33 s, resumed 0.14 s (agent scenarios, 8 agents).
+
+Reading: inferd leads every 27B fleet cell by 41–60% and every cell with 16+ agents taking turns, and keeps the slowest
+agent's first token within seconds where Splash's reaches 40–60 s. Splash leads with 4–8 agents taking turns, one agent's
+cold prefill on the M5 Pro, and the 35B fleet.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
