@@ -1335,8 +1335,9 @@ first token at 32):**
 build on main: 16k x 16 / 32 292.7 / 335.8 tok/s, the same as group 64; agents launched from a saved context 0.72 s,
 relaunched after unrelated load 0.33 s, resumed 0.14 s (agent scenarios, 8 agents).
 
-Reading: inferd leads every 27B fleet cell by 41–60% and every cell with 16+ agents taking turns, and keeps the slowest
-agent's first token within seconds where Splash's reaches 40–60 s. Splash leads with 4–8 agents taking turns, one agent's
+Reading: inferd leads every 27B fleet cell by 41–60%. With 16 agents taking turns it leads or is level (27B 32k with
+8-bit KV: 142 vs 146, level; with KV4 153; 35B at 16k: 297 vs 299, level), leads at 32, and keeps the slowest agent's
+first token within seconds where Splash's reaches 40–60 s. Splash leads with 4–8 agents taking turns, one agent's
 cold prefill on the M5 Pro, and the 35B fleet.
 
 ## Engine-level measurements
