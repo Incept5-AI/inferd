@@ -122,7 +122,7 @@ print(reply.choices[0].message.content)
 
 ## Where it stands (5 November 2026, release 0.4.0)
 
-**64 agents at once on one Mac Studio: 849 tok/s on Qwen3.8-27B, 1,289–1,323 tok/s on Qwen3.8-Flash-Next**, every agent
+**64 agents at once on one Mac Studio: 849 tok/s on Qwen3.8-27B, 1,331–1,346 tok/s on Qwen3.8-Flash-Next**, every agent
 on its own 16k context; the slowest agent's first token comes within 2 s on Flash-Next and 3.7 s on the 27B. And on a Mac mini, a fleet of agents doing real
 work keeps going at 13–19 completed turns a minute on a 27-billion-parameter model.
 
@@ -168,7 +168,7 @@ one cold prompt sooner on the M5 Pro and M6. On M1–M4 GPUs leave the drafter o
 | What it does | inferd |
 |---|---:|
 | Qwen3.8-27B, 64 agents taking turns on 16k contexts, total tok/s, slowest first token (32 agents: 722 tok/s) | **849**, 3.4–3.7 s |
-| Qwen3.8-Flash-Next, 64 agents on 16k contexts, total tok/s, slowest first token | **1,289–1,323**, 1.7–2.0 s |
+| Qwen3.8-Flash-Next, 64 agents on 16k contexts, total tok/s, slowest first token (v0.4.0, 3 trials) | **1,331–1,346**, 1.8–1.9 s |
 | Qwen3.6-35B-A3B (MoE), 32 agents on 16k contexts, total tok/s, slowest first token | **1,079**, 1.7 s |
 | Qwen3.8-27B agent fleet, 64 in flight, completed turns per minute | **95.3** |
 | 32 agents on 64k contexts: the last agent's first token | **3.3–3.4 s** |

@@ -1460,6 +1460,11 @@ simdgroup-matrix attention too).
 trials), 16k follow-ups at 32 / 48 / 64 agents: 991.6–1,012.0 / 1,190.7–1,213.1 / **1,289.2–1,322.6** tok/s, slowest first
 token 0.96–0.98 / 1.41–1.49 / 1.69–1.98 s. With 32 snapshots (v0.3.0, fn030) 64 agents had collapsed to 209–287 tok/s.
 
+**Release v0.4.0 (eb32329) on the Mac Studio, Flash-Next** (fn040, `run.sh 8334 64 2048 64 128 65536`, MTP=1, 16k
+follow-ups, 3 trials with a fresh server each, 0 errors), total tok/s at 1 / 4 / 8 / 16 / 32 / 48 / 64 agents (means):
+160.2 / 339.2 / 532.0 / 791.2 / 1,061.5 / 1,214.2 / **1,339.6**; at 64 the trials gave 1,331.4 / 1,341.8 / 1,345.7 with
+the slowest first token at 1.75–1.94 s; at 48, 1,203.7 / 1,205.2 / 1,233.8. Raw: results/fn040/conc.jsonl.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
