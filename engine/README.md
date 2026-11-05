@@ -151,9 +151,10 @@ KV instead of 5.2; without it, 16 agents' worst time to first token is lower (13
 resident. It costs ~2.8 GiB there (weights 1.1, context rings 42 MiB per state slot, scratch and verify tapes ~0.8), so
 on 32 GB keep `snapshots` small and `step tokens` at 1024. On GPUs without neural accelerators (M3/M4) a verify row
 costs ~3× a decode row; up to 0.2.0 the drafter lost at 16 agents there (M4 Pro 4k: 65 vs 73 tok/s). Since 9dd55ad (8-bit
-context rings, verify scratch sized for the real rows) it wins: an external M4 Pro 48 GB measured 69.0 vs 63.2 tok/s at 16
-agents x 4k (verify step at block 4: 732 vs 1,331 ms before), with a slower median first token (14 s vs 6.8 s without it).
-Leave it on unless first-token latency matters more than throughput.
+context rings, verify scratch sized for the real rows) it no longer loses: on an external M4 Pro 48 GB (98a2b19, 2 trials
+each, 4k follow-ups) the drafter wins 1.3-1.7x at 1-8 agents, and at 16 agents on and off are level (74.2 / 67.6 vs
+63.6 / 68.1 tok/s; one 9dd55ad trial had read 69.0 vs 63.2 as a win), with about twice the median first token (12-13 s
+vs 6.6-7.1 s). Leave it on for fewer than 16 agents; at 16+ choose by whether throughput or first-token latency matters.
 
 Snapshots (`run.sh`'s fifth argument): about 2 × the agent count. With thinking off, a turn is snapshotted while it
 decodes (when a step ends on a block boundary, at most every 64 tokens, and at its end when that falls on one), so an

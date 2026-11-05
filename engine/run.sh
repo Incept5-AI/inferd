@@ -36,8 +36,8 @@
 # MLX vision tower; without it, image work on a full 32-64 GB machine can hit a GPU out-of-memory step failure.
 # Small machines: kv_gib 0 sizes the pool from what is left. 32 GB (M6): `run.sh 8300 16 1024 0 8 32768` with DRAFT
 # set and SPILL_DIR on (the drafter wins there: 1 stream 39 vs 9.5 tok/s, 16 agents x 8k 89 vs 64; README "Sizing").
-# M3/M4 (no neural accelerators): since 9dd55ad the drafter also wins total throughput at 16 agents (M4 Pro 4k: 69 vs
-# 63 tok/s); leaving DRAFT unset still gives a faster first token there (median 6.8 vs 14 s).
+# M3/M4 (no neural accelerators): keep the drafter on for 1-8 agents (1.3-1.7x); at 16 agents on and off are level in
+# total throughput (M4 Pro 4k, 2 trials each: 74 / 68 vs 64 / 68 tok/s), and DRAFT unset halves the first-token wait.
 # A start first stops what this script started on the same port (as `run.sh stop`); it never kills by command-line
 # pattern, and refuses if a process it does not recognise holds the port.
 emulate -L zsh

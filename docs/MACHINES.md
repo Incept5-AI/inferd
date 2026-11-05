@@ -222,6 +222,14 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
 - **Long prompts are still slow on the M3 family.** The Neural Engine split's default covers M4 / M4 Pro only; on M3 it
   is off and untested. An external M3 Max (30-core GPU, 36 GB, 0.4.0) took 50.4 s to the first word of one ~8k-token
   prompt (RESULTS.md (ab)). Try `ANE_UNITS` (e.g. 14-26) there and check the release gate with it on.
+- **External M4 Pro MacBook Pro (48 GB), 98a2b19 (the 0.4.0 engine + docs), 5 Nov, 2 trials each:** prefill 1.5-1.9x
+  faster at 4k / 16k with the Neural Engine split on by default (speed.py first token 22.7 vs 35.3 s at 4k, 92.7 vs 157 s
+  at 16k; decode unchanged). 4k follow-ups, drafter on vs off, total decode tok/s at 1 / 4 / 8 / 16 agents: 23.9-22.8 /
+  52.2-49.0 / 63.8-66.0 / 74.2-67.6 vs 15.5-14.1 / 38.8-36.0 / 40.2-38.1 / 63.6-68.1: the drafter wins 1.3-1.7x to 8
+  agents and is level at 16 (correcting the single-trial "69 vs 63" below); off halves the first token at 16 (6.6-7.1 vs
+  11.9-13.1 s). The 1-8 agent shortfall reported against 0ef3457 is 2-10% here, within this build's 9% trial spread.
+  Step times (drafter on): 1 seq block 16 230 ms, 4 seqs block 4 235, 16 seqs block 4 673 (9dd55ad: 252 / 256 / 732);
+  acceptance 3.72 tokens per cycle. Correctness: top-1 matched mlx_lm at chunks 1 / 24 / 256 / 1,536.
 - **External M4 Pro MacBook Pro (48 GB), 9dd55ad, 4 Nov:** 16 agents x 4k follow-ups with the drafter 69.0 tok/s total
   (0ef3457: 35.3; no drafter 63.2), verify step at block 4 732 ms (was 1,331), median first token 14 s (was 64; no drafter
   6.8). Drafter memory 6.0 -> 2.9 GiB (8-bit rings). Open: drafter-on totals at 1 / 4 / 8 agents 19.5 / 46.9 / 57.3 vs
