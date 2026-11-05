@@ -142,6 +142,7 @@ Details: [docs/CONTEXTS.md](docs/CONTEXTS.md). Shipped vs experimental: [docs/FE
 | [docs/MACHINES.md](docs/MACHINES.md) | Mac Studio, Mac minis and MacBook Pro: what differs, what pays where, recommended settings |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the engine works: kernels, attention, KV, scheduler, prefix cache, SSD tier, speculative decoding, every env knob |
 | [docs/CONTEXTS.md](docs/CONTEXTS.md) | The agent-contexts API |
+| [docs/API-COMPAT.md](docs/API-COMPAT.md) | vLLM / OpenAI API compatibility: every endpoint and request field, and what inferd does with it |
 | [docs/FEATURES.md](docs/FEATURES.md) | What is shipped, what is opt-in, what is experimental |
 | [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md) | Everything we tried, kept or rejected, with numbers; what is ours and what is borrowed |
 | [docs/TESTING.md](docs/TESTING.md) | Correctness checks, smoke vs milestone benchmarks, how to report a result |

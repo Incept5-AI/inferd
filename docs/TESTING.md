@@ -86,8 +86,8 @@ On the minis, `agents.py` runs N:N fleets: M6 at 8 to 64 agents (8k and 16k), M5
 | Streaming SSE, `stream_options.include_usage`, `cached_tokens` | **Tested** | The harnesses read these fields. |
 | Client disconnect / cancel | **Untested** | `serve.py` sends `cancel` when a stream ends early, but nothing tests it. |
 | **Tool calling** through the OpenAI API | **Works** (1 Nov 2026) | `<tool_call>` output comes back as `message.tool_calls` / streaming `delta.tool_calls`, parallel calls included. Unit test `engine/frontend/test_tools.py`; live in `examples/tools-*`. |
-| **JSON mode / `response_format` / structured output** | **Unsupported** | `serve.py` ignores it. |
-| User `stop` sequences | **Unsupported** | `serve.py` stops only on the model's EOS/end-of-turn ids. |
+| **JSON mode / `response_format` / structured output** | **Light** | `response_format`, `guided_json` / `guided_choice` / `guided_regex` / `structured_outputs` ([API-COMPAT.md](API-COMPAT.md)); `test_structured.py`, `test_vllm_compat.py`. |
+| User `stop` sequences, `stop_token_ids`, vLLM request fields | **Light** | `test_tools.py`; `test_vllm_compat.py` (fixture mode in CI, `--url` against a live server: every vLLM endpoint and field, [API-COMPAT.md](API-COMPAT.md)). |
 | Neural Engine prefill split (`ANE_UNITS`) | **Light** (M6 only) | +12–23% on M6 fleets. +3% on the M5 Pro, so not used there. |
 | `ANE_A8D` (int8 down projection on the ANE) | **Broken** | Produces inf in layer 0 and all-zero output from layer 1 on. Off by default. |
 | `QMST=1` (staged-tile GEMM) | **Light** | A drafter bug was fixed but **not re-measured**. Off by default. |

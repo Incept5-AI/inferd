@@ -45,9 +45,16 @@ on a port first does the same stop. `./test_run.sh` checks stop / status / argum
 model needed); `./test_run_start.sh` checks the named start (options, memory-based sizing, `--dry-run`) and that the
 positional form, stop and status behave as before.
 
-`/v1/chat/completions` (streaming and not, `usage.prompt_tokens_details.cached_tokens`), `/v1/models`, `/health`
-(503 when the engine process has gone; engine errors come back as HTTP errors, or as an SSE `error` event once a
-stream has started).
+**API:** a drop-in for vLLM's OpenAI-compatible server ([docs/API-COMPAT.md](../docs/API-COMPAT.md): every vLLM endpoint
+and request field, and what inferd does with each). `/v1/chat/completions` and `/v1/completions` (streaming and not,
+`n` choices, `logprobs` / `top_logprobs`, penalties, `min_p`, `logit_bias`, `min_tokens`, `stop_token_ids`, tools with
+every `tool_choice`, `response_format` and vLLM's `guided_json` / `guided_choice` / `guided_regex` /
+`structured_outputs`, `usage.prompt_tokens_details.cached_tokens`), `/v1/models`, `/tokenize`, `/detokenize`,
+`/metrics` (Prometheus, `inferd:` names), `/version`, `/ping`, `/health` (503 when the engine process has gone; engine
+errors come back as HTTP errors, or as an SSE `error` event once a stream has started). Embeddings, scoring, audio and
+LoRA endpoints answer 501. Penalties, `min_p`, `logit_bias` and `min_tokens` decode one token per step on the host
+sampler (no speculation) for the requests that use them; `logprobs` stays speculative.
+`engine/frontend/test_vllm_compat.py --url http://127.0.0.1:8300` checks a running server against the whole list.
 
 **Per-agent policy** (optional request fields, top level or under `"inferd": {...}`):
 
