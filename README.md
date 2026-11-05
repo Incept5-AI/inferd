@@ -17,11 +17,13 @@ and getting started.
 
 ## Getting started
 
-Up and running in four steps. You need a Mac with Apple Silicon on macOS 27 or 26, and Python 3.12; Qwen3.8-27B with
+Up and running in four steps (click a step to open it). You need a Mac with Apple Silicon on macOS 27 or 26, and Python 3.12; Qwen3.8-27B with
 its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
 **[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-**1. Download and check** [inferd-0.3.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz)
+<details><summary><b>1. Download and check</b>: the macOS 27 file from the v0.3.0 release (macOS 26: build it)</summary>
+
+Download [inferd-0.3.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz)
 and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz.sha256)
 from the [v0.3.0 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.3.0). No Xcode needed.
 
@@ -38,20 +40,32 @@ git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.3
 ./build.sh                                   # under a minute
 ```
 
-**2. Install.** One command sets up the small Python front end and downloads Qwen3.8-27B with its draft model into
+</details>
+
+<details><summary><b>2. Install</b>: <code>./install.sh --model 27b</code></summary>
+
+One command sets up the small Python front end and downloads Qwen3.8-27B with its draft model into
 `~/models` (about 17 GB). Safe to run again.
 
 ```bash
 ./install.sh --model 27b
 ```
 
-**3. Start it.** The engine and its OpenAI-compatible server start on port 8300, sized for your Mac's memory.
+</details>
+
+<details><summary><b>3. Start it</b>: <code>./run.sh start --model 27b</code></summary>
+
+The engine and its OpenAI-compatible server start on port 8300, sized for your Mac's memory.
 
 ```bash
 ./run.sh start --model 27b
 ```
 
-**4. Talk to it** from anything that speaks the OpenAI API (agent frameworks connect by changing the base URL to
+</details>
+
+<details><summary><b>4. Talk to it</b>: any OpenAI client at <code>http://localhost:8300/v1</code></summary>
+
+Talk to it from anything that speaks the OpenAI API (agent frameworks connect by changing the base URL to
 `http://localhost:8300/v1`):
 
 ```bash
@@ -67,6 +81,8 @@ reply = client.chat.completions.create(
     messages=[{"role": "user", "content": "Hello"}])
 print(reply.choices[0].message.content)
 ```
+
+</details>
 
 <details><summary><b>More on these steps</b>: other models, options, checks, macOS versions</summary>
 
