@@ -1212,6 +1212,46 @@ Slowest first token at 32 agents: 2.19–2.35 s → 1.63–1.71 s. 0 errors in e
 27.0–29.3 / 72.9–73.7 / 98.5–100.0 vs 26.9 / 79.5 / 97.1; 16k x 1/4/8 25.2–25.3 / 67.2–68.7 / 64.9–66.1 vs
 25.6 / 65.9 / 64.4 tok/s. Level within run-to-run noise: QA8 speeds up prompt reading without costing decode.
 
+## (u) Qwen3.6-35B-A3B follow-ups at 16k: decode snapshots made agents re-prefill (5 November)
+
+**Symptom.** Mac Studio, 35B-A3B (mlx-community group 64) + DFlash2, `run.sh <port> 64 2048 140 96 262144`, follow-ups
+(`conc.py --mode followup`, 64-token answers, greedy): 16k x 32 agents served 269 tok/s with the slowest first token at
+52 s, and 20 of 32 agents reported **0 cached tokens** (the rest the full 16,352). With 32 snapshots instead of 96 the
+same happened at 16k x 16. The 27B on the same server shape served 16k x 32 at 711-727 tok/s.
+
+**Cause: the chat template, not the snapshot count.** With thinking off the front end asks the engine for decode
+snapshots (state saved while the answer is generated), on the premise that the next turn re-renders the answer token
+for token. Qwen3.8's template does (it keeps `<think>\n\n</think>\n\n` before an earlier answer). Qwen3.6's does not:
+it drops the empty think block from earlier turns, so a follow-up diverges right after `<|im_start|>assistant\n` and
+the only snapshot it can resume from is the one at the previous prompt's end. The decode snapshots sat deeper on the
+same unbranched chain, which makes that prompt-end snapshot look *redundant*, and redundant snapshots are evicted first
+when a slot is needed (`SNAP_REDUNDANT`). Under slot pressure every primed agent lost its one useful snapshot, kept a
+useless deeper one, and re-prefilled 16k tokens: hence all-or-nothing cached counts.
+
+**Fix (front end only).** At start-up the front end renders a probe conversation and compares it with the previous
+turn's prompt plus its answer; decode snapshots are requested only when the answer comes back unchanged
+(`INFERD_GEN_SNAP`, `auto`; `1` / `0` force). The 35B logs `decode snapshots off`; the 27B keeps them. The engine is
+unchanged.
+
+Studio, follow-ups, tok/s (slowest first token in s), same build, the knob the only difference:
+
+| ctx x agents | before (`INFERD_GEN_SNAP=1`, old behaviour) | **after (auto: off for the 35B)** | c5b1e48, 96 snapshots |
+|---|---:|---:|---:|
+| 4k x 1 / 8 / 16 / 32 | 342 / 741 / 1077 / 1344 | 264 / 757 / 1061 / **1348** | 262 / 785 / 1068 / 1318 |
+| 16k x 1 | 250 (0.07) | 255 (0.07) | 335 (0.07) |
+| 16k x 8 | 689 (0.37) | 704 (0.36) | 668 (0.38) |
+| 16k x 16 | 432 (11.5), 4 agents uncached | **886 (0.83)**, all cached | 587 (6.2) |
+| 16k x 32 | 245 (58.9), 20 agents uncached | **1079 (1.72)**, all cached | 269 (52.2) |
+
+At 16k x 32 every agent resumes from 16,320-16,352 cached tokens of 16,465: **4.0x the throughput**, and the
+slowest first token goes from 52-59 s to 1.7 s (Splash 1.5 on this model: 598 tok/s). One-agent cells are a single
+64-token answer and swing 250-340 tok/s between runs of either build.
+
+Gates: 27B `decode_test check` byte-identical to main at chunks 1/24/256/1536 (4 x 2,048 tokens); host tests pass
+(grammar 105/105, json 96/96, spill 39/39, weights 64/64); 27B 16k follow-ups 1/8/32 agents 154 / 497 / 728 vs main's
+147 / 485 / 718 tok/s, slowest first token at 32 1.69 vs 1.74 s; `frontend/test_gen_snap.py` checks the probe on both
+tokenizers.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

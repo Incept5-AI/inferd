@@ -114,6 +114,7 @@ an OpenAI-style error (`max_tokens: 0`, non-finite numbers, wrong types, a sessi
 | `INFERD_EVENT_TIMEOUT` | 1800 s (0: off) | a request with no engine event for this long is abandoned (HTTP 504 / SSE error) and cancelled |
 | `INFERD_IMAGE_DECODE` / `INFERD_IMAGE_DECODE_TIMEOUT` | `subprocess` / 10 s | images (PNG, JPEG, WebP, GIF only) decode in a child process killed at the deadline; `inline` decodes in the front end |
 | `INFERD_MAX_SESSIONS` / `INFERD_SESSION_TTL` | 4096 / 0 (off) | session ids kept; the least recently used idle ones, or those idle past the TTL, are dropped from the engine |
+| `INFERD_GEN_SNAP` | `auto` | decode snapshots (state saved while an answer is generated, thinking off): `auto` takes them only when the chat template renders an earlier answer exactly as generated (Qwen3.8 does; Qwen3.6 drops the empty think block, so its follow-ups resume at the previous prompt's end); `1` / `0` force |
 | `INFERD_RETRY_AFTER` | 2 s | the `Retry-After` value | Greedy requests are always speculated (the drafts are verified exactly). Sampled ones (temperature > 0) use
 speculative sampling where it is exact: `top_k` 1–64 (the GPU sampler sees each verify row's top 64 logits), or `top_k` off with `top_p` < 1 (the nucleus is placed against the full softmax; a row whose nucleus does not fit in the 64 is sampled by the host, `inferd.sampling.host_sampled_rows`). `top_k` above 64, or off with `top_p` 1, decodes one token per step on the host sampler (the full distribution); `"inferd": {"spec_sampling": "truncate"}` opts into truncation to the 64 candidates instead. Omitted `top_k` / `top_p` come from the checkpoint's `generation_config.json` (Qwen3.8: 20 / 0.95), so the default sampled request is speculated. The response's `inferd.sampling` reports the effective settings (src/sampling.h, Codex review 2026-11-04 R03). `SPEC_SAMPLE=0` turns speculative sampling off.
 
@@ -188,7 +189,7 @@ The full comparison is in [docs/RESULTS.md](../docs/RESULTS.md).
 `SPEC_BLOCKS` (fixed block by load, e.g. `8:4,16:3`), `ADMIT_RESERVE` (generated tokens budgeted per admitted turn,
 512), `SPILL_DIR`/`SPILL_GIB`, `W4A8` (1), `INFERD_DEBUG` (per-step logs and the tuner table), `SPILL_DEBUG`,
 `SPEC_ROWS` (verify rows to size the drafter and GDN tapes for; default from the block policy, 0 = the old
-max_running x 16 sizing), `SNAP_GEN` (decode snapshot interval, 128; 0 off), `SNAP_GEN_FORCE` (N > 0: with N or more decoders, shorten blocks to land
+max_running x 16 sizing), `SNAP_GEN` (decode snapshot interval, 128; 0 off; taken only for requests the front end marks, see `INFERD_GEN_SNAP`), `SNAP_GEN_FORCE` (N > 0: with N or more decoders, shorten blocks to land
 every `SNAP_GEN`; 0, default: cost 4-6%), `SNAP_REDUNDANT` (evict snapshots superseded on their chain first, 1), `PREFIX_ANY` (pure-attention models resume at any cached block without a snapshot slot, 1),
 `TREE` (token-tree verification for one greedy decoder: nodes per tree, 16; 0 = chains), `TREE_SEQS` (decoders that
 get trees, 1), `TREE_GPU` (build the trees on the GPU, 0), `TREE_TEMP` (1.5), `TREE_KIDS` (4).

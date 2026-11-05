@@ -124,6 +124,35 @@ eos = gen_cfg.get("eos_token_id", gen_cfg.get("text_config", {}).get("eos_token_
 _end = [tok.convert_tokens_to_ids(t) for t in ("<|im_end|>", "<|eot|>", "<end_of_turn>", "<turn|>") if t in tok.get_vocab()]
 STOP = sorted(set(i for i in (eos if isinstance(eos, list) else [eos]) + _end if i is not None))
 THINK_END = "</think>"
+
+
+def _answers_rerendered():
+    """Does the next turn render an answer exactly as the model generated it (thinking off), so that decode snapshots
+    are resume points? Qwen3.8's template does (it keeps the empty think block); Qwen3.6's drops it from earlier turns,
+    so a follow-up diverges right before the answer and only the prompt-end snapshot can resume it. There, decode
+    snapshots are worse than useless: they make that prompt-end snapshot look redundant (a deeper one on the same
+    chain), and slot pressure evicted it first (35B, 16k x 32 follow-ups: 20 of 32 agents re-prefilled, 269 tok/s).
+    INFERD_GEN_SNAP=1/0 overrides the probe."""
+    v = os.environ.get("INFERD_GEN_SNAP", "auto")
+    if v in ("0", "1"):
+        return v == "1"
+    if v != "auto":
+        sys.exit(f"serve: INFERD_GEN_SNAP={v!r} is not auto, 0 or 1")
+    u1, u2, a = ({"role": "user", "content": "Probe question one."}, {"role": "user", "content": "Probe two."},
+                 "Probe answer with some words.")
+    try:
+        p1 = tok.apply_chat_template([u1], add_generation_prompt=True, tokenize=False, enable_thinking=False)
+        p2 = tok.apply_chat_template([u1, {"role": "assistant", "content": a}, u2], add_generation_prompt=True,
+                                     tokenize=False, enable_thinking=False)
+    except Exception:
+        return True  # the old behaviour
+    return p2.startswith(p1 + a)
+
+
+GEN_SNAP = _answers_rerendered()
+if not GEN_SNAP:
+    print("serve: decode snapshots off (the chat template re-renders earlier answers differently; INFERD_GEN_SNAP=1 "
+          "forces them)", file=sys.stderr, flush=True)
 @contextlib.asynccontextmanager
 async def _lifespan(_app):  # FastAPI's lifespan (on_event("startup") is deprecated); engine and _expire_loop are below
     await engine.connect()
@@ -2028,7 +2057,7 @@ async def complete(body, prompts=None):
     if no_cache:
         gen["no_cache"] = 1
     session = policy.get("session")  # validated: 1..128 characters, never truncated
-    if not thinking and not no_cache:  # the next turn re-renders this answer token for token: snapshot while decoding
+    if GEN_SNAP and not thinking and not no_cache:  # the next turn re-renders this answer token for token: snapshot while decoding
         gen["gen_snap"] = 1
     for k in ("max_context", "priority"):
         if policy.get(k) is not None:
