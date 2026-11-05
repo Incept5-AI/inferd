@@ -145,7 +145,10 @@ continued" and "Lessons from the mlx.fast competition"). Its measured ALU rates 
 ## Recommended settings
 
 `run.sh` arguments are: port, max running sequences, step tokens, KV GiB (0 = auto from the GPU budget), snapshots,
-max context.
+max context. `run.sh start --model 27b` picks its sizing from the Mac's memory, using engine/README.md's "Sizing by
+machine": under 48 GB the M6 line (`16 1024 0 8 32768`, SSD tier 64 GiB); under 128 GB the M5 Pro line with the pool
+auto-sized, as its measured fleets ran (`16 1024 0 30 147456`, SSD tier 96 GiB); under 256 GB the laptop ("as the M5
+Pro row", `16 1024 24 30 147456`); 256 GB and up the Studio row below. `--dry-run` shows the choice.
 
 | Machine | `run.sh` | Environment | Notes |
 |---|---|---|---|

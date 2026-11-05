@@ -24,6 +24,9 @@ Model: **Qwen3.8-27B** (mlx-community 4-bit, 8-bit or bf16) with the **incoai Qw
 ## Run
 
 ```bash
+./install.sh --model 27b                 # venv ~/.venvs/inferd + requirements; the 27B + drafter into ~/models
+./run.sh start --model 27b               # sized from the Mac's memory (docs/MACHINES.md); --dry-run prints it
+# or the explicit form, unchanged:
 python3 -m venv ~/.venvs/inferd && ~/.venvs/inferd/bin/pip install -r requirements.txt
 export MODEL=~/models/Qwen3.8-27B-4bit DRAFT=~/models/Qwen3.8-27B-DFlash2 PY=~/.venvs/inferd/bin/python
 ./run.sh 8300 64 2048 140 96 262144      # start: port, max agents, step tokens, KV GiB, snapshots, max context
@@ -39,7 +42,8 @@ holding its GPU memory. `stop` signals only the processes recorded in its pid fi
 own inferd / front end found on the port or the old `/tmp` socket): SIGTERM, a wait of up to `STOP_WAIT` (60 s;
 inferd writes the SSD tier on SIGTERM), then SIGKILL. Anything else on the port is reported and left alone. Starting
 on a port first does the same stop. `./test_run.sh` checks stop / status / argument handling with fake processes (no
-model needed).
+model needed); `./test_run_start.sh` checks the named start (options, memory-based sizing, `--dry-run`) and that the
+positional form, stop and status behave as before.
 
 `/v1/chat/completions` (streaming and not, `usage.prompt_tokens_details.cached_tokens`), `/v1/models`, `/health`
 (503 when the engine process has gone; engine errors come back as HTTP errors, or as an SSE `error` event once a

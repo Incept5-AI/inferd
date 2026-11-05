@@ -13,6 +13,8 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # test_run_start.sh compares run.sh with its pre-named-start version (git show)
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -37,6 +39,9 @@ jobs:
       - name: Logits gate fixtures
         working-directory: engine
         run: python tools/test_ref_logits.py
+      - name: run.sh tests (fake processes)
+        working-directory: engine
+        run: zsh test_run.sh && zsh test_run_start.sh
       - name: Benchmark client tests
         working-directory: bench
         run: python test_sse_client.py
