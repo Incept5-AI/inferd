@@ -232,8 +232,10 @@ See `CLAUDE.md` in the project root for the rest.
   by itself when the Command Line Tools are the active developer directory (they have no Metal compiler) and otherwise
   says exactly what to install; `install.sh` works on a venv made by uv (no pip: `uv pip`, else `ensurepip`);
   `run.sh clean [port]` deletes a port's SSD tier, which persists across restarts by design; `examples/run_all.sh`
-  defaults its machine name to the host name; `agents-at-once` writes its results under `$TMPDIR`, not the checkout.
-  macOS 26: the source build and the 0.4.0 macOS 26 prebuilt passed the full release gate on a 128 GB Mac on macOS 26.6.
+  defaults its machine name to the host name; `agents-at-once` writes its results under `$TMPDIR`, not the checkout. `GET /version` reports
+  the release (it said 0.3.0-dev).
+  macOS 26: the 0.4.0 macOS 26 prebuilt passed the full release gate on two testers' Macs on macOS 26.6 (a 128 GB Mac, also
+  with a source build, and a MacBook Pro M4 Max, 36 GB).
 
 - **0.4.0 (2026-11-05)** — vLLM-compatible API: `/v1/completions`, logprobs (from the verify rows, speculation kept),
   presence/frequency/repetition penalties, `min_p`, `logit_bias`, `min_tokens`, `n`, guided JSON/choice/regex and
