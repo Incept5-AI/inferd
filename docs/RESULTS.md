@@ -1340,6 +1340,21 @@ Reading: inferd leads every 27B fleet cell by 41–60%. With 16 agents taking tu
 first token within seconds where Splash's reaches 40–60 s. Splash leads with 4–8 agents taking turns, one agent's
 cold prefill on the M5 Pro, and the 35B fleet.
 
+## (x) Mac Studio agent fleet, current main vs Splash 1.5 (5 November)
+
+Mac Studio M5 Ultra, Qwen3.8-27B 4-bit + DFlash2 (same weights and drafter for both engines), the minis' agent-fleet
+harness: 8k contexts, a 64-agent pool, 2 rounds, N in flight; main fea8080 then Splash 1.5, back to back. Completed turns
+per minute (p95 first token):
+
+| in flight | 8 | 16 | 32 | 64 |
+|---|---:|---:|---:|---:|
+| inferd, 96 snapshots | **80.3** (4.0 s) | **86.4** (8.0 s) | **89.3** (15.9 s) | 59.6 (82.8 s) |
+| inferd, 192 snapshots | | | | **95.3** (31.8 s) |
+| Splash 1.5 | 48.6 (10.3 s) | 48.2 (29.0 s) | 50.0 (42.0 s) | 49.6, 32 of 128 turns refused |
+
+With 96 snapshots, 64 agents in flight evicted the snapshots they resume from (cache hit 0.88 → 0.78); with 192 the
+cache hit returns to 0.88. `run.sh start` now sizes the Studio with 192 snapshots (160fbf6; ~16 GiB of state).
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
