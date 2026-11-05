@@ -38,6 +38,7 @@ run ocr-agents-compare   $PY ocr-agents/ocr_agents.py --compare 3
 run coding-smoke-none    ./coding-smoke/coding_smoke.sh none 8
 run coding-smoke-medium  ./coding-smoke/coding_smoke.sh medium 8
 run agent-swarm          $PY agent-swarm/agent_swarm.py --url $INFERD_URL
+run agents-at-once       ./agents-at-once/agents_at_once.sh
 run agent-followups      $PY agent-followups/agent_followups.py --url $INFERD_URL
 run users-at-once        $PY users-at-once/users_at_once.py --url $INFERD_URL
 

@@ -10,7 +10,7 @@ measured on one day with one build; yours will differ with the chip, the memory,
 machine is doing. Comparisons against other engines, with their methodology, are in
 [docs/RESULTS.md](../docs/RESULTS.md).
 
-Fifteen runs in thirteen folders, one script each (Python standard library, apart from Pillow for OCR), each with a
+Sixteen runs in fourteen folders, one script each (Python standard library, apart from Pillow for OCR), each with a
 README that holds the output of a real run.
 
 | Example | What it shows | Self-check | Run time (M5 Pro) |
@@ -26,6 +26,7 @@ README that holds the output of a real run.
 | [agent-handoff](agent-handoff/) | a lead agent's whole conversation saved as a context and handed to agents with other settings (effort, `max_context`, priority, `cache: drop`); they start in under a second instead of re-reading; then DELETE and verify the cache let go | **PASS/FAIL** (19 checks) | ~1.5 min |
 | [agent-team](agent-team/) | planner + workers + one-off classifiers + filler on a server short of memory, run with and without sessions / priorities / `cache: drop`, side by side | **PASS/FAIL/SKIP** | ~3.5 min on a small server; ~3 min in `run_all.sh` |
 | [agent-swarm](agent-swarm/) | 8-16 agents on one shared 16k document: the fan-out computes it once, follow-ups hit the cache; every answer checked | answers checked (24/24) | ~50 s |
+| [agents-at-once](agents-at-once/) | N agents (8 by default; 64-128 on a Mac Studio) on their own contexts send their next turn at the same moment; every answer checked, how many generated at once, tok/s and (with `POWER_CMD`) tokens per joule | answers + all at once (PASS/FAIL) | ~1 min (8 x 4k) |
 | [agent-followups](agent-followups/) | 8-16 agents, each with its own 4-8k context, taking follow-up turns with tool output | answers checked (24/24) | ~3 min |
 | [users-at-once](users-at-once/) | N users with long prompts released together (a small [bench/wall.py](../bench/wall.py)): when does the last one start? | exit code | ~2 min |
 

@@ -175,6 +175,10 @@ one cold prompt sooner on the M5 Pro and M6. On M1–M4 GPUs leave the drafter o
 | One agent saves a 33.5k-token context, 31 more start from it: median first token / all 31 done | **0.72 s / 15.3 s** |
 | 32 agents forked from a 25k context, relaunched after 1.4M tokens of unrelated work: first token | **1.03 s** |
 
+Check it on your own Mac: [examples/agents-at-once](examples/agents-at-once/) runs 64 (or 100, or 128) agents at once in
+about 5 minutes, checks every agent's answer, and with any watt meter reports tokens per joule. On our Studio: 64 / 100 / 128
+agents, every answer right, 1,326 / 1,457 / 1,487 tok/s at about 300 W at the wall, 4.4–5.1 tokens per joule.
+
 <details><summary><b>How the Studio compares with other engines</b> (Splash 1.5, TensorFold 1.2.2)</summary>
 
 | Workload | inferd | Other engine |

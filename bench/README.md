@@ -15,6 +15,7 @@ and run discipline, are in [docs/RESULTS.md](../docs/RESULTS.md). For a first ch
 | `wall.py` | N agents released at once (distinct long prompts, fixed output); `--shared cold/primed/context` for the agent variant. Total time, last first token, end-to-end and in-window decode. |
 | `studio/conc.py`, `studio/speed.py` | Follow-up fleets (`--mode followup`) and single-stream speed. |
 | `agents.py`, `agents_scenarios.py` | Multi-round agent fleets; the agent-context scenarios a–e. |
+| `quick64.py`, `quick64_plot.py` | N agents (default 64) on their own 16k contexts send their next turn at once, every answer checked; tok/s, first token, and with `--power-cmd` wall power and tokens per joule (~5 min on a Mac Studio). The plot lines up wall power with macOS counters (`mactop --headless`). See [examples/agents-at-once](../examples/agents-at-once/). |
 | `sse_client.py` | The validated streaming client all of the above use: a stream counts only with a normal finish, `[DONE]` and consistent usage. |
 
 **Lab scripts.** The shell scripts that drove these harnesses on our machines (model paths, ports, external SSDs)
