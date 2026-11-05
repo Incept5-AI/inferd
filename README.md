@@ -102,9 +102,10 @@ print(reply.choices[0].message.content)
   `~/.cache/huggingface/hub`: the snapshot `refs/main` points to, else the newest complete one) and LM Studio
   (`LMSTUDIO_MODELS`, else `~/.lmstudio/models`, then `~/.cache/lm-studio/models`), and use the first complete copy
   where it is: no copy, no download. Complete means `config.json` plus every shard the index lists, non-empty. Same
-  weights only: by default just the exact repo id counts; `--equivalent` (on both scripts) also accepts the known
-  equivalent builds in `tools/models.zsh` (for `27b`: `lmstudio-community/` and `Qwen/Qwen3.8-27B-MLX-4bit`; for the
-  drafter: `z-lab/Qwen3.8-27B-DFlash2`, byte-identical). Every candidate's `config.json` must match the
+  weights only: the exact repo id is preferred, and the known equivalent builds in `tools/models.zsh` are used too, with
+  a note (for `27b`: `lmstudio-community/` and `Qwen/Qwen3.8-27B-MLX-4bit`; for the
+  drafter: `z-lab/Qwen3.8-27B-DFlash2`, byte-identical); `--exact` (on both scripts) takes only the exact repo ids, as the
+  benchmarks do. Every candidate's `config.json` must match the
   architecture, size, bits and group size, so an 8-bit build never stands in for `27b`. Both scripts say which copy
   they chose and why, and what they skipped; `./install.sh --list` (or `./run.sh models`) shows what each name finds,
   and `./install.sh --download` downloads into `~/models` anyway.

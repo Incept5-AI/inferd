@@ -212,12 +212,13 @@ mkckpt $HOME/.cache/lm-studio/models/Jundot/Qwen3.8-Flash-Next-oQ4e-mtp "$FN"
 out=$(INFERD_RAM_GB=256 INFERD_MODELS=$X HF_HUB_CACHE=$X $R start --port $P1 --model flash-next --dry-run 2>&1)
 check "LM Studio: the older ~/.cache/lm-studio/models layout" eval '[[ $(line "model     ") == $HOME/.cache/lm-studio/models/Jundot/Qwen3.8-Flash-Next-oQ4e-mtp && $(line "engine    ") == *" MTP=1 "* ]]'
 
-# the same-weights rule: exact repo ids by default; --equivalent adds the listed builds, only when config.json matches
+# the same-weights rule: exact repo ids first, then (by default) the listed equivalent builds when config.json matches;
+# --exact takes only the exact repo ids
 mkckpt $L/Qwen/Qwen3.8-27B-MLX-4bit "$F4"
-out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$L $R start --port $P2 --model 27b --draft none 2>&1); rc=$?
-check "an equivalent build is not used by default, but named" eval '(( rc != 0 )) && has "note: found Qwen/Qwen3.8-27B-MLX-4bit (an equivalent build of mlx-community/Qwen3.8-27B-4bit) is $L/Qwen/Qwen3.8-27B-MLX-4bit: use it with --equivalent" && has "run ./install.sh --model 27b"'
-out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$L $R start --port $P1 --model 27b --draft none --equivalent --dry-run 2>&1)
-check "--equivalent: the equivalent build, and why" eval '[[ $(line "model     ") == $L/Qwen/Qwen3.8-27B-MLX-4bit ]] && has "an equivalent build of mlx-community/Qwen3.8-27B-4bit (--equivalent): Qwen3_5ForConditionalGeneration, 64 layers x 5120, 4-bit, group size 64"'
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$L $R start --port $P2 --model 27b --draft none --exact 2>&1); rc=$?
+check "--exact: an equivalent build is not used, but named" eval '(( rc != 0 )) && has "note: found Qwen/Qwen3.8-27B-MLX-4bit (an equivalent build of mlx-community/Qwen3.8-27B-4bit) is $L/Qwen/Qwen3.8-27B-MLX-4bit: --exact refuses it" && has "run ./install.sh --model 27b"'
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$X LMSTUDIO_MODELS=$L $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
+check "default: the equivalent build, with a note" eval '[[ $(line "model     ") == $L/Qwen/Qwen3.8-27B-MLX-4bit ]] && has "note: an equivalent build of mlx-community/Qwen3.8-27B-4bit, not the exact repo our benchmarks use (--exact refuses it): Qwen3_5ForConditionalGeneration, 64 layers x 5120, 4-bit, group size 64"'
 out=$(INFERD_RAM_GB=32 INFERD_EQUIVALENT=1 INFERD_MODELS=$X HF_HUB_CACHE=$H LMSTUDIO_MODELS=$L $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
 check "INFERD_EQUIVALENT=1 still prefers the exact repo" eval '[[ $(line "model     ") == $HM/snapshots/aaa ]]'
 rm -rf $L/Qwen/Qwen3.8-27B-MLX-4bit; mkckpt $L/lmstudio-community/Qwen3.8-27B-MLX-4bit "$F8"  # mislabelled: 8-bit
@@ -236,9 +237,9 @@ out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X $R start --port $P1 --model 27b --dry-ru
 check "the drafter in the default HF cache: found, and the engine gets it" eval '[[ $(line "drafter   ") == $D/snapshots/d1 && $(line "engine    ") == *" DRAFT=$D/snapshots/d1 "* ]] && has "(incoai/Qwen3.8-27B-DFlash2, in the Hugging Face cache (the snapshot refs/main points to))"'
 rm -rf $D; Z=$H/models--z-lab--Qwen3.8-27B-DFlash2; mkdir -p $Z/refs; mkckpt $Z/snapshots/z1 "$FD" $Z/blobs; print z1 > $Z/refs/main
 out=$(INFERD_RAM_GB=32 HF_HUB_CACHE=$H INFERD_MODELS=$X $R start --port $P1 --model 27b --equivalent --dry-run 2>&1)
-check "--equivalent: the z-lab drafter" eval '[[ $(line "drafter   ") == $Z/snapshots/z1 ]] && has "z-lab/Qwen3.8-27B-DFlash2, in the Hugging Face cache"'
-out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$H $R start --port $P2 --model 27b 2>&1); rc=$?
-check "... and without it, refused with the hint" eval '(( rc != 0 )) && has "found z-lab/Qwen3.8-27B-DFlash2" && has "no complete copy of the drafter incoai/Qwen3.8-27B-DFlash2"'
+check "--equivalent (the default): the z-lab drafter" eval '[[ $(line "drafter   ") == $Z/snapshots/z1 ]] && has "z-lab/Qwen3.8-27B-DFlash2, in the Hugging Face cache"'
+out=$(INFERD_RAM_GB=32 INFERD_MODELS=$X HF_HUB_CACHE=$H $R start --port $P2 --model 27b --exact 2>&1); rc=$?
+check "... and with --exact, refused with the hint" eval '(( rc != 0 )) && has "found z-lab/Qwen3.8-27B-DFlash2" && has "no complete copy of the drafter incoai/Qwen3.8-27B-DFlash2"'
 out=$(INFERD_MODELS=$X HF_HUB_CACHE=$H LMSTUDIO_MODELS=$L $R models --equivalent 2>&1); rc=$?
 check "run.sh models lists each name with its path" eval '(( rc == 0 )) && has "27b: $HM/snapshots/aaa" && has "27b drafter: $Z/snapshots/z1" && has "flash-next: $HOME/.cache/lm-studio/models/Jundot/Qwen3.8-Flash-Next-oQ4e-mtp"'
 check "no model search created a log or run directory" eval '[[ ! -e $T/logs && ! -e $T/run ]]'
@@ -259,13 +260,13 @@ chmod +x $T/ivenv/bin/python $T/bin/hf
 I=$E/install.sh
 inst() { env PATH=$T/bin:$PATH INFERD_VENV=$T/ivenv INFERD_RAM_GB=64 INFERD_MODELS=$1 HF_HUB_CACHE=$H LMSTUDIO_MODELS=$L "${@:2}" }
 rm -f $REC/hf-calls.txt
-out=$(inst $X $I --model 27b --equivalent 2>&1); rc=$?
+out=$(inst $X $I --model 27b 2>&1); rc=$?
 check "install.sh: both found, no download" eval '(( rc == 0 )) && [[ ! -e $REC/hf-calls.txt ]] && has "mlx-community/Qwen3.8-27B-4bit is already on this Mac: $HM/snapshots/aaa" && has "incoai/Qwen3.8-27B-DFlash2 is already on this Mac: $Z/snapshots/z1"'
-check "... and its start line carries --equivalent" eval 'has "./run.sh start --model 27b --equivalent"'
-out=$(inst $T/dl $I --model 27b 2>&1); rc=$?
-check "install.sh: only the missing drafter is downloaded, into the models directory" eval '(( rc == 0 )) && [[ $(<$REC/hf-calls.txt) == "download incoai/Qwen3.8-27B-DFlash2 --local-dir $T/dl/Qwen3.8-27B-DFlash2" ]] && has "found z-lab/Qwen3.8-27B-DFlash2"'
+check "... and its start line needs no flag" eval 'has "./run.sh start --model 27b" && ! has "./run.sh start --model 27b --exact"'
+out=$(inst $T/dl $I --model 27b --exact 2>&1); rc=$?
+check "install.sh --exact: only the missing drafter is downloaded, into the models directory" eval '(( rc == 0 )) && [[ $(<$REC/hf-calls.txt) == "download incoai/Qwen3.8-27B-DFlash2 --local-dir $T/dl/Qwen3.8-27B-DFlash2" ]] && has "found z-lab/Qwen3.8-27B-DFlash2"'
 rm -f $REC/hf-calls.txt
-out=$(inst $T/dl $I --model 27b 2>&1); rc=$?
+out=$(inst $T/dl $I --model 27b --exact 2>&1); rc=$?
 check "install.sh again: nothing to download" eval '(( rc == 0 )) && [[ ! -e $REC/hf-calls.txt ]] && has "is already on this Mac: $T/dl/Qwen3.8-27B-DFlash2 (incoai/Qwen3.8-27B-DFlash2, in INFERD_MODELS)"'
 out=$(inst $T/dl $I --model 27b --download 2>&1); rc=$?
 want="download mlx-community/Qwen3.8-27B-4bit --local-dir $T/dl/Qwen3.8-27B-4bit

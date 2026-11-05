@@ -1,19 +1,19 @@
 #!/bin/zsh
 # Start, stop or inspect inferd + the OpenAI front end on one port.
 #   run.sh start --model 27b|27b-8bit|flash-next|<dir> [--draft <dir>|none] [--port 8300] [--agents N] [--context N]
-#                [--kv GiB] [--snapshots N] [--spill <dir>|off] [--equivalent] [--dry-run]
+#                [--kv GiB] [--snapshots N] [--spill <dir>|off] [--exact] [--dry-run]
 #                               named start: a model name resolves, with its drafter, to the first complete copy in
 #                               INFERD_MODELS (default ~/models, where install.sh downloads), the Hugging Face cache,
 #                               then LM Studio (tools/models.zsh: the search order and the same-weights rule; exact
-#                               repo ids only, --equivalent or INFERD_EQUIVALENT=1 also takes the known equivalent
-#                               builds of the same weights), and the sizing comes from the Mac's memory
+#                               repo ids first, then the known equivalent
+#                               builds of the same weights, with a note; --exact or INFERD_EQUIVALENT=0: exact only), and the sizing comes from the Mac's memory
 #                               (docs/MACHINES.md; INFERD_RAM_GB overrides the detected GB). --dry-run prints the
 #                               engine and front-end command lines and starts nothing. PY defaults to the install.sh
 #                               venv (INFERD_VENV, default ~/.venvs/inferd) when it exists. Below 256 GB the SSD
 #                               tier is on, in ~/Library/Caches/inferd/spill-<port> (SPILL_DIR/--spill override).
 #                               Options override the sizing; DRAFT/SPILL_DIR/SPILL_GIB/MTP from the env are kept.
 # A release tarball (tools/package.sh) carries build/BUILD-INFO: any start refuses a build for another macOS major.
-#   run.sh models [--equivalent]   where each model name resolves (as install.sh --list)
+#   run.sh models [--exact]        where each model name resolves (as install.sh --list)
 #   run.sh [port=8300] [max_running=64] [step_tokens=2048] [kv_gib=96] [snapshots=96] [max_ctx=131072]   start
 #   run.sh stop [port=8300]     stop exactly what run.sh started on that port (pid files: SIGTERM, wait up to
 #                               STOP_WAIT s, then SIGKILL); exit 0 when nothing is running
@@ -63,8 +63,9 @@ sizing() {  # RAM GB -> RUNNING STEP KV SNAPS MAXCTX, SPILL_DEF (SSD tier GiB, 0
 usage() { sed -n '2,/^emulate/p' "$SELF" | sed '$d' | sed 's/^# \{0,1\}//'; }
 CMD=start
 if [[ ${1:-} == models ]]; then
-  [[ $# == 1 || ( $# == 2 && $2 == --equivalent ) ]] || die "usage: run.sh models [--equivalent]"
-  (( $# == 2 )) && INFERD_EQUIVALENT=1
+  [[ $# == 1 || ( $# == 2 && $2 == (--equivalent|--exact) ) ]] || die "usage: run.sh models [--exact]"
+  [[ ${2:-} == --exact ]] && INFERD_EQUIVALENT=0
+  [[ ${2:-} == --equivalent ]] && INFERD_EQUIVALENT=1
   source tools/models.zsh || die "tools/models.zsh is missing"
   models_list
   exit 0
@@ -84,6 +85,7 @@ elif [[ ${1:-} == start ]]; then
     case $1 in
       --dry-run) DRY=1; shift; continue ;;
       --equivalent) INFERD_EQUIVALENT=1; shift; continue ;;
+      --exact) INFERD_EQUIVALENT=0; shift; continue ;;
       --model|--draft|--port|--agents|--context|--kv|--snapshots|--spill) ;;
       *) die "start: unknown option '$1' (run.sh --help)" ;;
     esac

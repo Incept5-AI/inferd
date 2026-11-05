@@ -53,7 +53,8 @@ copy of the exact repo id in `$INFERD_MODELS/<dir>` (default `~/models`), then t
 one `refs/main` names, else the newest complete one; links into `blobs/` are followed), then LM Studio
 (`$LMSTUDIO_MODELS/<org>/<name>`, default `~/.lmstudio/models`, then `~/.cache/lm-studio/models`). Complete:
 `config.json` and every shard in `model.safetensors.index.json` present and non-empty (or `model.safetensors`).
-`--equivalent` / `INFERD_EQUIVALENT=1` adds the known equivalent builds per name (`MI_EQUIV`, `MI_DRAFT_EQUIV`); every
+Exact repo ids are preferred; the known equivalent builds per name (`MI_EQUIV`, `MI_DRAFT_EQUIV`) are accepted by default
+(since 0.4.0, with a note; `--exact` / `INFERD_EQUIVALENT=0` refuses them); every
 candidate's `config.json` must match `MI_FACTS` (architecture, layers, hidden size, quantization bits and group size),
 so an 8-bit checkpoint is refused for `27b`. The dry run and the start print the chosen copy and why; skipped copies
 are reported as notes. `install.sh --download` forces `hf download` into the models directory. JSON is read with

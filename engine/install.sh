@@ -1,8 +1,8 @@
 #!/bin/zsh
 # Set up inferd's front end, and optionally download a model. Safe to run again: it reuses what is already there.
-#   ./install.sh [--model 27b|27b-8bit|flash-next]... [--download] [--equivalent] [--venv DIR] [--python PATH]
+#   ./install.sh [--model 27b|27b-8bit|flash-next]... [--download] [--exact] [--venv DIR] [--python PATH]
 #                [--models-dir DIR]
-#   ./install.sh --list [--equivalent] [--models-dir DIR]
+#   ./install.sh --list [--exact] [--models-dir DIR]
 #   --model       the checkpoint and its drafter (27b: mlx-community/Qwen3.8-27B-4bit + incoai/Qwen3.8-27B-DFlash2;
 #                 27b-8bit: mlx-community/Qwen3.8-27B-8bit + the same drafter; flash-next:
 #                 Jundot/Qwen3.8-Flash-Next-oQ4e-mtp, which drafts with its own MTP head). Repeat for more than one.
@@ -11,9 +11,9 @@
 #                 places; tools/models.zsh). Otherwise `hf download` puts it in the models directory.
 #   --download    download into the models directory even when a copy exists elsewhere (hf download resumes or
 #                 checks what is already there)
-#   --equivalent  also accept the known equivalent builds of the same weights (e.g. 27b: lmstudio-community/ or
-#                 Qwen/Qwen3.8-27B-MLX-4bit), checked against config.json: architecture, size, bits and group size.
-#                 Without it only the exact repo ids count. Start with `run.sh start --equivalent` too.
+#   --exact       use only the exact repo ids (as the benchmarks do). By default an equivalent build of the same weights
+#                 already on the Mac (e.g. 27b: Qwen/ or lmstudio-community/Qwen3.8-27B-MLX-4bit; the z-lab drafter) is used,
+#                 with a note, when its config.json matches. Start with `run.sh start --exact` too.
 #   --list        show what was found for every model name, and where, then exit
 #   --venv        the virtual environment (default INFERD_VENV or ~/.venvs/inferd, where run.sh looks for it)
 #   --python      the interpreter to build it from (default: the first Python 3.12 found)
@@ -34,6 +34,7 @@ while (( $# )); do
     --list) LIST=1; shift; continue ;;
     --download) DOWNLOAD=1; shift; continue ;;
     --equivalent) INFERD_EQUIVALENT=1; shift; continue ;;
+    --exact) INFERD_EQUIVALENT=0; shift; continue ;;
     --model|--venv|--python|--models-dir) (( $# >= 2 )) && [[ -n $2 ]] || die "$1 needs a value" ;;
     *) die "unknown option '$1' (./install.sh --help)" ;;
   esac
@@ -135,7 +136,7 @@ done
 
 # What next
 [[ $VENV == ${INFERD_VENV:-$HOME/.venvs/inferd} ]] || pyenv="PY=${(q-)VENV}/bin/python "
-[[ ${INFERD_EQUIVALENT:-0} == 1 ]] && eqv=" --equivalent"
+[[ ${INFERD_EQUIVALENT:-1} == 0 ]] && eqv=" --exact"
 [[ $MROOT == ${ORIG_MODELS:-$HOME/models} ]] || menv="INFERD_MODELS=${(q-)MROOT} "
 print
 if (( $#models )); then

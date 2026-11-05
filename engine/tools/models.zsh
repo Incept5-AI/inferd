@@ -11,9 +11,9 @@
 #                        ~/.cache/lm-studio/models/<org>/<name>
 #                     It sets FOUND (the directory, empty if none), FOUND_WHY (which copy and why), FOUND_NOTES (the
 #                     copies it skipped, and why) and FOUND_HINT (an equivalent build it found but was not allowed to use).
-# Same weights: by default only the exact repo id counts. INFERD_EQUIVALENT=1 (install.sh / run.sh start --equivalent)
-# also accepts the builds listed in MI_EQUIV / MI_DRAFT_EQUIV: the same model at the same quantization from another
-# publisher. Every candidate, exact or not, must be complete (config.json, and every shard model.safetensors.index.json
+# Same weights: the exact repo id is preferred, and by default the builds listed in MI_EQUIV / MI_DRAFT_EQUIV are
+# accepted too (since 0.4.0): the same model at the same quantization from another publisher. --exact (or
+# INFERD_EQUIVALENT=0) takes only the exact repo ids, as the benchmarks do. Every candidate, exact or not, must be complete (config.json, and every shard model.safetensors.index.json
 # lists present and non-empty, or a non-empty model.safetensors) and its config.json must match MI_FACTS: architecture,
 # layers, hidden size, quantization bits and group size ("- -": unquantized). So an 8-bit build never stands in for 27b.
 # Repo ids: README / CONTRIBUTING "Getting a model"; the Flash-Next oQ4e build is the one every Flash-Next result in
@@ -127,11 +127,11 @@ model_find() {  # model|draft
   fi
   FOUND= FOUND_WHY= FOUND_NOTES=() FOUND_HINT=
   for r in $repo $equiv; do
-    if [[ $r != $repo && ${INFERD_EQUIVALENT:-0} != 1 ]]; then  # look, to say so, but do not use it
+    if [[ $r != $repo && ${INFERD_EQUIVALENT:-1} != 1 ]]; then  # --exact: look, to say so, but do not use it
       [[ -n $FOUND_HINT ]] && continue
       for c in ${(f)"$(model_candidates $r ${r:t})"}; do
         d=${c%%	*}
-        ckpt_check $d $facts && { FOUND_HINT="$r (an equivalent build of $repo) is $d: use it with --equivalent (INFERD_EQUIVALENT=1)"; break }
+        ckpt_check $d $facts && { FOUND_HINT="$r (an equivalent build of $repo) is $d: --exact refuses it (drop --exact / INFERD_EQUIVALENT=0 to use it)"; break }
       done
       continue
     fi
@@ -141,7 +141,7 @@ model_find() {  # model|draft
       seen+=(${d:A})
       if ckpt_check $d $facts; then
         FOUND=$d FOUND_WHY="$r, $why"
-        [[ $r != $repo ]] && FOUND_WHY+="; an equivalent build of $repo (--equivalent): $(facts_text ${=facts})"
+        [[ $r != $repo ]] && FOUND_WHY+="; note: an equivalent build of $repo, not the exact repo our benchmarks use (--exact refuses it): $(facts_text ${=facts})"
         return 0
       fi
       FOUND_NOTES+=("skipped $d ($r): $REPLY")
