@@ -54,6 +54,7 @@ for b in $bins; do cp -p build/$b $D/build/; done
 cp -p build/core.metallib $D/build/
 cp -p run.sh install.sh requirements.txt $D/
 cp -p tools/models.zsh tools/release_gate.sh tools/ref_logits.py tools/tie_check.py tools/test_ref_logits.py $D/tools/
+mkdir -p $D/tools/corpus && cp -p ../docs/ARCHITECTURE.md ../docs/RESULTS.md ../docs/EXPERIMENTS.md $D/tools/corpus/  # ref_logits.py's long prompts
 cp -p frontend/serve.py frontend/structured.py frontend/vision.py frontend/image_decode.py $D/frontend/
 cp -p frontend/test_hardening.py frontend/test_structured.py frontend/test_tools.py frontend/test_stream.py \
   frontend/test_image_decode.py frontend/test_vision.py $D/frontend/  # run by release_gate.sh
@@ -100,7 +101,7 @@ chmod 755 $D/run.sh $D/install.sh $D/tools/release_gate.sh
 
 # Self-containment: every file run.sh, install.sh and the gate use is present; no sources slipped in
 for f in build/inferd build/core.metallib build/BUILD-INFO run.sh install.sh requirements.txt tools/models.zsh \
-         tools/release_gate.sh tools/ref_logits.py tools/tie_check.py frontend/serve.py frontend/structured.py frontend/vision.py frontend/image_decode.py \
+         tools/release_gate.sh tools/ref_logits.py tools/tie_check.py tools/corpus/ARCHITECTURE.md tools/corpus/RESULTS.md tools/corpus/EXPERIMENTS.md frontend/serve.py frontend/structured.py frontend/vision.py frontend/image_decode.py \
          LICENSE NOTICE README.md third_party/mlx/LICENSE; do
   [[ -f $D/$f ]] || die "staging is missing $f"
 done

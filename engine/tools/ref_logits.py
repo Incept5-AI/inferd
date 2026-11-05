@@ -29,14 +29,20 @@ SHORT = [REPEAT * 8,
 CORPUS = ("docs/ARCHITECTURE.md", "docs/RESULTS.md", "engine/src/scheduler.h", "docs/EXPERIMENTS.md")
 
 
+# A release tarball has no sources: tools/package.sh copies the docs to tools/corpus/, and the code text is the shipped
+# front end. Same kinds of text (prose, tables, code), so the same thresholds hold; sequence 2's tokens differ.
+CORPUS_PKG = ("tools/corpus/ARCHITECTURE.md", "tools/corpus/RESULTS.md", "frontend/serve.py", "tools/corpus/EXPERIMENTS.md")
+
+
 def corpus():
-    """Real long texts shipped with the repository, fixed: prose (docs) and code (the scheduler). Run from a checkout."""
-    root = os.path.abspath(os.path.join(HERE, "..", ".."))
-    files = [os.path.join(root, f) for f in CORPUS]
-    missing = [f for f in files if not os.path.exists(f)]
-    if missing:
-        sys.exit(f"ref_logits: long prompts need the repository's texts; missing {', '.join(missing)}")
-    return files
+    """Real long texts, fixed: prose (docs) and code. From a checkout, the repository's (CORPUS); from a release tarball,
+    the copies it ships (CORPUS_PKG)."""
+    for root, names in ((os.path.abspath(os.path.join(HERE, "..", "..")), CORPUS), (os.path.abspath(os.path.join(HERE, "..")), CORPUS_PKG)):
+        files = [os.path.join(root, f) for f in names]
+        if all(os.path.exists(f) for f in files):
+            return files
+    sys.exit(f"ref_logits: long prompts need the repository's texts ({', '.join(CORPUS)}) or a release tarball's "
+             f"({', '.join(CORPUS_PKG)})")
 
 
 def make_ids(tok, B, T):
