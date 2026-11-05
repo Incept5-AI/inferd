@@ -2,7 +2,7 @@
 # package.sh VERSION: build a self-contained release tarball, run from engine/ (or anywhere: it finds engine/).
 #   -> release/inferd-VERSION-macosNN-arm64.tar.gz and its .sha256, unpacking to inferd-VERSION/ with everything needed
 #      to run without a checkout: build/ (inferd, core.metallib, the release gate's tools), run.sh, install.sh,
-#      requirements.txt, frontend/, tools/ (models.zsh, release_gate.sh, ref_logits.py), README.md, LICENSE, NOTICE and
+#      requirements.txt, frontend/, tools/ (models.zsh, release_gate.sh, ref_logits.py, tie_check.py), README.md, LICENSE, NOTICE and
 #      MLX's licence. No kernel sources, no engine sources, no third-party sources.
 # NN is the macOS major the kernels were built for, read back from build/core.metallib and build/inferd. build.sh builds
 # for the machine's own macOS and must stay that way: a lower Metal target made MLX's NAX matmuls compute WRONG logits
@@ -23,7 +23,7 @@ if [[ -z ${SKIP_BUILD:-} ]]; then
   print "package.sh: ./build.sh"
   ./build.sh || die "build.sh failed"
 fi
-bins=(inferd decode_test spec_test grammar_test json_test spill_test weights_test)  # inferd + what release_gate.sh runs
+bins=(inferd decode_test spec_test spec_sample_test grammar_test json_test spill_test weights_test)  # inferd + what release_gate.sh runs
 for b in $bins; do [[ -x build/$b ]] || die "build/$b is missing: run ./build.sh"; done
 [[ -f build/core.metallib ]] || die "build/core.metallib is missing: run ./build.sh"
 
@@ -53,9 +53,10 @@ mkdir -p $D/build $D/frontend $D/tools $D/third_party/mlx
 for b in $bins; do cp -p build/$b $D/build/; done
 cp -p build/core.metallib $D/build/
 cp -p run.sh install.sh requirements.txt $D/
-cp -p tools/models.zsh tools/release_gate.sh tools/ref_logits.py $D/tools/
-cp -p frontend/serve.py frontend/structured.py frontend/vision.py $D/frontend/
-cp -p frontend/test_structured.py frontend/test_tools.py frontend/test_stream.py $D/frontend/  # run by release_gate.sh
+cp -p tools/models.zsh tools/release_gate.sh tools/ref_logits.py tools/tie_check.py tools/test_ref_logits.py $D/tools/
+cp -p frontend/serve.py frontend/structured.py frontend/vision.py frontend/image_decode.py $D/frontend/
+cp -p frontend/test_hardening.py frontend/test_structured.py frontend/test_tools.py frontend/test_stream.py \
+  frontend/test_image_decode.py frontend/test_vision.py $D/frontend/  # run by release_gate.sh
 cp -p ../LICENSE $D/LICENSE
 cp -p third_party/mlx/LICENSE third_party/mlx/README $D/third_party/mlx/
 {
@@ -99,9 +100,15 @@ chmod 755 $D/run.sh $D/install.sh $D/tools/release_gate.sh
 
 # Self-containment: every file run.sh, install.sh and the gate use is present; no sources slipped in
 for f in build/inferd build/core.metallib build/BUILD-INFO run.sh install.sh requirements.txt tools/models.zsh \
-         tools/release_gate.sh tools/ref_logits.py frontend/serve.py frontend/structured.py frontend/vision.py \
+         tools/release_gate.sh tools/ref_logits.py tools/tie_check.py frontend/serve.py frontend/structured.py frontend/vision.py frontend/image_decode.py \
          LICENSE NOTICE README.md third_party/mlx/LICENSE; do
   [[ -f $D/$f ]] || die "staging is missing $f"
+done
+# ... and every binary, tool and front-end test release_gate.sh names (the gate grew after this list was written once)
+for f in ${(u)${(f)"$(grep -o -E 'build/[a-z_0-9]+|tools/[a-z_0-9]+\.py' tools/release_gate.sh)"}} \
+         ${(u)${(f)"$(sed -n 's/^for t in \(test_[a-z_ ]*\); do$/\1/p' tools/release_gate.sh | tr ' ' '\n' | sed 's|^|frontend/|; s|$|.py|')"}}; do
+  [[ $f == build/core ]] && f=build/core.metallib
+  [[ -f $D/$f ]] || die "staging is missing $f (used by release_gate.sh)"
 done
 srcs=($D/**/*.(metal|h|mm|cc|cpp|air)(N))
 (( $#srcs == 0 )) || die "sources in the staging directory: ${srcs#$STAGE/}"
