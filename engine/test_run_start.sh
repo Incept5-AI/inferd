@@ -130,17 +130,18 @@ out=$(INFERD_RAM_GB=64 MODEL=$T/mydraft $R start --port $P1 --dry-run 2>&1)
 check "MODEL from the environment when --model is absent" eval '[[ $(line "model     ") == $T/mydraft ]]'
 
 # --- errors (a start that cannot work stops before anything runs)
-out=$($R start --port $P2 2>&1); rc=$?;                              check "start without a model" eval '(( rc != 0 )) && has "start needs --model"'
-out=$($R start --port $P2 --model 27b --bogus 2>&1); rc=$?;          check "unknown option" eval '(( rc != 0 )) && has "unknown option '"'--bogus'"'"'
-out=$($R start --port $P2 --model 2>&1); rc=$?;                      check "missing value" eval '(( rc != 0 )) && has "--model needs a value"'
-out=$($R start --port $P2 --model 70b 2>&1); rc=$?;                  check "unknown model name" eval '(( rc != 0 )) && has "unknown model '"'70b'"'"'
-out=$($R start --port $P2 --model 27b --agents x 2>&1); rc=$?;       check "bad --agents" eval '(( rc != 0 )) && has "max_running must be an integer"'
-out=$($R start --model 27b --port 0 2>&1); rc=$?;         check "bad --port" eval '(( rc != 0 )) && has "port must be an integer"'
+# (the error checks pin the memory: a small CI runner, 14 GB, would otherwise stop at "27b needs 32 GB" first)
+out=$(INFERD_RAM_GB=64 $R start --port $P2 2>&1); rc=$?;                              check "start without a model" eval '(( rc != 0 )) && has "start needs --model"'
+out=$(INFERD_RAM_GB=64 $R start --port $P2 --model 27b --bogus 2>&1); rc=$?;          check "unknown option" eval '(( rc != 0 )) && has "unknown option '"'--bogus'"'"'
+out=$(INFERD_RAM_GB=64 $R start --port $P2 --model 2>&1); rc=$?;                      check "missing value" eval '(( rc != 0 )) && has "--model needs a value"'
+out=$(INFERD_RAM_GB=64 $R start --port $P2 --model 70b 2>&1); rc=$?;                  check "unknown model name" eval '(( rc != 0 )) && has "unknown model '"'70b'"'"'
+out=$(INFERD_RAM_GB=64 $R start --port $P2 --model 27b --agents x 2>&1); rc=$?;       check "bad --agents" eval '(( rc != 0 )) && has "max_running must be an integer"'
+out=$(INFERD_RAM_GB=64 $R start --model 27b --port 0 2>&1); rc=$?;         check "bad --port" eval '(( rc != 0 )) && has "port must be an integer"'
 out=$(INFERD_RAM_GB=x $R start --port $P2 --model 27b 2>&1); rc=$?;  check "bad INFERD_RAM_GB" eval '(( rc != 0 )) && has "INFERD_RAM_GB must be"'
-out=$(INFERD_MODELS=$T/empty $R start --port $P2 --model 27b 2>&1); rc=$?
+out=$(INFERD_RAM_GB=64 INFERD_MODELS=$T/empty $R start --port $P2 --model 27b 2>&1); rc=$?
 check "a missing checkpoint names install.sh" eval '(( rc != 0 )) && has "run ./install.sh --model 27b"'
 print 'macos_target 26' > $E/build/BUILD-INFO
-out=$(INFERD_MACOS=27 $R start --port $P2 --model 27b 2>&1); rc=$?
+out=$(INFERD_RAM_GB=64 INFERD_MACOS=27 $R start --port $P2 --model 27b 2>&1); rc=$?
 check "a release build for another macOS refuses to start" eval '(( rc != 0 )) && has "this build is for macOS 26 and this Mac runs macOS 27"'
 print 'macos_target 27' > $E/build/BUILD-INFO
 out=$(INFERD_MACOS=27 INFERD_RAM_GB=32 $R start --port $P1 --model 27b --dry-run 2>&1)
