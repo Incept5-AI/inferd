@@ -153,7 +153,7 @@ Pro row", `16 1024 24 30 147456`); 256 GB and up the Studio row below. `--dry-ru
 
 | Machine | `run.sh` | Environment | Notes |
 |---|---|---|---|
-| Mac Studio M5 Ultra, 256 GB | `8300 64 2048 140 96 262144` | defaults (`KV8=1`, `SPEC_AUTO=1`, `LANE=0`, `ANE_UNITS=0`); `SPILL_DIR` optional | Give the KV size explicitly; never 0 with a small model. Restart the server between long benchmark sweeps |
+| Mac Studio M5 Ultra, 256 GB | `8300 64 2048 140 192 262144` | defaults (`KV8=1`, `SPEC_AUTO=1`, `LANE=0`, `ANE_UNITS=0`); `SPILL_DIR` optional | Give the KV size explicitly; never 0 with a small model. Restart the server between long benchmark sweeps |
 | Mac mini M5 Pro, 64 GB | `8300 16 1024 24 30 147456` (README); the overnight fleets used `8300 32 1024 0 16 <window>` | `SPILL_DIR=… SPILL_GIB=96`, `DRAFT_BITS=4` | GPU only: the Neural Engine split gains ~3% here |
 | Mac mini M6, 32 GB | `8300 4 1024 3 8 40960` (README); the overnight fleets used 8 running, auto KV (3.1–4 GiB), 16 snapshots | `SPILL_DIR=… SPILL_GIB=64` (README) or 96 (fleets), `ANE_UNITS=24` (`ANE_MIN_ROWS` defaults to 1,024), `DRAFT_BITS=4` | The Neural Engine split is worth +8–17% in fleets. Agents beyond the KV pool queue and swap through the SSD |
 | Mac mini M4 Pro, 64 GB (no GPU neural accelerators) | `8300 16 1024 0 8 40960` (the 5 Nov measurements) | `DRAFT=…`; the Neural Engine split is on by default (26 units; `ANE_UNITS=0` off) | Prefill ~1.5x with the split (RESULTS.md (v)); decode unchanged |

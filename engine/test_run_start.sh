@@ -93,7 +93,7 @@ R=$E/run.sh SOCK1=$T/run/inferd-$P1.sock
 # --- the sizing from memory (docs/MACHINES.md), each tier and its edges
 for ram want spill in 32 "16 1024 0 8 32768" 64 47 "16 1024 0 8 32768" 64 48 "16 1024 0 30 147456" 96 \
                       64 "16 1024 0 30 147456" 96 127 "16 1024 0 30 147456" 96 128 "16 1024 24 30 147456" 96 \
-                      255 "16 1024 24 30 147456" 96 256 "64 2048 140 96 262144" off 512 "64 2048 140 96 262144" off; do
+                      255 "16 1024 24 30 147456" 96 256 "64 2048 140 192 262144" off 512 "64 2048 140 192 262144" off; do
   out=$(INFERD_RAM_GB=$ram $R start --port $P1 --model 27b --dry-run 2>&1); rc=$?
   check "$ram GB: dry run exits 0" test $rc -eq 0
   check "$ram GB: engine gets $want" eval '[[ $(line "engine    ") == *" ./build/inferd $M/Qwen3.8-27B-4bit $SOCK1 $want" ]]'
@@ -112,7 +112,7 @@ check "dry run created no log or run directory" eval '[[ ! -e $T/logs && ! -e $T
 out=$(INFERD_RAM_GB=256 $R start --model 27b --port $P2 --agents 4 --context 65536 --kv 3 --snapshots 6 --dry-run 2>&1)
 check "--port/--agents/--context/--kv/--snapshots" eval '[[ $(line "engine    ") == *" $T/run/inferd-$P2.sock 4 2048 3 6 65536" && $(line "front end ") == *"--port $P2" ]]'
 out=$(INFERD_RAM_GB=256 $R start --model=27b --port=$P2 --kv=7.5 --dry-run 2>&1)
-check "--opt=value forms" eval '[[ $(line "engine    ") == *" $T/run/inferd-$P2.sock 64 2048 7.5 96 262144" ]]'
+check "--opt=value forms" eval '[[ $(line "engine    ") == *" $T/run/inferd-$P2.sock 64 2048 7.5 192 262144" ]]'
 out=$(INFERD_RAM_GB=32 $R start --port $P1 --model 27b --draft none --dry-run 2>&1)
 check "--draft none: no speculation" eval '[[ $(line "drafter   ") == none && $(line "engine    ") == *" DRAFT='"''"' "* ]]'
 out=$(INFERD_RAM_GB=32 $R start --port $P1 --model 27b --draft $T/mydraft --dry-run 2>&1)

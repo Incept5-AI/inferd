@@ -57,7 +57,7 @@ sizing() {  # RAM GB -> RUNNING STEP KV SNAPS MAXCTX, SPILL_DEF (SSD tier GiB, 0
   elif (( $1 < 256 )); then  # MacBook Pro M5 Max, 128 GB: "as the M5 Pro row", with its explicit 24 GiB pool
     RUNNING=16 STEP=1024 KV=24 SNAPS=30 MAXCTX=147456 SPILL_DEF=96 SIZING="128 GB Mac"
   else  # Mac Studio, 256 GB+: an explicit pool, never auto (auto-sizing hung the Studio, MACHINES.md)
-    RUNNING=64 STEP=2048 KV=140 SNAPS=96 MAXCTX=262144 SPILL_DEF=0 SIZING="256 GB+ Mac (Mac Studio)"
+    RUNNING=64 STEP=2048 KV=140 SNAPS=192 MAXCTX=262144 SPILL_DEF=0 SIZING="256 GB+ Mac (Mac Studio)"
   fi
 }
 usage() { sed -n '2,/^emulate/p' "$SELF" | sed '$d' | sed 's/^# \{0,1\}//'; }

@@ -31,7 +31,7 @@ Model: **Qwen3.8-27B** (mlx-community 4-bit, 8-bit or bf16) with the **incoai Qw
 # or the explicit form, unchanged:
 python3 -m venv ~/.venvs/inferd && ~/.venvs/inferd/bin/pip install -r requirements.txt
 export MODEL=~/models/Qwen3.8-27B-4bit DRAFT=~/models/Qwen3.8-27B-DFlash2 PY=~/.venvs/inferd/bin/python
-./run.sh 8300 64 2048 140 96 262144      # start: port, max agents, step tokens, KV GiB, snapshots, max context
+./run.sh 8300 64 2048 140 192 262144     # start: port, max agents, step tokens, KV GiB, snapshots, max context
 curl localhost:8300/v1/chat/completions -H 'Content-Type: application/json' \
   -d '{"model":"qwen3.8-27b","messages":[{"role":"user","content":"Hello"}]}'
 ./run.sh status 8300                     # pids, engine socket, log paths (exit 0 when both processes run, 3 if not)
@@ -136,7 +136,7 @@ speculative sampling where it is exact: `top_k` 1–64 (the GPU sampler sees eac
 
 | Machine | `run.sh` arguments | SSD tier | Notes |
 |---|---|---|---|
-| M5 Ultra, 256 GB | `8300 64 2048 140 96 262144` | optional | 4.5M tokens of KV: 32 agents × 128k stay resident |
+| M5 Ultra, 256 GB | `8300 64 2048 140 192 262144` | optional | 4.5M tokens of KV: 32 agents × 128k stay resident. 192 snapshots (5 Nov): with 96, a 64-agent fleet re-read contexts (8k fleet, 64 in flight: 59.6 → 95.3 turns/min with 192; +16 GiB of state) |
 | M5 Max / M5 Pro, 64 GB | `8300 16 1024 24 30 147456` | `SPILL_DIR=… SPILL_GIB=96` | ~770k tokens resident |
 | M6, 32 GB | `8300 16 1024 0 8 32768` | `SPILL_DIR=… SPILL_GIB=64` | auto KV: 2.9 GiB (~92k tokens) beside the drafter; agents beyond that queue and swap via SSD. `KV4=1` doubles it (182k: eight 16k agents resident) at a small accuracy cost |
 
