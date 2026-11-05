@@ -85,6 +85,8 @@ Smoke tests, to run after every kernel change (each takes seconds):
   from `Qwen35::sg_tile`), all bf16 activations, no W4A8. MLX's `BlockLoader` silently skips columns when BM*BK/128
   values per thread don't tile the block (BM 24/40/48 at BK 64): check any new tile shape with `decode_test check`
   at a chunk that lands on it. Knobs: `WIDE_MIN`/`WIDE_MAX`/`WIDE_NV`/`WIDE_KL`, `SG_MIN` (11), `SG_BM`/`SG_BK`/`SG_BN`/`SG_W`.
+  Prefill there is ~93% that GEMM, already at ~6.2 TFLOPS on an M4 Pro (level with mlx_lm); the Neural Engine FFN split
+  (`ANE_UNITS`) is the lever: on by default on M4 / M4 Pro (26 units, `Qwen35::ane_units_default`; 0 = off), +50% prefill.
 - KV blocks are allocated in aligned free groups of 4 (`grp_free`/`free_groups`): scattered pages cost 10–14% per verify step at 128k–256k. Anything that takes blocks off the pool must go through `alloc_block`/`push_free`.
 - **Never lower the Metal kernels' target** (`-mmacosx-version-min` or `MACOSX_DEPLOYMENT_TARGET` for `xcrun metal`):
   a macOS 26 target made MLX's NAX matmuls compute wrong logits on macOS 27 at >= 256 rows (2026-11-03, reverted in

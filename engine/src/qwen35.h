@@ -576,7 +576,7 @@ struct Qwen35 {
       moe_stats = env_int("MOE_STATS", 0);
       if (cfg.topk <= 16) moe_plan_buf = g.alloc((size_t)(1 + 8 * cfg.topk * 9) * 4 * (moe_stats ? cfg.layers + 1 : 1));
     }
-    if (const int units = getenv("ANE_UNITS") ? atoi(getenv("ANE_UNITS")) : 0; !cfg.experts && units > 0 && B >= 512 &&
+    if (const int units = ane_units_default(); !cfg.experts && units > 0 && B >= 512 &&
         L[0].gate_up.bits == 4 && cfg.hidden % AneFfn::SEG == 0)
       ane = new AneFfn(g, cfg.hidden, cfg.inter, units, std::min(B, 2048));
     attn_part = g.alloc((size_t)std::max(kAttnPartRows, B) * cfg.hq * (cfg.max_dh() + 2) * 4);
@@ -2263,6 +2263,17 @@ struct Qwen35 {
   // (2026-11-02 night; cause not found: the GPU idled between the early command buffers while the host encoded).
   bool no_split_step = false;
   AneFfn* ane = nullptr;  // the Neural Engine FFN split (ANE_UNITS > 0): prefill steps of >= 512 rows
+  // ANE_UNITS when set (0 = off); otherwise 26 of the 27B's 34 FFN units on an M4 or M4 Pro (no GPU neural
+  // accelerators, <= 20 GPU cores) and off elsewhere. M4 Pro (2026-11-05), 8k prefill, GPU alone 122 / 114 tok/s
+  // (chunks 1,024 / 2,048): 14 units 159 / 160, 22 201 / 208, 26 212 / 218, 30 197 / 202, 34 187 / 194. There the
+  // GPU's quantized GEMM is at ~6.2 TFLOPS and the Neural Engine runs the FFN at ~10.3 (tools/ane_probe). Not
+  // measured on M1-M3 or the M4 Max (a 40-core GPU leaves the Neural Engine a smaller share): try ANE_UNITS there.
+  int ane_units_default() const {
+    if (const char* v = getenv("ANE_UNITS")) return atoi(v);
+    const std::string name = g.dev.name.UTF8String;
+    const bool m4 = name.find("Apple M4") != std::string::npos && name.find("Max") == std::string::npos;
+    return !g.nax && m4 && g.cores <= 20 ? 26 : 0;
+  }
   void commit_early(id<MTLCommandBuffer> __strong& cb) {
     [cb commit];
     early.push_back(cb);
