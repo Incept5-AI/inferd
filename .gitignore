@@ -5,3 +5,5 @@ __pycache__/
 release/
 publish/
 engine/gate-*.log
+
+CLAUDE.md
