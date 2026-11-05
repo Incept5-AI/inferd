@@ -50,7 +50,19 @@ ap.add_argument("--max-model-len", type=int, default=int(os.environ.get("INFERD_
 args = ap.parse_args()
 SERVED = [n.strip() for n in args.name.split(",") if n.strip()] or ["qwen3.8-27b"]
 args.name = SERVED[0]
-VERSION = "0.3.0-dev"  # inferd; GET /version
+def _version():
+    """GET /version: a release tarball's build/BUILD-INFO "version" line, else this checkout's release."""
+    try:
+        bi = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "build", "BUILD-INFO")
+        for ln in open(bi):
+            if ln.startswith("version "):
+                return ln.split(None, 1)[1].strip()
+    except OSError:
+        pass
+    return "0.4.1"
+
+
+VERSION = _version()  # inferd; GET /version
 STARTED = int(time.time())
 
 

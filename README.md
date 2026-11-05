@@ -35,7 +35,8 @@ tar xzf inferd-0.4.1-macos27-arm64.tar.gz && cd inferd-0.4.1
 On **macOS 26**, use [inferd-0.4.1-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz)
 and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz.sha256)
 the same way (built natively on macOS 26.6 with Xcode 26.5; the same engine and toolchain as 0.4.0's, whose macOS 26 file passed
-the full release gate on an external tester's 128 GB Mac on macOS 26.6, the only macOS 26 machine so far). Or build it yourself, then carry on from step 2
+the full release gate on two testers' Macs on macOS 26.6: a 128 GB Mac and a MacBook Pro M4 Max, 36 GB). During the gate
+macOS may show a Python crash report: `test_image_decode` aborts a helper process on purpose, and it is not a failure. Or build it yourself, then carry on from step 2
 in `engine/`. That needs Xcode, not just the Command Line Tools, with its Metal toolchain (once:
 `xcodebuild -downloadComponent MetalToolchain`); `./build.sh` uses `/Applications/Xcode.app` by itself when the
 Command Line Tools are the active developer directory (see [Building from source](#building-from-source)):
