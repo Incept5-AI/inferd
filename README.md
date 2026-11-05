@@ -21,25 +21,25 @@ Up and running in four steps (click a step to open it). You need a Mac with Appl
 its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
 **[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-<details><summary><b>1. Download and check</b>: the file for your macOS (27, or 26 beta) from the v0.3.0 release</summary>
+<details><summary><b>1. Download and check</b>: the file for your macOS (27, or 26 beta) from the v0.4.0 release</summary>
 
-Download [inferd-0.3.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz)
-and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz.sha256)
-from the [v0.3.0 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.3.0). No Xcode needed.
+Download [inferd-0.4.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos27-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos27-arm64.tar.gz.sha256)
+from the [v0.4.0 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.0). No Xcode needed.
 
 ```bash
-cd ~/Downloads && shasum -a 256 -c inferd-0.3.0-macos27-arm64.tar.gz.sha256   # prints OK
-tar xzf inferd-0.3.0-macos27-arm64.tar.gz && cd inferd-0.3.0
+cd ~/Downloads && shasum -a 256 -c inferd-0.4.0-macos27-arm64.tar.gz.sha256   # prints OK
+tar xzf inferd-0.4.0-macos27-arm64.tar.gz && cd inferd-0.4.0
 ```
 
-On **macOS 26**, use [inferd-0.3.0-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos26-arm64.tar.gz)
-and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos26-arm64.tar.gz.sha256)
+On **macOS 26**, use [inferd-0.4.0-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos26-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.0/inferd-0.4.0-macos26-arm64.tar.gz.sha256)
 the same way (**beta**: built natively on macOS 26.6 with Xcode 26.5, not yet run on a macOS 26 Mac's GPU; run the release
 gate once, below). Or build it yourself (needs Xcode with its Metal compiler: `xcodebuild -downloadComponent
 MetalToolchain`, once), then carry on from step 2 in `engine/`:
 
 ```bash
-git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.3.0 && cd engine
+git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.0 && cd engine
 ./build.sh                                   # under a minute
 ```
 
