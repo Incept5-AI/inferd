@@ -8,7 +8,8 @@ from jinja2 import TemplateError
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from transformers import AutoTokenizer
 
 TRUST = """\
@@ -42,8 +43,14 @@ ap.add_argument("--model", required=True)
 ap.add_argument("--socket", default="/tmp/inferd.sock", help="inferd's Unix socket (run.sh: an owner-only directory)")
 ap.add_argument("--host", default="127.0.0.1", help="anything but loopback requires INFERD_API_KEY")
 ap.add_argument("--port", type=int, default=8300)
-ap.add_argument("--name", default="qwen3.8-27b")
+ap.add_argument("--name", default="qwen3.8-27b",
+                help="served model name(s), comma-separated (vLLM's --served-model-name): the first is the id")
+ap.add_argument("--max-model-len", type=int, default=0, help="the engine's context cap (run.sh passes it); 0: unknown")
 args = ap.parse_args()
+SERVED = [n.strip() for n in args.name.split(",") if n.strip()] or ["qwen3.8-27b"]
+args.name = SERVED[0]
+VERSION = "0.3.0-dev"  # inferd; GET /version
+STARTED = int(time.time())
 
 
 def _loopback(host):
@@ -352,9 +359,22 @@ async def _unexpected(req, e):  # a bug, not the client's fault: still an OpenAI
     return JSONResponse(_err("internal error", "server_error", "internal_error"), status_code=500)
 
 
+def _model_card(name):
+    return {"id": name, "object": "model", "created": STARTED, "owned_by": "inferd",
+            "root": os.path.basename(os.path.normpath(args.model)), "parent": None,
+            "max_model_len": args.max_model_len or None, "permission": []}
+
+
 @app.get("/v1/models")
 async def models():
-    return {"object": "list", "data": [{"id": args.name, "object": "model", "owned_by": "inferd"}]}
+    return {"object": "list", "data": [_model_card(n) for n in SERVED]}
+
+
+@app.get("/v1/models/{name:path}")
+async def model_card(name: str):
+    if name not in SERVED:
+        return ApiError(404, f"The model `{name}` does not exist.", "model_not_found", param="model").response()
+    return _model_card(name)
 
 
 @app.get("/health")
@@ -362,6 +382,48 @@ async def health():
     if not engine.alive:
         return JSONResponse({"ok": False, "error": "engine disconnected"}, status_code=503)
     return {"ok": True}
+
+
+@app.api_route("/ping", methods=["GET", "POST"])
+async def ping():  # vLLM / SageMaker liveness: 200 while the engine is connected
+    if not engine.alive:
+        return JSONResponse({"ok": False, "error": "engine disconnected"}, status_code=503)
+    return {"ok": True}
+
+
+@app.get("/version")
+async def version():
+    return {"version": VERSION, "engine": "inferd"}
+
+
+# Endpoints vLLM serves that inferd does not (pooling, scoring, audio, LoRA, the Responses API): a clean 501 with an
+# OpenAI-style error, never a 404 HTML page or a hang (docs/API-COMPAT.md).
+_UNSUPPORTED = {
+    "/v1/embeddings": "embeddings", "/pooling": "pooling", "/classify": "classification", "/v1/classify": "classification",
+    "/score": "scoring", "/v1/score": "scoring", "/rerank": "reranking", "/v1/rerank": "reranking",
+    "/v2/rerank": "reranking", "/v1/audio/transcriptions": "audio", "/v1/audio/translations": "audio",
+    "/v1/audio/speech": "audio", "/v1/load_lora_adapter": "LoRA adapters", "/v1/unload_lora_adapter": "LoRA adapters",
+    "/v1/responses": "the Responses API", "/v1/images/generations": "image generation"}
+
+
+def _unsupported_route(path, what):
+    async def handler():
+        return JSONResponse(_err(f"{path}: {what} is not supported by inferd (a generative chat model server); see "
+                                 "docs/API-COMPAT.md", "invalid_request_error", "unsupported_endpoint"),
+                            status_code=501)
+    return handler
+
+
+for _p, _w in _UNSUPPORTED.items():
+    app.add_api_route(_p, _unsupported_route(_p, _w), methods=["GET", "POST"], include_in_schema=False)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_error(req, e):  # unknown routes, wrong methods: OpenAI-style JSON, not FastAPI's {"detail": ...}
+    code = {404: "not_found", 405: "method_not_allowed"}.get(e.status_code, "http_error")
+    msg = f"{req.method} {req.url.path}: {e.detail}"
+    return JSONResponse(_err(msg, "invalid_request_error" if e.status_code < 500 else "server_error", code),
+                        status_code=e.status_code)
 
 
 # Tool calls, Qwen3.x markup (the chat template's own format):
@@ -436,7 +498,7 @@ class StopMatcher:
     stop string is held back until the next piece decides it; flush() returns it when generation ends otherwise."""
 
     def __init__(self, stops, keep=False):
-        self.stops, self.keep, self.buf, self.done = list(stops), keep, "", False
+        self.stops, self.keep, self.buf, self.done, self.hit = list(stops), keep, "", False, None
 
     def feed(self, piece):
         if self.done:
@@ -444,7 +506,7 @@ class StopMatcher:
         s = self.buf + piece
         h = _first_stop(s, self.stops)
         if h is not None:
-            self.done, self.buf = True, ""
+            self.done, self.buf, self.hit = True, "", h[1]
             return s[:h[0]] + (h[1] if self.keep else ""), True
         k = next((n for n in range(min(max(map(len, self.stops)) - 1, len(s)), 0, -1)
                   if any(st.startswith(s[-n:]) for st in self.stops)), 0)
@@ -494,6 +556,7 @@ _GONE = {"done": "error: client disconnected", "p": 0, "c": 0, "cached": 0, "_lo
 
 
 async def _watch_disconnect(receive, q):
+    """q: a request's queue, or a list of them (n choices)."""
     while True:
         try:
             msg = await receive()
@@ -502,15 +565,31 @@ async def _watch_disconnect(receive, q):
         except Exception:  # the server's receive channel failed: the client is as good as gone
             msg = {"type": "http.disconnect"}
         if msg.get("type") == "http.disconnect":
-            q.put_nowait(dict(_GONE))
+            for x in (q if isinstance(q, list) else [q]):
+                x.put_nowait(dict(_GONE))
             return
         await asyncio.sleep(0.05)  # not a disconnect (nothing else is expected once the body is read): never spin
 
 
 def _template_messages(messages):
-    """OpenAI clients send tool_calls[].function.arguments as a JSON string; the template iterates a mapping."""
+    """OpenAI clients send tool_calls[].function.arguments as a JSON string; the template iterates a mapping. Content
+    parts in the other shapes vLLM accepts become the template's own: input_text / output_text / refusal -> text,
+    input_image (a URL string) and image_url given as a bare string -> image_url {url}."""
     out = []
     for m in messages:
+        if m.get("role") == "developer":  # OpenAI's newer name for the system role (templates know "system")
+            m = {**m, "role": "system"}
+        if isinstance(m.get("content"), list):
+            parts = []
+            for p in m["content"]:
+                t = p.get("type")
+                if t in ("input_text", "output_text", "refusal"):
+                    p = {"type": "text", "text": p.get("text", p.get("refusal", ""))}
+                elif t == "input_image" or (t == "image_url" and isinstance(p.get("image_url"), str)):
+                    u = p.get("image_url")
+                    p = {"type": "image_url", "image_url": {"url": u.get("url") if isinstance(u, dict) else u}}
+                parts.append(p)
+            m = {**m, "content": parts}
         if m.get("role") == "assistant" and m.get("tool_calls"):
             calls = []
             for c in m["tool_calls"]:
@@ -542,13 +621,31 @@ def render(body):
             kw[k] = body[k]
     tools = body.get("tools")
     body = {**body, "messages": _template_messages(body["messages"])}
+    force = body.get("_force")  # tool_choice required / named: the call's opening markup, thinking off
+    if force:
+        kw["enable_thinking"] = False
     thinking = kw.get("enable_thinking", True)
+    # vLLM's template fields: continue_final_message (the reply continues the last assistant message),
+    # add_generation_prompt (default true), documents, chat_template (refused unless trusted, check_chat).
+    cont = bool(body.get("continue_final_message"))
+    agp = not cont and body.get("add_generation_prompt") is not False
+    extra = {k: body[k] for k in ("documents", "chat_template") if body.get(k) is not None}
+    if cont:
+        extra["continue_final_message"] = True
+    if cont or not agp:
+        thinking = False  # the output continues a message as written: no reasoning split
     if _has_images(body["messages"]):
+        if extra or not agp or force:
+            raise ValueError("continue_final_message, add_generation_prompt: false, documents, chat_template and a "
+                             "forced tool_choice are not supported with images")
         with _vision_lock:
             tokens, emb, mrope, delta = vision().prepare(body["messages"], tools=tools, **kw)
         return {"tokens": tokens, "mrope": mrope, "rope_delta": delta,
                 "embeds": base64.b64encode(emb).decode()}, thinking
-    text = tok.apply_chat_template(body["messages"], tools=tools, add_generation_prompt=True, tokenize=False, **kw)
+    text = tok.apply_chat_template(body["messages"], tools=tools, add_generation_prompt=agp, tokenize=False,
+                                   **extra, **kw)
+    if force:
+        text += force
     out = {"tokens": encode_cached(text)}
     if text.startswith(_SEG + "system"):  # agents sharing this system prompt resume after it (prefix cache)
         end = text.find(_SEG, 1)
@@ -830,6 +927,9 @@ def v_messages(msgs, param="messages"):
             for k, part in enumerate(c):
                 if not isinstance(part, dict):
                     raise _bad(f"{p}.content[{k}]", "must be a content-part object")
+                if part.get("type") not in _PART_TYPES:
+                    raise _bad(f"{p}.content[{k}].type", f"content parts of type {str(part.get('type'))[:40]!r} are "
+                               "not supported (text, image_url and their input_* forms are)", "unsupported_content")
                 if isinstance(part.get("text"), str):
                     chars += len(part["text"])
         elif c is not None:
@@ -852,11 +952,147 @@ def v_messages(msgs, param="messages"):
     return msgs
 
 
+_PART_TYPES = ("text", "input_text", "output_text", "refusal", "image_url", "input_image", "image")
+
+
 def v_tools(d):
     tools = d.get("tools")
     if tools is not None and (not isinstance(tools, list) or not all(isinstance(t, dict) for t in tools)):
         raise _bad("tools", "must be a list of tool objects")
     return tools
+
+
+MAX_N = _env_num("INFERD_MAX_N", 16, 1, 256)  # choices per request (n)
+MAX_LOGPROBS = 20                             # top logprobs per token (vLLM's default max_logprobs)
+STRICT_MODEL = os.environ.get("INFERD_STRICT_MODEL") == "1"  # unknown model names: 404, as vLLM (default: accepted)
+TRUST_TEMPLATE = os.environ.get("INFERD_TRUST_REQUEST_CHAT_TEMPLATE") == "1"  # vLLM's --trust-request-chat-template
+# vLLM's structured-output fields (guided_* before 0.10, structured_outputs since): -> one response_format-style spec.
+_GUIDED = ("guided_json", "guided_regex", "guided_choice", "guided_grammar", "guided_decoding_backend",
+           "guided_whitespace_pattern", "structured_outputs")
+
+
+def v_sampling_extras(b, chat):
+    """vLLM's request fields shared by chat and completions (docs/API-COMPAT.md); raises ApiError."""
+    if STRICT_MODEL and b.get("model") is not None and b["model"] not in SERVED:
+        raise ApiError(404, f"The model `{b['model']}` does not exist.", "model_not_found", param="model")
+    n = v_int(b, "n", 1, MAX_N)
+    best = v_int(b, "best_of", 1, MAX_N)
+    if best is not None and best != (n or 1):
+        raise _bad("best_of", "best_of different from n is not supported (as in vLLM V1); leave it out", "unsupported")
+    v_num(b, "min_p", 0, 1)
+    for k in ("presence_penalty", "frequency_penalty"):
+        v_num(b, k, -2, 2)
+    v_num(b, "repetition_penalty", 0, 100, lo_open=True)
+    v_int(b, "min_tokens", 0, LIM.output_tokens)
+    lb = v_type(b, "logit_bias", dict, "an object of token id -> bias")
+    if lb:
+        if len(lb) > 1024:
+            raise _bad("logit_bias", "at most 1024 entries")
+        for k, v in lb.items():
+            if not (isinstance(k, str) and k.lstrip("-").isdigit()) or isinstance(v, bool) or \
+                    not isinstance(v, (int, float)) or not math.isfinite(v) or not -100 <= v <= 100:
+                raise _bad("logit_bias", "keys are token ids, values numbers in [-100, 100]")
+    sti = v_type(b, "stop_token_ids", list, "a list of token ids")
+    if sti is not None and (len(sti) > 64 or not all(isinstance(t, int) and not isinstance(t, bool) and t >= 0
+                                                       for t in sti)):
+        raise _bad("stop_token_ids", "at most 64 non-negative integers")
+    for k in ("ignore_eos", "include_stop_str_in_output", "skip_special_tokens", "spaces_between_special_tokens",
+              "echo", "add_special_tokens", "return_tokens_as_token_ids"):
+        v_type(b, k, bool, "true or false")
+    v_type(b, "user", str, "a string")
+    v_type(b, "metadata", dict, "an object")
+    v_type(b, "request_id", str, "a string")
+    if b.get("request_id") is not None and (len(b["request_id"]) > 128 or any(ord(c) < 32 for c in b["request_id"])):
+        raise _bad("request_id", "at most 128 characters, no control characters")
+    v_int(b, "truncate_prompt_tokens", -1, LIM.prompt_tokens)
+    if b.get("truncate_prompt_tokens") == 0:
+        raise _bad("truncate_prompt_tokens", "must be -1 (the model's limit) or a positive number of tokens")
+    so = b.get("stream_options") or {}
+    v_type(so, "continuous_usage_stats", bool, "true or false", "stream_options.")
+    if b.get("prompt_logprobs") is not None:
+        raise _bad("prompt_logprobs", "prompt logprobs are not supported (inferd keeps no logits for prompt positions)",
+                   "unsupported")
+    if b.get("cache_salt") is not None:
+        raise _bad("cache_salt", "not supported: inferd's prefix cache is shared by every request (one trusted user; "
+                   "README, Security and limits); use \"cache\": \"drop\" to keep a request out of it", "unsupported")
+    if b.get("lora_request") is not None or b.get("lora") is not None:
+        raise _bad("lora_request", "LoRA adapters are not supported", "unsupported")
+    if chat:
+        v_type(b, "logprobs", bool, "true or false")
+        tl = v_int(b, "top_logprobs", 0, MAX_LOGPROBS)
+        if tl is not None and not b.get("logprobs"):
+            raise _bad("top_logprobs", "needs logprobs: true")
+    else:
+        v_int(b, "logprobs", 0, MAX_LOGPROBS)
+    return b
+
+
+def v_guided(b):
+    """-> a response_format equivalent of vLLM's guided_* / structured_outputs fields, or None. guided_choice and
+    guided_regex become a JSON string schema (enum / anchored pattern) decoded under the grammar and unquoted."""
+    so = v_type(b, "structured_outputs", dict, "an object") or {}
+    g = {k[len("guided_"):]: b[k] for k in ("guided_json", "guided_regex", "guided_choice", "guided_grammar")
+         if b.get(k) is not None}
+    g.update({k: v for k, v in so.items() if v is not None and k in ("json", "regex", "choice", "grammar",
+                                                                       "json_object", "structural_tag")})
+    bad = [k for k, v in so.items() if v is not None and k not in ("json", "regex", "choice", "grammar", "json_object",
+                                                                   "structural_tag", "backend", "whitespace_pattern",
+                                                                   "disable_fallback", "disable_any_whitespace",
+                                                                   "disable_additional_properties")]
+    if bad:
+        raise _bad("structured_outputs", f"unknown field(s): {', '.join(map(str, bad))[:200]}")
+    if not g:
+        return None
+    if len(g) > 1:
+        raise _bad("structured_outputs", "give one of json, regex, choice, grammar")
+    if b.get("response_format") is not None and (b["response_format"] or {}).get("type", "text") != "text":
+        raise _bad("structured_outputs", "give either response_format or guided_* / structured_outputs, not both")
+    kind, v = next(iter(g.items()))
+    if kind in ("grammar", "structural_tag"):
+        raise _bad("guided_grammar" if kind == "grammar" else "structured_outputs.structural_tag",
+                   "context-free grammars are not supported (JSON Schema, regex and choice are)", "unsupported")
+    if kind == "json_object":
+        return {"type": "json_object"} if v else None
+    if kind == "json":
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except ValueError:
+                raise _bad("guided_json", "must be a JSON Schema (an object or its JSON text)")
+        if not isinstance(v, dict):
+            raise _bad("guided_json", "must be a JSON Schema object")
+        return {"type": "json_schema", "json_schema": {"name": "guided", "schema": v, "strict": True}}
+    if kind == "choice":
+        if not isinstance(v, list) or not v or not all(isinstance(c, str) for c in v):
+            raise _bad("guided_choice", "must be a non-empty list of strings")
+        return {"type": "json_schema", "json_schema": {"name": "choice", "schema": {"enum": v}, "strict": True},
+                "_unquote": True}
+    if not isinstance(v, str) or not v:
+        raise _bad("guided_regex", "must be a non-empty string")
+    return {"type": "json_schema", "json_schema": {"name": "regex", "schema": {"type": "string",
+                                                                              "pattern": f"^(?:{v})$"},
+                                                   "strict": True}, "_unquote": True}
+
+
+def v_tool_choice(b):
+    """-> None (auto), "none", "required" or a function name; raises ApiError."""
+    tc = b.get("tool_choice")
+    v_type(b, "parallel_tool_calls", bool, "true or false")
+    if tc is None or tc == "auto":
+        return None
+    tools = b.get("tools") or []
+    if tc == "none":
+        return "none"
+    if not tools:
+        raise _bad("tool_choice", "needs tools")
+    if tc == "required":
+        return "required"
+    name = (tc.get("function") or {}).get("name") if isinstance(tc, dict) else None
+    if not isinstance(name, str):
+        raise _bad("tool_choice", "must be none, auto, required or {type: function, function: {name}}")
+    if name not in [(t.get("function") or t).get("name") for t in tools]:
+        raise _bad("tool_choice", f"function {name[:64]!r} is not in tools")
+    return name
 
 
 def v_effort_fields(d, where=""):
@@ -890,6 +1126,7 @@ def v_policy(b):
 def check_chat(b):
     """Validate a /v1/chat/completions body (in place; raises ApiError)."""
     b.pop("_grammar", None)  # internal (structured_chat -> complete): never from a client
+    b.pop("_force", None)    # internal (tool_choice)
     v_type(b, "model", str, "a string")
     v_messages(b.get("messages"))
     v_type(b, "stream", bool, "true or false")
@@ -914,6 +1151,29 @@ def check_chat(b):
         raise _bad("stop", "at most 64 strings of up to 4096 characters")
     v_type(b, "response_format", dict, "an object")
     v_policy(b)
+    v_sampling_extras(b, chat=True)
+    rf = v_guided(b)
+    if rf is not None:
+        b["response_format"] = rf
+    v_tool_choice(b)
+    for k in ("add_generation_prompt", "continue_final_message"):
+        v_type(b, k, bool, "true or false")
+    if b.get("continue_final_message") and b.get("add_generation_prompt"):  # absent counts as false here
+        raise _bad("continue_final_message", "cannot be combined with add_generation_prompt: true")
+    if b.get("continue_final_message") and b["messages"][-1].get("role") != "assistant":
+        raise _bad("continue_final_message", "the last message must be the assistant's")
+    if b.get("chat_template") is not None:
+        v_type(b, "chat_template", str, "a string")
+        if not TRUST_TEMPLATE:
+            raise _bad("chat_template", "request chat templates are refused (as vLLM without "
+                       "--trust-request-chat-template); start the server with INFERD_TRUST_REQUEST_CHAT_TEMPLATE=1",
+                       "unsupported")
+    docs = b.get("documents")
+    if docs is not None and not (isinstance(docs, list) and all(isinstance(d, dict) for d in docs)):
+        raise _bad("documents", "must be a list of objects")
+    if (b.get("n") or 1) > 1 and b.get("response_format") is not None and \
+            (b["response_format"].get("type") or "text") != "text":
+        raise _bad("n", "n > 1 with structured output is not supported", "unsupported")
     return b
 
 
@@ -1352,6 +1612,22 @@ async def _expire_loop():
             print(f"serve: expiry: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
 
 
+def _request_id(req, body):
+    """X-Request-Id (vLLM): the response id is built from it (a body "request_id" wins) and it is echoed back."""
+    xr = req.headers.get("x-request-id")
+    if xr and len(xr) <= 128 and all(32 <= ord(c) < 127 for c in xr):
+        body["_xrid"] = xr
+        return xr
+    body.pop("_xrid", None)
+    return None
+
+
+def _echo_id(resp, xr):
+    if xr is not None:
+        resp.headers["X-Request-Id"] = xr
+    return resp
+
+
 @app.post("/v1/chat/completions")
 async def chat(req: Request):
     _client_receive.set(req.receive)  # complete() watches it for http.disconnect while it waits (R07)
@@ -1359,9 +1635,246 @@ async def chat(req: Request):
         body = check_chat(await read_json(req))  # one validation boundary (Codex review R03)
     except ApiError as e:
         return e.response()
+    xr = _request_id(req, body)
+    tc = v_tool_choice(body)  # required / a named function: the reply opens with the call's markup (thinking off)
+    if tc == "required":
+        body["_force"] = TOOL_OPEN + "\n"  # not "<function=": a prefix that ends inside a token invents names
+    elif tc not in (None, "none"):
+        body["_force"] = f"{TOOL_OPEN}\n<function={tc}>\n"
     if body.get("response_format") is not None:
-        return await structured_chat(body)
-    return await complete(body)
+        return _echo_id(await structured_chat(body), xr)
+    return _echo_id(await complete(body), xr)
+
+
+# ---- /v1/completions (legacy text completions): the prompt is tokenized as given (no chat template), then the same
+# engine path as chat. prompt: a string, a list of strings, a list of token ids or a list of those lists.
+def check_completion(b):
+    b.pop("_grammar", None)
+    b.pop("_force", None)
+    v_type(b, "model", str, "a string")
+    pr = b.get("prompt")
+    if isinstance(pr, str) or (isinstance(pr, list) and pr and all(isinstance(x, int) and not isinstance(x, bool)
+                                                                   for x in pr)):
+        prompts = [pr]
+    elif isinstance(pr, list) and pr and all(isinstance(x, str) or (isinstance(x, list) and x and all(
+            isinstance(t, int) and not isinstance(t, bool) for t in x)) for x in pr):
+        prompts = list(pr)
+    else:
+        raise _bad("prompt", "must be a string, a list of strings, a list of token ids or a list of such lists")
+    if len(prompts) > MAX_N:
+        raise _bad("prompt", f"at most {MAX_N} prompts per request")
+    if any(isinstance(x, str) and len(x) > LIM.prompt_chars for x in prompts):
+        raise ApiError(413, f"a prompt is over {LIM.prompt_chars} characters (INFERD_MAX_PROMPT_CHARS)",
+                       "request_too_large", param="prompt")
+    if b.get("suffix") not in (None, ""):
+        raise _bad("suffix", "suffix (fill-in-the-middle) is not supported, as in vLLM", "unsupported")
+    v_type(b, "stream", bool, "true or false")
+    so = v_type(b, "stream_options", dict, "an object")
+    if so:
+        v_type(so, "include_usage", bool, "true or false", "stream_options.")
+    for k in ("max_tokens", "max_completion_tokens"):
+        v_int(b, k, 1, LIM.output_tokens)
+    v_num(b, "temperature", 0, 2)
+    v_num(b, "top_p", 0, 1, lo_open=True)
+    v_int(b, "top_k", -1, 1 << 20)
+    v_int(b, "seed", -(1 << 63), (1 << 63) - 1)
+    try:
+        stops = parse_stop(b.get("stop"))
+    except ValueError as e:
+        raise _bad("stop", str(e))
+    if len(stops) > 64 or any(len(s) > 4096 for s in stops):
+        raise _bad("stop", "at most 64 strings of up to 4096 characters")
+    v_policy(b)
+    if (b.get("inferd") or {}).get("context") is not None or b.get("context") is not None:
+        raise _bad("inferd.context", "saved contexts are for /v1/chat/completions")
+    v_sampling_extras(b, chat=False)
+    rf = v_guided(b) or (b.get("response_format") if isinstance(b.get("response_format"), dict) else None)
+    if b.get("response_format") is not None and not isinstance(b["response_format"], dict):
+        raise _bad("response_format", "must be an object")
+    if rf is not None and (rf.get("type") or "text") != "text":
+        if rf.get("_unquote"):
+            raise _bad("guided_choice", "guided_choice / guided_regex are supported on /v1/chat/completions only",
+                       "unsupported")
+        try:
+            spec = structured.parse_response_format(rf)
+        except (ValueError, TypeError) as e:
+            raise _bad("response_format", str(e))
+        b["_grammar"] = spec["schema"]  # constrained decoding of the raw continuation (no instruction, no retries)
+    return b, prompts
+
+
+@app.post("/v1/completions")
+async def completions(req: Request):
+    _client_receive.set(req.receive)
+    try:
+        body, raw = check_completion(await read_json(req))
+    except ApiError as e:
+        return e.response()
+    xr = _request_id(req, body)
+
+    def tokenize_all():
+        out = []
+        for x in raw:
+            if isinstance(x, str):
+                ids_ = tok.encode(x, add_special_tokens=body.get("add_special_tokens", True) is not False)
+                out.append({"tokens": ids_, "text": x})
+            else:
+                out.append({"tokens": list(x), "text": tok.decode(x, skip_special_tokens=False)
+                            if body.get("echo") else ""})
+        return out
+    try:
+        prompts = await preprocess(tokenize_all)
+    except ApiError as e:
+        return e.response()
+    except (ValueError, TypeError, OverflowError) as e:
+        return _bad_request(e)
+    vocab = len(tok)
+    for p in prompts:
+        if not p["tokens"]:
+            return _bad("prompt", "a prompt is empty").response()
+        if any(t < 0 or t >= vocab for t in p["tokens"]):
+            return _bad("prompt", f"token ids must be in [0, {vocab})").response()
+    return _echo_id(await complete(body, prompts), xr)
+
+
+# ---- vLLM's tokenizer endpoints
+@app.post("/tokenize")
+async def tokenize(req: Request):
+    try:
+        b = await read_json(req)
+        v_type(b, "model", str, "a string")
+        for k in ("add_special_tokens", "add_generation_prompt", "continue_final_message", "return_token_strs"):
+            v_type(b, k, bool, "true or false")
+        if b.get("messages") is not None:
+            v_messages(b["messages"])
+            v_tools(b)
+            v_effort_fields(b)
+            if b.get("chat_template") is not None and not TRUST_TEMPLATE:
+                raise _bad("chat_template", "request chat templates are refused (INFERD_TRUST_REQUEST_CHAT_TEMPLATE)")
+            body = dict(b)
+            if body.get("add_generation_prompt") is None and not body.get("continue_final_message"):
+                body["add_generation_prompt"] = True
+            if _has_images(body["messages"]):
+                raise _bad("messages", "/tokenize does not count image prompts")
+            tokens = (await preprocess(render, body))[0]["tokens"]
+        elif isinstance(b.get("prompt"), str):
+            if len(b["prompt"]) > LIM.prompt_chars:
+                raise ApiError(413, "prompt too long (INFERD_MAX_PROMPT_CHARS)", "request_too_large")
+            tokens = await preprocess(tok.encode, b["prompt"], add_special_tokens=b.get("add_special_tokens", True)
+                                      is not False)
+        else:
+            raise _bad("prompt", "give prompt (a string) or messages")
+    except ApiError as e:
+        return e.response()
+    except (ValueError, TemplateError, TypeError, KeyError) as e:
+        return _bad_request(e)
+    out = {"count": len(tokens), "max_model_len": args.max_model_len or None, "tokens": list(tokens),
+           "token_strs": tok.convert_ids_to_tokens(list(tokens)) if b.get("return_token_strs") else None}
+    return out
+
+
+@app.post("/detokenize")
+async def detokenize(req: Request):
+    try:
+        b = await read_json(req)
+        t = b.get("tokens")
+        if not isinstance(t, list) or not all(isinstance(x, int) and not isinstance(x, bool) for x in t):
+            raise _bad("tokens", "must be a list of token ids")
+        if len(t) > LIM.prompt_tokens:
+            raise ApiError(413, "too many tokens (INFERD_MAX_PROMPT_TOKENS)", "request_too_large")
+        if any(x < 0 or x >= len(tok) for x in t):
+            raise _bad("tokens", f"token ids must be in [0, {len(tok)})")
+    except ApiError as e:
+        return e.response()
+    return {"prompt": await preprocess(tok.decode, t, skip_special_tokens=False)}
+
+
+# ---- GET /metrics: Prometheus text. vLLM's names under an "inferd:" prefix (docs/API-COMPAT.md): request and token
+# counters and latency histograms from this front end, gauges (running / waiting requests, KV usage, preemptions)
+# from the engine's stats at scrape time.
+class _Metrics:
+    TTFT = (0.001, 0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 20.0, 40.0,
+            80.0, 160.0, 640.0, 2560.0)
+    E2E = (0.3, 0.5, 0.8, 1.0, 1.5, 2.0, 2.5, 5.0, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0, 60.0, 120.0, 240.0, 480.0,
+           960.0, 1920.0, 7680.0)
+
+    def __init__(self):
+        self.prompt = self.gen = self.cached = 0
+        self.finished = collections.Counter()
+        self.ttft = [0] * (len(self.TTFT) + 1) + [0.0]  # bucket counts (last: +Inf), then the sum
+        self.e2e = [0] * (len(self.E2E) + 1) + [0.0]
+
+    @staticmethod
+    def _obs(h, bounds, v):
+        h[next((i for i, b in enumerate(bounds) if v <= b), len(bounds))] += 1
+        h[-1] += v
+
+    def done(self, ev, t_sub, first):
+        """One finished engine request (a choice): its done event, submit time and first-token time."""
+        now = time.monotonic()
+        self.prompt += ev.get("p", 0)
+        self.gen += ev.get("c", 0)
+        self.cached += ev.get("cached", 0)
+        self.finished[str(ev.get("done"))[:16]] += 1
+        if first is not None:
+            self._obs(self.ttft, self.TTFT, first - t_sub)
+        self._obs(self.e2e, self.E2E, now - t_sub)
+
+    def text(self, st):
+        lab = f'model_name="{args.name}"'
+        o = []
+
+        def metric(name, typ, help_, rows):
+            o.append(f"# HELP inferd:{name} {help_}")
+            o.append(f"# TYPE inferd:{name} {typ}")
+            o.extend(rows)
+
+        def hist(name, help_, h, bounds):
+            rows, acc = [], 0
+            for i, b in enumerate(bounds):
+                acc += h[i]
+                rows.append(f'inferd:{name}_bucket{{{lab},le="{b}"}} {acc}')
+            acc += h[len(bounds)]
+            rows += [f'inferd:{name}_bucket{{{lab},le="+Inf"}} {acc}', f"inferd:{name}_sum{{{lab}}} {h[-1]:.6f}",
+                     f"inferd:{name}_count{{{lab}}} {acc}"]
+            metric(name, "histogram", help_, rows)
+        blocks = st.get("kv_blocks") or 0
+        metric("num_requests_running", "gauge", "Sequences the engine is running (prefill or decode).",
+               [f"inferd:num_requests_running{{{lab}}} {st.get('running', 0)}"])
+        metric("num_requests_waiting", "gauge", "Sequences waiting for admission.",
+               [f"inferd:num_requests_waiting{{{lab}}} {st.get('waiting', 0)}"])
+        metric("kv_cache_usage_perc", "gauge", "Fraction of KV blocks held by running sequences (1 = full).",
+               [f"inferd:kv_cache_usage_perc{{{lab}}} {(st.get('kv_running', 0) / blocks) if blocks else 0:.6f}"])
+        metric("kv_cache_cached_perc", "gauge", "Fraction of KV blocks holding cached prefixes only (reclaimable).",
+               [f"inferd:kv_cache_cached_perc{{{lab}}} {(st.get('kv_cached_only', 0) / blocks) if blocks else 0:.6f}"])
+        metric("num_preemptions", "counter", "Sequences preempted when the KV pool ran dry.",
+               [f"inferd:num_preemptions_total{{{lab}}} {st.get('preempted', 0)}"])
+        metric("prompt_tokens", "counter", "Prompt tokens of finished requests.",
+               [f"inferd:prompt_tokens_total{{{lab}}} {self.prompt}"])
+        metric("generation_tokens", "counter", "Generated tokens of finished requests.",
+               [f"inferd:generation_tokens_total{{{lab}}} {self.gen}"])
+        metric("prefix_cache_queries", "counter", "Prompt tokens looked up in the prefix cache.",
+               [f"inferd:prefix_cache_queries_total{{{lab}}} {self.prompt}"])
+        metric("prefix_cache_hits", "counter", "Prompt tokens served from the prefix cache.",
+               [f"inferd:prefix_cache_hits_total{{{lab}}} {self.cached}"])
+        metric("request_success", "counter", "Finished requests by finish reason (engine terms).",
+               [f'inferd:request_success_total{{{lab},finished_reason="{k}"}} {v}'
+                for k, v in sorted(self.finished.items())] or [f'inferd:request_success_total{{{lab},finished_reason="stop"}} 0'])
+        hist("time_to_first_token_seconds", "Time from submit to the first generated token.", self.ttft, self.TTFT)
+        hist("e2e_request_latency_seconds", "Time from submit to the last event.", self.e2e, self.E2E)
+        return "\n".join(o) + "\n"
+
+
+METRICS = _Metrics()
+
+
+@app.get("/metrics")
+async def metrics():
+    try:
+        st = await asyncio.wait_for(_stats(), 5) if engine.alive else {}
+    except Exception:
+        st = {}
+    return PlainTextResponse(METRICS.text(st), media_type="text/plain; version=0.0.4")
 
 
 class _Stream(StreamingResponse):
@@ -1383,36 +1896,105 @@ def _bad_request(e):
     return JSONResponse({"error": {"message": str(e)[:1000], "type": "invalid_request_error"}}, status_code=400)
 
 
-async def complete(body):
-    """One chat completion for a validated request body (check_chat) -> JSONResponse or StreamingResponse."""
+def _tok_str(t):
+    return tok.decode([t], skip_special_tokens=False)
+
+
+def logprobs_chat(lps):
+    """Engine logprobs [(token, logprob, [id, logprob, ...])] -> OpenAI chat choices[].logprobs."""
+    def ent(t, lp):
+        s = _tok_str(t)
+        return {"token": s, "logprob": lp, "bytes": list(s.encode("utf-8", "replace"))}
+    return {"content": [dict(ent(t, lp), top_logprobs=[ent(top[k], top[k + 1]) for k in range(0, len(top), 2)])
+                        for t, lp, top in lps]}
+
+
+def logprobs_text(lps, offset):
+    """-> OpenAI completions choices[].logprobs (tokens, token_logprobs, top_logprobs, text_offset) from `offset`."""
+    out = {"tokens": [], "token_logprobs": [], "top_logprobs": [], "text_offset": []}
+    for t, lp, top in lps:
+        s = _tok_str(t)
+        out["tokens"].append(s)
+        out["token_logprobs"].append(lp)
+        d = {_tok_str(top[k]): top[k + 1] for k in range(0, len(top), 2)}
+        d.setdefault(s, lp)  # the sampled token is always listed (vLLM)
+        out["top_logprobs"].append(d)
+        out["text_offset"].append(offset)
+        offset += len(s)
+    return out
+
+
+def _last_content(messages):
+    c = messages[-1].get("content") if messages else None
+    if isinstance(c, list):
+        return "".join(p.get("text") or "" for p in c if isinstance(p, dict) and p.get("type") == "text")
+    return c or ""
+
+
+async def complete(body, prompts=None):
+    """A chat completion for a validated request body (check_chat; prompts None), or a text completion
+    (/v1/completions: prompts = [{"tokens", "text"}], body checked by check_completion) -> JSONResponse or
+    StreamingResponse. n choices per prompt run as separate engine requests on the same prompt (the prefix cache
+    shares it); choice i of prompt p has index p * n + i."""
+    chat = prompts is None
     try:
-        body, ctx_tokens = await apply_context(body)  # "inferd": {"context", "effort"} (agent contexts)
-        prompt, thinking = await preprocess(render, body)  # bounded: INFERD_MAX_PREPROCESS
+        if chat:
+            body, ctx_tokens = await apply_context(body)  # "inferd": {"context", "effort"} (agent contexts)
+            prompt, thinking = await preprocess(render, body)  # bounded: INFERD_MAX_PREPROCESS
+            prompts = [prompt]
+        else:
+            ctx_tokens, thinking = None, False
     except ApiError as e:
         return e.response()
     except (ValueError, TemplateError, TypeError, KeyError) as e:  # the chat template rejects the messages / effort
         return _bad_request(e)
-    n_prompt = len(prompt.get("tokens", []))
-    if n_prompt > LIM.prompt_tokens:
-        return ApiError(400, f"prompt is {n_prompt} tokens; the limit is {LIM.prompt_tokens} "
-                        "(INFERD_MAX_PROMPT_TOKENS)", "context_length_exceeded").response()
-    if ctx_tokens is not None and prompt.get("tokens", [])[:len(ctx_tokens)] != ctx_tokens:
+    trunc = body.get("truncate_prompt_tokens")  # vLLM: keep the last k prompt tokens (-1: the model's limit)
+    for prompt in prompts:
+        if trunc is not None:
+            keep = (args.max_model_len or LIM.prompt_tokens) if trunc == -1 else trunc
+            if len(prompt["tokens"]) > keep:
+                if "embeds" in prompt or ctx_tokens is not None:
+                    return ApiError(400, "truncate_prompt_tokens: a prompt with images or a saved context cannot be "
+                                    "cut", "invalid_value", param="truncate_prompt_tokens").response()
+                prompt["tokens"] = prompt["tokens"][-keep:]
+                prompt.pop("snap_at", None)
+                if "text" in prompt:
+                    prompt["text"] = tok.decode(prompt["tokens"], skip_special_tokens=False)
+        n_prompt = len(prompt.get("tokens", []))
+        if n_prompt > LIM.prompt_tokens:
+            return ApiError(400, f"prompt is {n_prompt} tokens; the limit is {LIM.prompt_tokens} "
+                            "(INFERD_MAX_PROMPT_TOKENS)", "context_length_exceeded").response()
+    if ctx_tokens is not None and prompts[0].get("tokens", [])[:len(ctx_tokens)] != ctx_tokens:
         return ApiError(400, "the rendered request does not extend the context token for token (chat template)",
                         "context_prefix_mismatch").response()
     stops = parse_stop(body.get("stop"))  # validated by check_chat
     keep_stop = bool(body.get("include_stop_str_in_output"))
+    min_tokens = int(body.get("min_tokens") or 0)  # stop ids are masked and stop strings ignored until then
+    user_stop_ids = [int(t) for t in body.get("stop_token_ids") or []]
     if not engine.alive:
         return ApiError(503, "engine disconnected", retry_after=LIM.retry_after).response()
-    rid = next(ids)
 
     def given(*keys, default):  # the first field present and not null; 0 is a value, never "absent"
         return next((body[k] for k in keys if body.get(k) is not None), default)
     top_k = int(given("top_k", default=DEFAULT_TOP_K))
-    gen = {**prompt, "max_tokens": int(given("max_tokens", "max_completion_tokens", default=4096)),
+    stop_ids = sorted(set(([] if body.get("ignore_eos") else STOP) + user_stop_ids))  # ignore_eos: vLLM's field
+    gen = {"max_tokens": int(given("max_tokens", "max_completion_tokens", default=4096 if chat else 16)),
            "temperature": float(given("temperature", default=0.7)), "top_p": float(given("top_p", default=DEFAULT_TOP_P)),
-           "top_k": max(0, top_k), "stop": [] if body.get("ignore_eos") else STOP}  # ignore_eos: vLLM's field
+           "top_k": max(0, top_k), "stop": stop_ids}
     if body.get("seed") is not None:
         gen["seed"] = int(body["seed"])
+    # vLLM's logits processing (src/scheduler.h Request: host sampler, never speculated; only fields that change
+    # anything are sent, so a request at the defaults keeps the speculative path).
+    for k, neutral in (("presence_penalty", 0), ("frequency_penalty", 0), ("repetition_penalty", 1), ("min_p", 0)):
+        if body.get(k) is not None and float(body[k]) != neutral:
+            gen[k] = float(body[k])
+    if min_tokens and stop_ids:
+        gen["min_tokens"] = min_tokens
+    if body.get("logit_bias"):
+        gen["logit_bias"] = [[int(k), float(v)] for k, v in body["logit_bias"].items()]
+    n_lp = (int(body.get("top_logprobs") or 0) if body.get("logprobs") else None) if chat else body.get("logprobs")
+    if n_lp is not None:
+        gen["logprobs"] = int(n_lp)
     # Sampling contract (Codex review 2026-11-04, R03; src/sampling.h): top_k 0 / -1 is no limit, over the whole
     # vocabulary, on every path. The speculative sampler sees 64 candidates per row: exact for top_k 1..64 and, with
     # top_k off, for top_p < 1 (a row whose nucleus does not fit is sampled by the engine's host sampler: "spec_host").
@@ -1445,8 +2027,6 @@ async def complete(body):
     if no_cache:
         gen["no_cache"] = 1
     session = policy.get("session")  # validated: 1..128 characters, never truncated
-    if session is not None:
-        gen["session"] = session
     if not thinking and not no_cache:  # the next turn re-renders this answer token for token: snapshot while decoding
         gen["gen_snap"] = 1
     for k in ("max_context", "priority"):
@@ -1454,34 +2034,67 @@ async def complete(body):
             gen[k] = int(policy[k])
     if "priority" in gen:
         gen["priority"] = max(-10, min(10, gen["priority"]))  # a bounded scale; the engine clamps too
-    if gen.get("max_context") and n_prompt >= gen["max_context"]:
-        return JSONResponse({"error": {"message": f"prompt is {n_prompt} tokens, max_context is "
-                                       f"{gen['max_context']}", "type": "invalid_request_error",
-                                       "code": "context_length_exceeded"}}, status_code=400)
+    for prompt in prompts:
+        n_prompt = len(prompt.get("tokens", []))
+        if gen.get("max_context") and n_prompt >= gen["max_context"]:
+            return JSONResponse({"error": {"message": f"prompt is {n_prompt} tokens, max_context is "
+                                           f"{gen['max_context']}", "type": "invalid_request_error",
+                                           "code": "context_length_exceeded"}}, status_code=400)
+    n = int(body.get("n") or 1)
+    gens = []  # one engine request per choice
+    for p in prompts:
+        for k in range(n):
+            g = {**{f: v for f, v in p.items() if f != "text"}, **gen}
+            if k and "seed" in g:
+                g["seed"] = g["seed"] + k  # distinct, reproducible samples per choice
+            if session is not None and not gens:
+                g["session"] = session  # the agent's turn: its first choice
+            gens.append(g)
     if session is not None:
         session_begin(session)
+    rids, qs, t_sub = [], [], time.monotonic()
     try:
-        q = await engine.submit(rid, gen)
+        for g in gens:
+            rid = next(ids)
+            qs.append(await engine.submit(rid, g))
+            rids.append(rid)
     except BaseException as e:
+        for rid in rids:
+            engine.release(rid)
+            engine.background(engine.cancel_quiet(rid))
         if session is not None:
             session_end(session)
         if isinstance(e, (ConnectionError, OSError, RuntimeError, AttributeError)):
             return ApiError(503, "engine disconnected", retry_after=LIM.retry_after).response()
         raise
-    over = False
+    left = [len(rids)]
 
-    def end_request(ended):
-        """Once per request, whichever path ends it: unregister, close the session, cancel unfinished engine work."""
-        nonlocal over
-        if over:
-            return
-        over = True
-        engine.release(rid)
-        if session is not None:
-            session_end(session)
-        if not ended:
-            engine.background(engine.cancel_quiet(rid))
-    cid, created, model = f"chatcmpl-{uuid.uuid4().hex[:24]}", int(time.time()), body.get("model", args.name)
+    def ender(rid):
+        over = False
+
+        def end_request(ended):
+            """Once per choice, whichever path ends it: unregister, cancel unfinished engine work; the session closes
+            with the last choice."""
+            nonlocal over
+            if over:
+                return
+            over = True
+            engine.release(rid)
+            left[0] -= 1
+            if session is not None and left[0] == 0:
+                session_end(session)
+            if not ended:
+                engine.background(engine.cancel_quiet(rid))
+        return end_request
+    ends = [ender(r) for r in rids]
+
+    def end_all(ended):
+        for e in ends:
+            e(ended)
+    base_id = body.get("request_id") or body.get("_xrid") or uuid.uuid4().hex[:24]
+    cid = f"{'chatcmpl' if chat else 'cmpl'}-{base_id}"
+    created, model = int(time.time()), body.get("model") or args.name
+    obj = "chat.completion" if chat else "text_completion"
 
     def split(state, piece):
         """Route text to reasoning_content until </think>, then to content."""
@@ -1496,12 +2109,31 @@ async def complete(body):
         r, state["buf"] = state["buf"][:-keep] if len(state["buf"]) > keep else "", state["buf"][-keep:]
         return r, None
 
-    def usage(ev):
-        return {"prompt_tokens": ev["p"], "completion_tokens": ev["c"], "total_tokens": ev["p"] + ev["c"],
-                "prompt_tokens_details": {"cached_tokens": ev["cached"]}}
+    def usage(evs):
+        """Usage over choices: each prompt counted once (its first choice), completions summed."""
+        firsts = evs[::n]
+        p, c = sum(e["p"] for e in firsts), sum(e["c"] for e in evs)
+        return {"prompt_tokens": p, "completion_tokens": c, "total_tokens": p + c,
+                "prompt_tokens_details": {"cached_tokens": sum(e["cached"] for e in firsts)}}
 
     finish_map = {"stop": "stop", "length": "length"}
-    tools = body.get("tools")
+    tc = v_tool_choice(body) if chat else None
+    tools = body.get("tools") if chat and tc != "none" else None  # tool_choice none: tool markup stays text
+    force = body.get("_force") if chat else None
+    one_call = body.get("parallel_tool_calls") is False
+
+    def keep_calls(calls):  # tool_choice naming a function: that call, once (vLLM); parallel_tool_calls false: one
+        if tc not in (None, "none", "required"):
+            calls = [c for c in calls if c["function"]["name"] == tc][:1]
+        return calls[:1] if one_call else calls
+    echo = (_last_content(body["messages"]) if chat and body["messages"][-1].get("role") == "assistant" else "") \
+        if body.get("echo") else ""
+
+    def stop_reason(ev, matched):
+        if matched is not None:
+            return matched
+        t = ev.get("stop_tok")
+        return t if t is not None and t in user_stop_ids else None
 
     def tool_hold(state, c):
         """With tools: stream content up to a <tool_call>, hold everything from there for the final delta."""
@@ -1518,23 +2150,55 @@ async def complete(body):
         return s[:len(s) - k]
 
     if body.get("stream"):
-        async def events():
-            dt, state = Detok(), {"reasoning": thinking, "buf": "", "tool": None, "pend": ""}
-            sm, used = (StopMatcher(stops, keep_stop) if stops else None), 0
+        so = body.get("stream_options") or {}
 
-            def chunk(delta, finish=None, **extra):
-                return "data: " + json.dumps({"id": cid, "object": "chat.completion.chunk", "created": created,
-                                              "model": model, "choices": [{"index": 0, "delta": delta,
-                                                                           "finish_reason": finish}], **extra}) + "\n\n"
+        async def choice_stream(i):
+            """One choice's stream items: ("chunk", choice object, extra members), then ("end", ev) or ("error", msg)."""
+            q, rid, prompt = qs[i], rids[i], prompts[i // n]
+            n_p = len(prompt.get("tokens", []))
+            dt, state = Detok(), {"reasoning": thinking, "buf": "", "tool": force, "pend": ""}
+            sm, used, lps, off, first = (StopMatcher(stops, keep_stop) if stops else None), 0, [], 0, None
+
+            def piece(delta, finish=None, **extra):
+                nonlocal off
+                c = {"index": i}
+                if chat:
+                    if "reasoning_content" in delta:
+                        delta = {**delta, "reasoning": delta["reasoning_content"]}  # vLLM's newer name
+                    c["delta"] = delta
+                else:
+                    c["text"] = delta.get("content", "")
+                if lps and (delta or finish):
+                    c["logprobs"] = logprobs_chat(lps) if chat else logprobs_text(lps, off)
+                    off += sum(len(_tok_str(t)) for t, _, _ in lps) if not chat else 0
+                    lps.clear()
+                else:
+                    c["logprobs"] = None
+                c["finish_reason"] = finish
+                if finish is not None or not chat:
+                    c["stop_reason"] = extra.pop("stop_reason", None)
+                if so.get("continuous_usage_stats"):
+                    extra["usage"] = {"prompt_tokens": n_p, "completion_tokens": used, "total_tokens": n_p + used}
+                return ("chunk", c, extra)
+            ev = None
             try:
+                if chat:
+                    yield piece({"role": "assistant", "content": ""})
+                if echo or (not chat and body.get("echo")):
+                    text0 = echo if chat else prompt.get("text") or ""
+                    off = len(text0)
+                    if text0:
+                        yield piece({"content": text0})
                 while True:
                     ev = await next_event(q, rid)
                     if "t" in ev:
                         used += len(ev["t"])
-                        piece = "".join(dt.add(t) for t in ev["t"])
-                        r, c = split(state, piece)
+                        first = first or time.monotonic()
+                        if "lp" in ev:
+                            lps.append((ev["t"][0], ev["lp"][0], ev["lp"][1]))
+                        r, c = split(state, "".join(dt.add(t) for t in ev["t"]))
                         hit = False
-                        if c and sm:
+                        if c and sm and used >= min_tokens:
                             c, hit = sm.feed(c)
                         delta = {}
                         if r:
@@ -1544,108 +2208,199 @@ async def complete(body):
                         if c:
                             delta["content"] = c
                         if delta:
-                            yield "data: " + json.dumps({"id": cid, "object": "chat.completion.chunk", "created": created,
-                                                         "model": model, "choices": [{"index": 0, "delta": delta,
-                                                                                      "finish_reason": None}]}) + "\n\n"
+                            yield piece(delta)
                         if not hit:
                             continue
                         await engine.cancel_quiet(rid)  # a stop string: end the engine's work, finish as "stop"
                         ev = dict(await _drain_done(q), done="stop", c=used)
                     elif str(ev["done"]).startswith("error") or ev["done"] == "cancelled":
-                        # an engine failure is an error event, never a normal finish (Codex review R04)
-                        yield "data: " + json.dumps({"error": {"message": ev["done"], "type": "server_error",
-                                                               "code": "engine_error"}}) + "\n\n"
-                        yield "data: [DONE]\n\n"
+                        yield ("error", ev["done"])  # an engine failure is an error event, never a normal finish
                         return
                     finish = finish_map.get(ev["done"], ev["done"])
                     if not (sm and sm.done):  # flush held text: a partial UTF-8 tail and the </think> look-behind
                         r, c = drain_split(split, state, dt.flush())
-                        if c and sm:
+                        if c and sm and used >= min_tokens:
                             c, hit = sm.feed(c)
                             finish = "stop" if hit else finish
                         if c and tools:
                             c = tool_hold(state, c)
                         if r or c:
-                            yield chunk(dict(({"reasoning_content": r} if r else {}), **({"content": c} if c else {})))
+                            yield piece(dict(({"reasoning_content": r} if r else {}), **({"content": c} if c else {})))
                     if sm and not sm.done and (tail := sm.flush()):  # text held back as a possible stop prefix
                         tail = tool_hold(state, tail) if tools else tail
                         if tail:
-                            yield chunk({"content": tail})
+                            yield piece({"content": tail})
                     if state["pend"]:
-                        yield chunk({"content": state["pend"]})
+                        yield piece({"content": state["pend"]})
                     if state["tool"] is not None:  # tool calls go out whole, as one final delta
                         _, calls = parse_tool_calls(state["tool"], tools)
                         if calls:
-                            yield chunk({"tool_calls": [dict(c, index=n) for n, c in enumerate(calls)]})
+                            calls = keep_calls(calls)
+                            yield piece({"tool_calls": [dict(c, index=k) for k, c in enumerate(calls)]})
                             finish = "tool_calls" if finish == "stop" else finish
                         else:
-                            yield chunk({"content": state["tool"]})
-                    yield chunk({}, finish, inferd={"sampling": sampling_info(ev)})
-                    if (body.get("stream_options") or {}).get("include_usage"):
-                        yield "data: " + json.dumps({"id": cid, "object": "chat.completion.chunk", "created": created,
-                                                     "model": model, "choices": [], "usage": usage(ev)}) + "\n\n"
-                    yield "data: [DONE]\n\n"
+                            yield piece({"content": state["tool"]})
+                    yield piece({}, finish, inferd={"sampling": sampling_info(ev)},
+                                stop_reason=stop_reason(ev, sm.hit if sm and sm.done else None))
+                    METRICS.done(ev, t_sub, first)
+                    yield ("end", ev)
                     return
             finally:
-                end_request("ev" in locals() and "t" not in ev and not ev.get("_local"))
-        return _Stream(events(), end_request)
+                ends[i](ev is not None and "t" not in ev and not ev.get("_local"))
 
-    out = []
+        async def events():
+            def line(choices, **extra):
+                return "data: " + json.dumps({"id": cid, "object": obj + ".chunk" if chat else obj, "created": created,
+                                              "model": model, "choices": choices, **extra}) + "\n\n"
+            done_evs = [None] * len(qs)
+            if len(qs) == 1:
+                items = choice_stream(0)
+                tasks = []
+            else:  # n > 1 or several prompts: the choices' items interleave as they arrive
+                outq = asyncio.Queue()
+
+                async def run(i):
+                    try:
+                        async for it in choice_stream(i):
+                            outq.put_nowait((i, it))
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # never leave the merger waiting
+                        outq.put_nowait((i, ("error", f"error: {type(e).__name__}")))
+                    finally:
+                        outq.put_nowait((i, None))
+                tasks = [asyncio.ensure_future(run(i)) for i in range(len(qs))]
+
+                async def merged():
+                    running = len(tasks)
+                    while running:
+                        i, it = await outq.get()
+                        if it is None:
+                            running -= 1
+                            continue
+                        yield it if it[0] != "end" else ("end", it[1], i)
+                items = merged()
+            try:
+                async for it in items:
+                    if it[0] == "chunk":
+                        yield line([it[1]], **it[2])
+                    elif it[0] == "error":
+                        yield "data: " + json.dumps({"error": {"message": it[1], "type": "server_error",
+                                                               "code": "engine_error"}}) + "\n\n"
+                        yield "data: [DONE]\n\n"
+                        return
+                    else:
+                        done_evs[it[2] if len(it) > 2 else 0] = it[1]
+                if so.get("include_usage"):
+                    yield line([], usage=usage([e or {"p": 0, "c": 0, "cached": 0} for e in done_evs]))
+                yield "data: [DONE]\n\n"
+            finally:
+                for t in tasks:
+                    t.cancel()
+                end_all(False)
+        resp = _Stream(events(), end_all)
+        return resp
+
     # Stop strings: watch the answer text as it arrives (the same detokenizer and reasoning split as the stream) and
     # cancel at the first match; n_used = the tokens up to the one that completed it.
-    sm, sdt, sst, n_used = (StopMatcher(stops) if stops else None), Detok(), {"reasoning": thinking, "buf": ""}, None
-    ended = False
+    async def choice_full(i):
+        q, rid = qs[i], rids[i]
+        out, lps, first = [], [], None
+        sm, sdt, sst, n_used = (StopMatcher(stops) if stops else None), Detok(), {"reasoning": thinking, "buf": ""}, None
+        ended = False
+        try:
+            while True:
+                ev = await next_event(q, rid)
+                if "t" in ev:
+                    out += ev["t"]
+                    first = first or time.monotonic()
+                    if "lp" in ev:
+                        lps.append((ev["t"][0], ev["lp"][0], ev["lp"][1]))
+                    if sm and n_used is None:
+                        _, c = split(sst, "".join(sdt.add(t) for t in ev["t"]))
+                        if c and len(out) >= min_tokens and sm.feed(c)[1]:
+                            n_used = len(out)
+                            await engine.cancel_quiet(rid)
+                else:
+                    ended = not ev.get("_local")  # a timeout or a disconnect: the engine has not ended it
+                    if ended:
+                        METRICS.done(dict(ev, done="stop", c=n_used) if n_used is not None else ev, t_sub, first)
+                    break
+        finally:  # the client went away (CancelledError, http.disconnect) or anything else: the engine work stops too
+            ends[i](ended)
+        return out, lps, n_used, ev
+
     recv = _client_receive.get()
-    watch = engine.background(_watch_disconnect(recv, q)) if recv is not None else None
+    watch = engine.background(_watch_disconnect(recv, qs)) if recv is not None else None
     try:
-        while True:
-            ev = await next_event(q, rid)
-            if "t" in ev:
-                out += ev["t"]
-                if sm and n_used is None:
-                    _, c = split(sst, "".join(sdt.add(t) for t in ev["t"]))
-                    if c and sm.feed(c)[1]:
-                        n_used = len(out)
-                        await engine.cancel_quiet(rid)
-            else:
-                ended = not ev.get("_local")  # a timeout or a disconnect: the engine has not ended it
-                break
-    finally:  # the client went away (CancelledError, http.disconnect) or anything else: the engine work stops too
+        results = await asyncio.gather(*(choice_full(i) for i in range(len(qs))))
+    finally:
         if watch is not None:
             watch.cancel()
-        end_request(ended)
-    if ev.get("_gone"):  # nobody is listening; 499 (nginx's "client closed request") for the logs
-        return JSONResponse(_err("client disconnected", "invalid_request_error", "client_disconnected"), status_code=499)
-    if n_used is not None:  # ended by a stop string (the engine's own end, if it raced the cancel, is moot)
-        out, ev = out[:n_used], dict(ev, done="stop", c=n_used)
-    if str(ev["done"]).startswith("error"):
-        code = 504 if ev.get("_timeout") else 503 if ("disconnected" in ev["done"] or "too slow" in ev["done"]) else 400 if ("too long" in ev["done"] or "max_context" in ev["done"]
-                                                                or "json_schema" in ev["done"]
-                                                                or "bad request" in ev["done"]) else 500
-        return JSONResponse({"error": {"message": ev["done"], "type": "server_error" if code != 400 else "invalid_request_error",
-                                       "code": "engine_error"}}, status_code=code)
-    text = tok.decode(out, skip_special_tokens=False)
-    reasoning = None
-    if thinking and THINK_END in text:
-        reasoning, text = text.split(THINK_END, 1)
-        text = text.lstrip("\n")
-    elif thinking:  # cut off inside the reasoning (max_tokens): it is all reasoning, as the stream reports it
-        reasoning, text = text, ""
-    if stops:
-        text = cut_at_stop(text, stops, keep_stop)[0]
-    finish = finish_map.get(ev["done"], ev["done"])
-    calls = []
-    if tools:
-        text, calls = parse_tool_calls(text, tools)
-    msg = {"role": "assistant", "content": text}
-    if calls:
-        msg["tool_calls"] = calls
-        finish = "tool_calls" if finish == "stop" else finish
-    if reasoning is not None:
-        msg["reasoning_content"] = reasoning
-    return JSONResponse({"id": cid, "object": "chat.completion", "created": created, "model": model,
-                         "choices": [{"index": 0, "message": msg, "finish_reason": finish}],
-                         "usage": usage(ev), "inferd": {"sampling": sampling_info(ev)}})
+        end_all(False)
+    choices, evs = [], []
+    for i, (out, lps, n_used, ev) in enumerate(results):
+        if ev.get("_gone"):  # nobody is listening; 499 (nginx's "client closed request") for the logs
+            return JSONResponse(_err("client disconnected", "invalid_request_error", "client_disconnected"),
+                                status_code=499)
+        if n_used is not None:  # ended by a stop string (the engine's own end, if it raced the cancel, is moot)
+            out, ev = out[:n_used], dict(ev, done="stop", c=n_used)
+        if str(ev["done"]).startswith("error"):
+            code = 504 if ev.get("_timeout") else 503 if ("disconnected" in ev["done"] or "too slow" in ev["done"]) \
+                else 400 if ("too long" in ev["done"] or "max_context" in ev["done"] or "json_schema" in ev["done"]
+                             or "bad request" in ev["done"]) else 500
+            return JSONResponse({"error": {"message": ev["done"], "type": "server_error" if code != 400 else
+                                           "invalid_request_error", "code": "engine_error"}}, status_code=code)
+        evs.append(ev)
+        text = tok.decode(out, skip_special_tokens=False)
+        reasoning = None
+        if thinking and THINK_END in text:
+            reasoning, text = text.split(THINK_END, 1)
+            text = text.lstrip("\n")
+        elif thinking:  # cut off inside the reasoning (max_tokens): it is all reasoning, as the stream reports it
+            reasoning, text = text, ""
+        matched = None
+        if stops:
+            start = 0
+            if min_tokens:  # stop strings count only after min_tokens tokens: search past the text they make
+                pre = tok.decode(out[:min_tokens], skip_special_tokens=False)
+                if thinking:
+                    pre = pre.split(THINK_END, 1)[1].lstrip("\n") if THINK_END in pre else ""
+                start = min(len(pre), len(text))
+            h = _first_stop(text[start:], stops)
+            if h is not None:
+                matched = h[1]
+                text = text[:start + h[0]] + (h[1] if keep_stop else "")
+        finish = finish_map.get(ev["done"], ev["done"])
+        lp_obj = None
+        if n_lp is not None:
+            lps = lps[:len(out)]
+            lp_obj = logprobs_chat(lps) if chat else logprobs_text(lps, len(prompts[i // n].get("text") or "")
+                                                                    if body.get("echo") else 0)
+        if not chat:
+            if body.get("echo"):
+                text = (prompts[i // n].get("text") or "") + text
+            choices.append({"index": i, "text": text, "logprobs": lp_obj, "finish_reason": finish,
+                            "stop_reason": stop_reason(ev, matched)})
+            continue
+        calls = []
+        if force:
+            text = force + text
+        if tools:
+            text, calls = parse_tool_calls(text, tools)
+            calls = keep_calls(calls)
+        if echo:
+            text = echo + (text or "")
+        msg = {"role": "assistant", "content": text}
+        if calls:
+            msg["tool_calls"] = calls
+            finish = "tool_calls" if finish == "stop" else finish
+        if reasoning is not None:
+            msg["reasoning_content"] = msg["reasoning"] = reasoning
+        choices.append({"index": i, "message": msg, "logprobs": lp_obj, "finish_reason": finish,
+                        "stop_reason": stop_reason(ev, matched)})
+    return JSONResponse({"id": cid, "object": obj, "created": created, "model": model, "system_fingerprint": None,
+                         "choices": choices, "usage": usage(evs), "inferd": {"sampling": sampling_info(evs[0])}})
 
 
 # Structured output (response_format): the instruction goes on the last user turn, the answer's JSON is extracted and
@@ -1686,6 +2441,8 @@ async def structured_chat(body):
             break
         content = msg.get("content") or ""
         out, err = await asyncio.to_thread(structured.check, content, spec)  # bounded work, off the event loop
+        if out is not None and body["response_format"].get("_unquote"):  # guided_choice / guided_regex: the string
+            out = json.loads(out)
         if out is not None:
             msg["content"], choice["finish_reason"] = out, "stop"
             break

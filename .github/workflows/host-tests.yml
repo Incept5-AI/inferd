@@ -1,6 +1,6 @@
 # Host-only tests (no GPU, no model weights): the native JSON parser and protocol helpers, grammar/sampler, SSD tier and
 # the front end's hardening suite (auth, budgets, validation, Unicode, cancellation, disconnects over a real socket,
-# context admission), structured output, tool calls, stop strings, streaming, the image decoder, the logits-gate
+# context admission), structured output, tool calls, stop strings, streaming, the vLLM compatibility probe (fixture mode), the image decoder, the logits-gate
 # fixtures and the benchmark SSE client. GPU and model gates are run on real Macs with engine/tools/release_gate.sh
 # (CONTRIBUTING.md, "Release gate").
 name: host-tests
@@ -36,6 +36,7 @@ jobs:
           python test_tools.py
           python test_stream.py
           python test_image_decode.py
+          python test_vllm_compat.py
       - name: Logits gate fixtures
         working-directory: engine
         run: python tools/test_ref_logits.py
