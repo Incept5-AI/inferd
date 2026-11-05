@@ -39,5 +39,5 @@
 <circle class="k-o1" cx="426.5" cy="196.8" r="3.3"/>
 <circle class="k-o1" cx="550.0" cy="74.8" r="3.3"/>
 <text class="lab k-o1" x="558.0" y="78.8" style="font-weight:600">Splash 1.5 49</text>
-<text class="lab k-us" x="558.0" y="286.6" style="font-weight:600">inferd 0.3.0 3</text>
-<text class="note" x="18" y="346">Seconds until the last agent&#x27;s first token; lower is better. inferd 0.3.0: mean of 2 trials, 5 Nov; Splash 30 Oct.</text></svg>
+<text class="lab k-us" x="558.0" y="286.6" style="font-weight:600">inferd 3</text>
+<text class="note" x="18" y="346">Seconds until the last agent&#x27;s first token; lower is better. inferd: main fea8080 (the 0.3.0 engine + API additions), 2 trials, 5 Nov; Splash 30 Oct.</text></svg>

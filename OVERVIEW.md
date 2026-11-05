@@ -23,7 +23,7 @@ moving, remembering what each one has already read, and never making the twentie
 
 <p align="center"><img src="docs/img/overview-wait.svg" alt="The last agent's wait with 1-32 agents on 64k contexts: inferd vs Splash" width="720"></p>
 
-With 32 agents on 64k contexts, the last agent starts in about 3.4 seconds (0.3.0); it waits 49 s on the next-best engine.
+With 32 agents on 64k contexts, the last agent starts in about 3.4 seconds (the 0.3.0 engine, 5 Nov); it waits 49 s on the next-best engine.
 
 ## What is genuinely new
 
