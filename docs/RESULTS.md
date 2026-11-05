@@ -1355,6 +1355,60 @@ per minute (p95 first token):
 With 96 snapshots, 64 agents in flight evicted the snapshots they resume from (cache hit 0.88 → 0.78); with 192 the
 cache hit returns to 0.88. `run.sh start` now sizes the Studio with 192 snapshots (160fbf6; ~16 GiB of state).
 
+## (y) Qwen3.6-35B-A3B agent fleets on the Mac mini M5 Pro: int8 experts, router GEMM, drafter attention (5 November)
+
+Mac mini M5 Pro 64 GB, Qwen3.6-35B-A3B (mlx-community group 64) + DFlash2, the minis' harnesses as in (w). Before =
+main 853842d, after = this change; two trials each, alternating builds on one box, then Splash 1.5 on the same box.
+
+**Where the time went.** Per-step logs (`INFERD_DEBUG=1`) of the 8k fleet (each turn adds ~1.2k tokens of tool
+output and generates ~95): steps holding a prefill chunk were 66% of the step time with 8 agents in flight, 78% with
+16 and 93% with 32, so the fleet was bound by prefill, not by the cache (hit rate 0.88 throughout) or the drafter. A
+1,024-row turn at 8k took 421 ms (`decode_test followup`): MLX's bf16 gathered expert matmul 37%, attention 17%,
+the dense QA8 GEMMs 16%, GDN 12%, and the 8-bit router as a **per-row GEMV, 9%**. In verify steps of several agents
+the same expert matmul was 54% of the step, and the drafter's attention kernel 10% of a cycle with 8 agents.
+
+**Changes** (all but the third apply only to MoE checkpoints; the 27B's output is byte-identical):
+- `qa8g`: the routed experts on int8 activations (one scale per row per 64-group, as QA8) x the packed 4-bit expert
+  weights on the integer tensor path, one row tile per expert (`MOE_QA8`, default on, every step that sorts by
+  expert: prefill and verify steps of 16+ rows). The token rows are quantized once and read through the sort
+  permutation, so the bf16 gather copy is gone too.
+- The router (and shared-expert gate) as MLX's quantized GEMM with bf16 logits, as the reference computes them, for
+  steps of 64+ rows (`MOE_ROUTER_GEMM`).
+- Drafter attention on simdgroup matrices for blocks of up to 8 rows (`DRAFT_ATTN_MMA`; S^T = K Q^T, softmax, P V).
+
+Engine (M5 Pro): a 1,024-row turn at 8k 421 -> 320 ms; four at once 1,461 -> 1,126 ms; 16k prefill 2,435 -> 3,096
+tok/s (1,024-row chunks) and 2,692 -> 3,279 (2,048); verify steps of 8 agents x 8 rows 67 -> 58 ms, 16 x 4
+71 -> 60 ms. The drafter's block for 8 agents x 8 rows 18.2 -> 11.5 ms (same acceptance).
+
+**8k agent fleet** (64-agent pool, 2 rounds, 32 running, 32 snapshots), completed turns per minute (p95 first token):
+
+| in flight | 8 | 16 | 32 |
+|---|---:|---:|---:|
+| main, trial 1 / 2 | 60.0 / 63.1 (4.8 s) | 69.3 / 68.2 (10.0 s) | 71.3 / 71.0 (20.9 s) |
+| **this change**, trial 1 / 2 | **81.0 / 85.6** (3.8 s) | **86.0 / 86.6** (7.9 s) | **93.0 / 91.0** (16.2 s) |
+| Splash 1.5 | 79.0 (7.1 s) | 77.9 (12.7 s) | 79.2 (29.1 s) |
+
+**Follow-ups** (`conc.py --mode followup`, 96 snapshots), total tok/s at 1 / 4 / 8 / 16 / 32 agents, both trials
+(slowest first token at 32):
+
+| contexts | main | **this change** | Splash 1.5 |
+|---|---|---|---|
+| 4k | 126-131 / 216-219 / 285-288 / 347-351 / 406-408 (2.4 s) | 134-144 / **267-298** / **401-407** / **491-503** / **610-612** (1.9 s) | **159** / **356** / 353 / 355 / 358 (40.9 s) |
+| 16k | 117-134 / 202-213 / 253-261 / 295-301 / 335-337 (4.4 s) | 123-128 / 237-250 / **334-349** / **396-403** / **467** (3.7 s) | **149** / **314** / 305 / 309 / 302 (49.5 s) |
+
+Reading: the 35B fleet, the one fleet Splash led on the M5 Pro, now leads it at every load (+3% to +17%) with a
+lower p95 first token, and follow-ups lead from 8 agents up (4k x 32: 1.7x Splash). Splash still leads one agent
+(single-stream verify cycle) and 4 agents (by 16-25%).
+
+Quality: the 35B against mlx_lm (4 x 2,048 tokens, chunks 1 / 24 / 256 / 1,536) keeps top-1 on every sequence; the
+code sequence misses the long-prompt cos/KL floors as it does on main (cos 0.990 vs 0.996 at chunk 256, KL 0.098 vs
+0.082). Per-position over 2k tokens of real text (fake-quantized expert inputs in mlx_lm, vs the unmodified model),
+int8 expert activations add nothing measurable to what QA8's dense GEMMs already cost: KL 0.0076 / 0.0103 with
+experts vs 0.0078 / 0.0097 without, top-1 agreement 96.3-96.5% vs 96.1-96.5%, perplexity unchanged. Greedy
+speculation at 8 sequences diverges from plain decode at MoE near-ties on main and here alike (6-7 of 8). Gates:
+27B `decode_test check` byte-identical to main at chunks 1 / 24 / 256 / 1,536; host tests pass; 27B follow-ups 4k at
+1 / 8 agents 51-57 / 157-158 (main) vs 50-51 / 162-174 tok/s.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
