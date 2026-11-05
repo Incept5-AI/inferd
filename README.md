@@ -21,14 +21,14 @@ Needs a Mac with Apple Silicon, macOS 26 or 27, and Python 3.12. The 27B 4-bit w
 
 | Your Mac runs | Download | Checksum | Status |
 |---|---|---|---|
-| **macOS 27** | [inferd-0.3.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz) | [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz.sha256) | the platform release 0.2.0 was tested on (Mac Studio M5 Ultra, Mac mini M6 / M5 Pro / M4 Pro) |
-| **macOS 26** | [inferd-0.3.0-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos26-arm64.tar.gz) | [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos26-arm64.tar.gz.sha256) | **beta**: built for macOS 26; a source build ran on an M4 Max with macOS 26. Run the release gate once (below) |
+| **macOS 27** | [inferd-0.3.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz) | [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz.sha256) | the platform inferd is tested on (Mac Studio M5 Ultra; Mac mini M6, M5 Pro, M4 Pro; MacBook Pro M5 Max, M4 Max, M3 Max) |
+| **macOS 26** | build from source (below: `./build.sh`, under a minute) | | the kernels must be built on the Mac's own macOS; a source build passed every check on an M4 Max with macOS 26. 0.2.0 has a beta macOS 26 file |
 
-Use the one that matches: the macOS 27 build refuses to start on macOS 26, and the macOS 26 build must not be used on
-macOS 27 (its kernels compute wrong logits there at prefill chunks of 256+ rows). `install.sh` and `run.sh` check this.
+The macOS 27 build refuses to start on macOS 26 (`install.sh` and `run.sh` check). Never run a build made for macOS 26 on
+macOS 27: its kernels compute wrong logits there at prefill chunks of 256+ rows.
 
 ```bash
-cd ~/Downloads && shasum -a 256 -c inferd-0.3.0-macos27-arm64.tar.gz.sha256       # or the macos26 file: prints OK
+cd ~/Downloads && shasum -a 256 -c inferd-0.3.0-macos27-arm64.tar.gz.sha256       # prints OK
 tar xzf inferd-0.3.0-macos27-arm64.tar.gz && cd inferd-0.3.0
 ```
 
@@ -67,17 +67,16 @@ print(reply.choices[0].message.content)
 `--model 27b-8bit` (64 GB and up), `--model flash-next` (Mac Studio, 256 GB), or `--model <checkpoint dir>` with
 `--draft <drafter dir>`. Optional check of the build on your Mac, a few minutes with no other model running:
 `PY=~/.venvs/inferd/bin/python tools/release_gate.sh ~/models/Qwen3.8-27B-4bit ~/models/Qwen3.8-27B-DFlash2`.
-(Release 0.2.0's files hold only `build/`: unpack one into `engine/` of a `v0.2.0` checkout instead, and skip
-`./build.sh` below.)
+(Release 0.2.0's files hold only `build/`: unpack one into `engine/` of a `v0.2.0` checkout instead.)
 
-## Where it stands (4 November 2026, release 0.2.0)
+## Where it stands (5 November 2026, release 0.3.0)
 
 Same model, same weights, same drafter for every engine, on the same machine and harness. Methodology, every table and
 the raw file behind each number: [docs/RESULTS.md](docs/RESULTS.md).
 
 | Machine | Workload | inferd | Other engine |
 |---|---|---:|---:|
-| Mac Studio M5 Ultra | 32 agents taking turns on 16k contexts, total tok/s | **615–620** | Splash 1.5: levels off at ~369 |
+| Mac Studio M5 Ultra | 32 agents taking turns on 16k contexts, total tok/s | **711–727** (0.2.0: 613–621) | Splash 1.5: levels off at ~369 |
 | Mac Studio M5 Ultra | 32 agents on 64k contexts: the last agent's first token | **3.8 s** | Splash 1.5: 48.9 s |
 | Mac Studio M5 Ultra | 8 Qwen3.8-27B agents start at once (14k prompts, 6,400 tokens out): all done | **125.6 s** | TensorFold 1.2.2: 177.6 s (1.2.1: 177.9 s) |
 | Mac Studio M5 Ultra | 16 agents arriving at random, 2k–16k prompts: all done | **78.7 s** | TensorFold 1.2.2: 116.8 s |
@@ -89,6 +88,7 @@ the raw file behind each number: [docs/RESULTS.md](docs/RESULTS.md).
 | Mac Studio M5 Ultra | one agent, single stream | 143–231 tok/s | **Splash, TensorFold and mlx-serve are faster** |
 | Mac Studio M5 Ultra | 32 agents forked from a 25k context, relaunched after 1.4M tokens of unrelated work: first token | **1.03 s** (100% cached) | |
 | Mac mini M5 Pro, 64 GB | 16 forked agents relaunched / 8 agents resumed after unrelated load: first token | **2.1 s / 0.25 s** | TensorFold 1.2.2 (with its disk cache): 195 s / 15.4 s |
+| Mac mini M5 Pro, 64 GB | Qwen3.6-35B-A3B (MoE) with its drafter: one agent at 4k / agent fleet, turns per minute | 151–153 tok/s / 59–62 | **Splash 1.5: 209–219 / 76–81** |
 | Mac Studio M5 Ultra | Qwen3.8-Flash-Next, 1–5 agents starting together | | **TensorFold 1.2.2 finishes sooner** |
 | Mac Studio M5 Ultra | Qwen3.8-Flash-Next, 16 agents arriving at random | 57.2 s, p95 first token 13.7 s | TensorFold 1.2.2: 57.3 s, **9.2 s** |
 

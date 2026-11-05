@@ -1,7 +1,7 @@
 #!/bin/zsh
 # run.sh's named start (`run.sh start --model ...`): option parsing, the RAM-based sizing (INFERD_RAM_GB), --dry-run, and
 # a check that the positional form, stop and status behave exactly as in the run.sh before the named form
-# (BASE, default 1138540, read with git show). It runs copies of run.sh against a fake build/inferd and a fake front end
+# (BASE, default 19805b9: main just before the named start, after status learnt the start's log dir; read with git show). It runs copies of run.sh against a fake build/inferd and a fake front end
 # in a temporary directory: no model, no GPU, no network. Ports 18397 and 18398 must be free. Cleans up only what it
 # started. Every case that could reach a real start names one of those ports: never the default 8300, where stop_all
 # would find (and stop) a real server's front end by its command line.
@@ -9,7 +9,7 @@
 emulate -L zsh
 setopt no_unset
 cd "${0:A:h}" || exit 1
-BASE=${BASE:-1138540}
+BASE=${BASE:-19805b9}
 P1=18398 P2=18397
 for p in $P1 $P2; do lsof -nP -t -iTCP:$p -sTCP:LISTEN >/dev/null && { print "port $p is in use"; exit 1; }; done
 unset MODEL DRAFT PY SPILL_DIR SPILL_GIB MTP INFERD_RAM_GB INFERD_MACOS VISION 2>/dev/null

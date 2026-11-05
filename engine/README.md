@@ -194,6 +194,18 @@ See `CLAUDE.md` in the project root for the rest.
 
 ## Changes
 
+- **0.3.0 (2026-11-05)** — getting started in four steps: a self-contained release tarball, `install.sh` (venv,
+  requirements, `--model` downloads) and `run.sh start --model 27b|27b-8bit|flash-next|<dir>` sized from the Mac's
+  memory. **QA8**: int8 prefill read straight from the packed 4-bit weights on GPUs with neural accelerators (no weight
+  copy; replaces PF8 there), which frees memory for KV: 32 agents x 16k on the Mac Studio 711–727 tok/s (0.2.0:
+  613–621). 8-bit drafter context rings (RING8, default) and opt-in 4-bit KV (`KV4=1`). One sampling contract on every
+  path: exact speculative sampling up to top_k 64, defaults from the model's generation_config (Qwen3.8: top_k 20,
+  top_p 0.95), `"spec_sampling": "truncate"` opt-in. Qwen3.6-35B-A3B: group size read per checkpoint (0.2.0 misloaded
+  Qwen's official group-128 build), the DFlash2 drafter on MoE targets and an 8-row MoE verify path. Release gate:
+  chunks 1/24/256/1536 on 4 x 2,048 tokens with cos/KL enforced, and speculative divergences judged by their
+  reference logit gap. Fixes from the 4 November code and security review (R01–R08) and two external test reports.
+  See [docs/RESULTS.md](../docs/RESULTS.md) (r)–(t) and the `docs/CHANGES-*` files.
+
 - **0.2.0 (2026-11-03)** — first public-ready release: the agent-contexts API (`/v1/contexts`, sessions, `cache: drop`,
   per-agent `effort` / `max_context` / `priority`, `GET /v1/cache`), int8 prefill (PF8, automatic), tree verification
   for one agent, Flash-Next with QSA sparse attention, MTP and copy drafts, prefill budget beside decoders, admission
