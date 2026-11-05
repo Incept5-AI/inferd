@@ -220,6 +220,18 @@ See `CLAUDE.md` in the project root for the rest.
 
 ## Changes
 
+- **0.4.0 (2026-11-05)** — vLLM-compatible API: `/v1/completions`, logprobs (from the verify rows, speculation kept),
+  presence/frequency/repetition penalties, `min_p`, `logit_bias`, `min_tokens`, `n`, guided JSON/choice/regex and
+  `structured_outputs`, every `tool_choice`, `/tokenize`, `/detokenize`, `/version`, Prometheus `/metrics`; unsupported
+  endpoints answer a clean 501 ([docs/API-COMPAT.md](../docs/API-COMPAT.md)). Qwen3.6-35B-A3B fleets: int8 experts on the
+  QA8 path, the router as a matmul from 64 rows, drafter attention on simdgroup matrices (M5 Pro fleet 60–71 → 81–93
+  turns/min), and decode snapshots off when a chat template drops earlier reasoning (Studio 16k x 32: 269 → 1,079 tok/s).
+  M4 / M4 Pro: the Neural Engine FFN split on by default (8k prompt 64.2 → 42.8 s). `install.sh` / `run.sh start` find
+  models in `~/models`, the Hugging Face cache and LM Studio, and accept known equivalent builds (with a note; `--exact`
+  for exact repo ids). `run.sh start` sizing: the Mac Studio gets 192 snapshots (27B fleet at 64 in flight 59.6 → 95.3
+  turns/min), Flash-Next 64 running / 128 snapshots (64 agents at 16k: 209–287 → 1,289–1,323 tok/s). A macOS 26 build
+  made on macOS 26 itself. See [docs/RESULTS.md](../docs/RESULTS.md) (t)–(y).
+
 - **0.3.0 (2026-11-05)** — getting started in four steps: a self-contained release tarball, `install.sh` (venv,
   requirements, `--model` downloads) and `run.sh start --model 27b|27b-8bit|flash-next|<dir>` sized from the Mac's
   memory. **QA8**: int8 prefill read straight from the packed 4-bit weights on GPUs with neural accelerators (no weight

@@ -120,30 +120,78 @@ print(reply.choices[0].message.content)
 
 </details>
 
-## Where it stands (5 November 2026, release 0.3.0)
+## Where it stands (5 November 2026, release 0.4.0)
 
-Same model, same weights, same drafter for every engine, on the same machine and harness. Methodology, every table and
-the raw file behind each number: [docs/RESULTS.md](docs/RESULTS.md).
+**64 agents at once on one Mac Studio: 849 tok/s on Qwen3.8-27B, 1,289–1,323 tok/s on Qwen3.8-Flash-Next**, every agent
+on its own 16k context; the slowest agent's first token comes within 2 s on Flash-Next and 3.7 s on the 27B. And on a Mac mini, a fleet of agents doing real
+work keeps going at 13–19 completed turns a minute on a 27-billion-parameter model.
 
-| Machine | Workload | inferd | Other engine |
+Every number below is measured: same weights and drafter for every engine, same machine, same harness. Methodology,
+every table and the raw file behind each number: [docs/RESULTS.md](docs/RESULTS.md).
+
+### On a Mac mini
+
+| Mac mini | What it does | inferd |
+|---|---|---:|
+| M6, 32 GB | Qwen3.8-27B + drafter, an agent fleet on 8k contexts (64-agent pool), completed turns per minute | **13.3–14.0** |
+| M6, 32 GB | Qwen3.5-9B, 16 agents taking turns on 16k contexts, total tok/s | **164** (8-bit: 117) |
+| M6, 32 GB | 27B agents launched from a saved context / resumed after other work: first token | **2.3 s / 0.4 s** |
+| M5 Pro, 64 GB | Qwen3.8-27B agent fleet, turns per minute, on 16k / 32k contexts | **18.2–19.0 / 14.4–15.7** |
+| M5 Pro, 64 GB | Qwen3.6-35B-A3B (MoE) agent fleet, turns per minute | **81–93** |
+| M5 Pro, 64 GB | 35B, 32 agents taking turns on 4k / 16k contexts, total tok/s | **610 / 467** |
+| M5 Pro, 64 GB | 27B on 32k contexts, 16 agents: the slowest agent's first token | **5.8–7.5 s** |
+| M5 Pro, 64 GB | agents resumed after unrelated load (35B / 27B): first token | **0.14 s / 0.25 s** |
+| M4 Pro, 64 GB | 27B, one agent, 8k prompt: first token (the Neural Engine helps on M4) | **42.8 s** (0.3.0: 64.2 s) |
+
+<details><summary><b>How the minis compare with other engines</b> (Splash 1.5, TensorFold 1.2.2, mlx_lm)</summary>
+
+| Mac mini | Workload | inferd | Other engine |
 |---|---|---:|---:|
-| Mac Studio M5 Ultra | 32 agents taking turns on 16k contexts, total tok/s | **711–727** (0.2.0: 613–621); 849 with 64 agents | Splash 1.5: levels off at ~369 |
-| Mac Studio M5 Ultra | 32 agents on 64k contexts: the last agent's first token | **3.3–3.4 s** | Splash 1.5: 48.9 s |
-| Mac Studio M5 Ultra | 8 Qwen3.8-27B agents start at once (14k prompts, 6,400 tokens out): all done | **125.6 s** | TensorFold 1.2.2: 177.6 s (1.2.1: 177.9 s) |
-| Mac Studio M5 Ultra | 16 agents arriving at random, 2k–16k prompts: all done | **78.7 s** | TensorFold 1.2.2: 116.8 s |
-| Mac mini M5 Pro, 64 GB | 16 agents at 16k, completed turns per minute (0.3.0 engine, back to back, 5 Nov) | **18.2** (8–32 agents: 18.2–19.0) | Splash 1.5: 12.0 (11.4–12.0) |
-| Mac mini M6, 32 GB | Qwen3.8-27B 4-bit + drafter, 16 agents on 8k contexts, turns per minute | **9.7**, **14.3** with the opt-in Neural Engine split | Splash 1.5: 8.8; TensorFold 1.2.2 cannot load the 27B on 32 GB |
-| Mac mini M6, 32 GB | Qwen3.5-9B 4-bit, 16 agents taking turns on 16k contexts, total tok/s | **160** | TensorFold 1.2.2: 23 |
-| Mac mini M6, 32 GB | Qwen3.8-27B, 8–16 agents taking turns on 16k contexts, total tok/s | 64–66 | **Splash 1.5: 86–89** (inferd's KV pool on 32 GB holds about four 16k contexts) |
-| Mac Studio M5 Ultra | Qwen3.6-35B-A3B (MoE), 32 agents on 16k contexts, total tok/s (main, after 0.3.0) | **1,079**, last agent's first token 1.7 s | Splash 1.5: 598 |
-| Mac mini M4 Pro, 64 GB | 27B, one agent, 8k prompt: first token (main, after 0.3.0: Neural Engine split on M4) | **42.8 s** (0.3.0: 64.2 s) | mlx_lm: ~63 s (131 tok/s) |
-| MacBook Pro M3 Max (external tester) | 16 agents at 32k: the last agent's first token | **28.4 s** | Splash 1.5: 113–115 s |
-| Mac Studio M5 Ultra | one agent, single stream | 143–231 tok/s | **Splash, TensorFold and mlx-serve are faster** |
-| Mac Studio M5 Ultra | 32 agents forked from a 25k context, relaunched after 1.4M tokens of unrelated work: first token | **1.03 s** (100% cached) | |
-| Mac mini M5 Pro, 64 GB | 16 forked agents relaunched / 8 agents resumed after unrelated load: first token | **2.1 s / 0.25 s** | TensorFold 1.2.2 (with its disk cache): 195 s / 15.4 s |
-| Mac mini M5 Pro, 64 GB | Qwen3.6-35B-A3B (MoE) with its drafter: one agent at 4k / agent fleet, turns per minute | 151–153 tok/s / 59–62 | **Splash 1.5: 209–219 / 76–81** |
-| Mac Studio M5 Ultra | Qwen3.8-Flash-Next, 1–5 agents starting together | | **TensorFold 1.2.2 finishes sooner** |
-| Mac Studio M5 Ultra | Qwen3.8-Flash-Next, 16 agents arriving at random | 57.2 s, p95 first token 13.7 s | TensorFold 1.2.2: 57.3 s, **9.2 s** |
+| M6, 32 GB | 27B agent fleet on 8k, turns per minute (back to back) | **13.3–13.5** | Splash 1.5: 8.8–8.9; TensorFold 1.2.2 cannot load the 27B on 32 GB |
+| M6, 32 GB | 9B, 16 agents on 16k, total tok/s | **164** (8-bit 117) | TensorFold 1.2.2: 23 (8-bit 8.7) |
+| M6, 32 GB | 27B, 8 / 16 agents on 16k, total tok/s (4-bit KV, `KV4=1`) | **95** / 85 | Splash 1.5: 86 / 89 |
+| M5 Pro, 64 GB | 27B agent fleet, 16k / 32k, turns per minute (back to back) | **18.2–19.0 / 14.4–15.7** | Splash 1.5: 11.4–12.0 / 10.2–10.4 |
+| M5 Pro, 64 GB | 35B agent fleet, turns per minute (back to back) | **81–93** | Splash 1.5: 78–79 |
+| M5 Pro, 64 GB | 9B agent fleet, 32 agents, turns per minute (4-bit / 8-bit) | **57.4 / 46.9** | TensorFold 1.2.2: 7.7 / 3.0 |
+| M5 Pro, 64 GB | 16 forked agents relaunched / 8 resumed after unrelated load: first token | **2.1 s / 0.25 s** | TensorFold 1.2.2 (disk cache): 195 s / 15.4 s |
+| M4 Pro, 64 GB | 27B, one agent, 8k prompt: first token | **42.8 s** | mlx_lm: ~63 s |
+
+Where others lead on the minis: Splash is faster for one agent and for 4–8 agents taking turns on the M5 Pro and M6
+(e.g. the 35B at 16k with 4 agents, 315 vs 237 tok/s on the M5 Pro), and for the 35B on the 32 GB M6 at 16k. Splash reads
+one cold prompt sooner on the M5 Pro and M6. On M1–M4 GPUs leave the drafter off for the 35B from 4 agents
+(`--draft none`).
+
+</details>
+
+### On a Mac Studio (M5 Ultra, 256 GB)
+
+| What it does | inferd |
+|---|---:|
+| Qwen3.8-27B, 64 agents taking turns on 16k contexts, total tok/s, slowest first token (32 agents: 722 tok/s) | **849**, 3.4–3.7 s |
+| Qwen3.8-Flash-Next, 64 agents on 16k contexts, total tok/s, slowest first token | **1,289–1,323**, 1.7–2.0 s |
+| Qwen3.6-35B-A3B (MoE), 32 agents on 16k contexts, total tok/s, slowest first token | **1,079**, 1.7 s |
+| Qwen3.8-27B agent fleet, 64 in flight, completed turns per minute | **95.3** |
+| 32 agents on 64k contexts: the last agent's first token | **3.3–3.4 s** |
+| One agent saves a 33.5k-token context, 31 more start from it: median first token / all 31 done | **0.72 s / 15.3 s** |
+| 32 agents forked from a 25k context, relaunched after 1.4M tokens of unrelated work: first token | **1.03 s** |
+
+<details><summary><b>How the Studio compares with other engines</b> (Splash 1.5, TensorFold 1.2.2)</summary>
+
+| Workload | inferd | Other engine |
+|---|---:|---:|
+| 27B, 32 agents on 16k contexts, total tok/s | **722** | Splash 1.5: levels off at ~369 |
+| 27B agent fleet on 8k, 8 / 32 / 64 in flight, turns per minute | **80 / 89 / 95** | Splash 1.5: 49 / 50 / 50 (32 of 128 turns refused at 64) |
+| 35B, 32 agents on 16k, total tok/s | **1,079** | Splash 1.5: 598 |
+| 32 agents on 64k: the last agent's first token | **3.3–3.4 s** | Splash 1.5: 48.9 s |
+| 8 Qwen3.8-27B agents start at once (14k prompts, 6,400 tokens out): all done | **125.6 s** | TensorFold 1.2.2: 177.6 s |
+| 16 agents arriving at random, 2k–16k prompts: all done | **78.7 s** | TensorFold 1.2.2: 116.8 s |
+
+Where others lead on the Studio: one agent on its own (Splash, TensorFold and mlx-serve decode a single stream faster),
+and Flash-Next with 1–5 agents starting together (TensorFold 1.2.2 finishes sooner; with 16 arriving at random the two are
+level on total time and TensorFold's p95 first token is lower, 9.2 vs 13.7 s). The MacBook Pro M3 Max (external tester):
+16 agents at 32k, the last agent's first token 28.4 s vs Splash 1.5's 113–115 s.
+
+</details>
 
 Quality: logits match the mlx_lm reference (top-1, cosine ≥ 0.9997); [HLE Lite](https://github.com/Incept5-AI/hle-lite) (173 items, effort medium) 32.4% for the
 27B 4-bit, 34.1% for 8-bit and 41.6% for Flash-Next, inside the range of published runs on other engines; 100/100
