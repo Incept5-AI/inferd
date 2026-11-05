@@ -124,8 +124,8 @@ elif [[ ${1:-} == start ]]; then
     (( RAM_GB >= MI_MIN_GB )) || need "$MNAME needs a Mac with at least $MI_MIN_GB GB of memory (this one: $RAM_GB GB)"
     mhint=": run ./install.sh --model $MNAME, or set INFERD_MODELS to where your models are"
     (( mmiss )) && need "no complete copy of $MI_REPO in INFERD_MODELS ($MROOT), the Hugging Face cache or LM Studio${mhint}"
-    if [[ $MNAME == flash-next ]]; then  # the Studio setting of every Flash-Next result (MTP drafts, 64 GiB of KV)
-      RUNNING=32 STEP=2048 KV=64 SNAPS=32 MAXCTX=65536 SPILL_DEF=0 SIZING="$SIZING, Flash-Next"
+    if [[ $MNAME == flash-next ]]; then  # the Studio: MTP drafts, 64 GiB of KV; 128 snapshots (5 Nov: with 32, 48-64 agents collapsed to 209-287 tok/s at 16k; 1,289 with 128)
+      RUNNING=64 STEP=2048 KV=64 SNAPS=128 MAXCTX=65536 SPILL_DEF=0 SIZING="$SIZING, Flash-Next"
     fi
   fi
   if [[ $o_draft == none ]]; then

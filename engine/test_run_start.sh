@@ -136,7 +136,7 @@ check "27b-8bit: its directory and the same drafter" eval '[[ $(line "engine    
 out=$(INFERD_RAM_GB=32 $R start --port $P2 --model 27b-8bit 2>&1); rc=$?
 check "27b-8bit refuses a 32 GB Mac" eval '(( rc != 0 )) && has "needs a Mac with at least 64 GB"'
 out=$(INFERD_RAM_GB=256 $R start --port $P1 --model flash-next --dry-run 2>&1)
-check "flash-next: MTP, no drafter, the Studio setting" eval '[[ $(line "engine    ") == *" DRAFT='"''"' MTP=1 ./build/inferd $M/Qwen3.8-Flash-Next-oQ4e-mtp $SOCK1 32 2048 64 32 65536" ]]'
+check "flash-next: MTP, no drafter, the Studio setting" eval '[[ $(line "engine    ") == *" DRAFT='"''"' MTP=1 ./build/inferd $M/Qwen3.8-Flash-Next-oQ4e-mtp $SOCK1 64 2048 64 128 65536" ]]'
 out=$(INFERD_RAM_GB=256 $R start --port $P1 --model flash-next --draft none --dry-run 2>&1)
 check "flash-next --draft none: MTP=0" eval '[[ $(line "engine    ") == *" MTP=0 "* ]]'
 out=$(INFERD_RAM_GB=128 $R start --port $P2 --model flash-next 2>&1); rc=$?
