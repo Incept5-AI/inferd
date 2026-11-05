@@ -4,6 +4,32 @@
 # NAX matmuls into kernels that give WRONG logits on macOS 27 at >= 256 rows (2026-11-03, reverted the same day).
 set -e
 cd "$(dirname $0)"
+# The Metal compiler comes with Xcode, not with the Command Line Tools. When the active developer directory has none
+# (xcode-select -p = /Library/Developer/CommandLineTools on a stock setup), use an installed Xcode for this build.
+metal_ok() { xcrun metal --version >/dev/null 2>&1 }
+if ! metal_ok; then
+  active=$(xcode-select -p 2>/dev/null) || active="the active developer directory"
+  xcode= good= cands=(/Applications/Xcode.app(N) /Applications/Xcode*.app(N))
+  for a in ${(u)cands}; do
+    [[ -d $a/Contents/Developer ]] || continue
+    xcode=${xcode:-$a}
+    DEVELOPER_DIR=$a/Contents/Developer metal_ok && { good=$a; break }
+  done
+  if [[ -n $good ]]; then
+    export DEVELOPER_DIR=$good/Contents/Developer
+    print -r -- "build.sh: no Metal compiler in $active; using $good for this build (to make it permanent: sudo xcode-select -s $good/Contents/Developer)"
+  elif [[ -n $xcode ]]; then
+    print -u2 -r -- "build.sh: no Metal compiler in $active, and $xcode has no Metal toolchain. Install it once (about
+690 MB), then run ./build.sh again:
+  DEVELOPER_DIR=$xcode/Contents/Developer xcodebuild -downloadComponent MetalToolchain"
+    exit 1
+  else
+    print -u2 -r -- "build.sh: no Metal compiler in $active. The kernels need Xcode (App Store or developer.apple.com),
+not just the Command Line Tools. Install Xcode, then its Metal toolchain once (about 690 MB), and run ./build.sh again:
+  sudo xcode-select -s /Applications/Xcode.app/Contents/Developer && xcodebuild -downloadComponent MetalToolchain"
+    exit 1
+  fi
+fi
 mkdir -p build
 xcrun metal -std=metal4.0 -O3 -c kernels/core.metal -o build/core.air
 xcrun metal -std=metal4.0 -O3 -I third_party/mlx -c kernels/mlx_qmm.metal -o build/mlx_qmm.air

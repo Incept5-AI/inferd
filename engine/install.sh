@@ -103,8 +103,22 @@ if [[ -f $stamp && $(<$stamp) == $want ]] &&
   say "the front end's packages are installed (requirements.txt unchanged)"
 else
   say "installing the front end's packages (requirements.txt)"
-  "$VENV/bin/python" -m pip install --disable-pip-version-check -q -r requirements.txt ||
-    die "pip install -r requirements.txt failed"
+  # A venv made by uv has no pip: install with uv itself when it is on PATH, else bootstrap pip with ensurepip
+  if "$VENV/bin/python" -I -c 'import pip' 2>/dev/null; then
+    "$VENV/bin/python" -m pip install --disable-pip-version-check -q -r requirements.txt ||
+      die "pip install -r requirements.txt failed"
+  elif (( ${+commands[uv]} )); then
+    say "the venv has no pip (made by uv?): installing with uv pip"
+    uv pip install --python "$VENV/bin/python" -q -r requirements.txt ||
+      die "uv pip install --python $VENV/bin/python -r requirements.txt failed"
+  else
+    say "the venv has no pip: adding it with ensurepip"
+    "$VENV/bin/python" -m ensurepip --upgrade >/dev/null ||
+      die "$VENV has no pip and ensurepip failed: install uv (https://docs.astral.sh/uv/) and run ./install.sh again,
+  or recreate the venv with pip (move $VENV away; ./install.sh makes a new one)"
+    "$VENV/bin/python" -m pip install --disable-pip-version-check -q -r requirements.txt ||
+      die "pip install -r requirements.txt failed"
+  fi
   "$VENV/bin/python" -I -c 'import fastapi, uvicorn, transformers, jinja2, mlx' 2>/dev/null ||
     { "$VENV/bin/python" -I -c 'import fastapi, uvicorn, transformers, jinja2, mlx'; die "the packages installed but do not import"; }
   print -r -- $want > $stamp

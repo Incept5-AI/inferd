@@ -19,6 +19,10 @@
 #                               STOP_WAIT s, then SIGKILL); exit 0 when nothing is running
 #   run.sh status [port=8300]   pids, socket and log paths (the log directory the last start used); exit 0 when
 #                               both processes run, 3 otherwise
+#   run.sh clean [port=8300]    delete that port's SSD tier: the tier persists across stops and restarts on purpose
+#                               (agents come back from it), so this is how to get the disk space back. Only the tier's
+#                               own files (<dir>/inferd-spill and its lock) in the directory the last start used
+#                               (default ~/Library/Caches/inferd/spill-<port>); refuses while a server runs on the port
 # The engine socket is no longer /tmp/inferd-<port>.sock: use `run.sh stop` / `run.sh status`, not lsof on a path.
 # Env: MODEL (checkpoint dir, required to start), DRAFT (DFlash2 dir; speculation off without it), DRAFT_BITS, PY (python
 # with the front end's packages, default python3), SPILL_DIR/SPILL_GIB (SSD tier), VISION, plus the engine knobs in
@@ -69,7 +73,7 @@ if [[ ${1:-} == models ]]; then
   source tools/models.zsh || die "tools/models.zsh is missing"
   models_list
   exit 0
-elif [[ ${1:-} == (stop|status) ]]; then
+elif [[ ${1:-} == (stop|status|clean) ]]; then
   CMD=$1
   (( $# <= 2 )) || die "usage: run.sh $CMD [port]"
   PORT=${2:-8300}
@@ -172,6 +176,7 @@ if [[ -e $RUN ]]; then
 fi
 SOCK=$RUN/inferd-$PORT.sock IPID=$RUN/inferd-$PORT.pid SPID=$RUN/serve-$PORT.pid
 LOGF=$RUN/logs-$PORT  # the log directory the last start used (status reports it, not the current INFERD_LOGS)
+SPILLF=$RUN/spill-$PORT  # the SSD tier directory the last start used (clean removes its tier), empty when it was off
 LEGACY=/tmp/inferd-$PORT.sock  # where run.sh put the socket before 2026-11-03
 
 alive() { kill -0 "$1" 2>/dev/null }
@@ -224,6 +229,28 @@ stop_all() {  # -> 0, after stopping our processes on PORT; a holder we do not r
 
 if [[ $CMD == stop ]]; then
   stop_all
+  exit 0
+fi
+if [[ $CMD == clean ]]; then  # the port's SSD tier, only when nothing of ours or anyone else's serves the port
+  spid=$(file_pid "$SPID" "frontend/serve.py") || spid=
+  ipid=$(file_pid "$IPID" "$SOCK") || ipid=
+  [[ -z $spid$ipid && -z $(holders) ]] || die "a server is running on port $PORT: run.sh stop $PORT first"
+  def=$HOME/Library/Caches/inferd/spill-$PORT dir=
+  [[ -f $SPILLF && ! -L $SPILLF ]] && dir=$(<$SPILLF)
+  dir=${dir:-$def}
+  tier=$dir/inferd-spill lock=$dir/inferd-spill.lock
+  if [[ ! -e $tier && ! -e $lock ]]; then
+    print -r -- "run.sh: no SSD tier for port $PORT in $dir; nothing to clean"
+    exit 0
+  fi
+  [[ -e $tier && ( -L $tier || ! -d $tier || ! -f $tier/.inferd-owner ) ]] &&
+    die "$tier is not an inferd SSD tier (no .inferd-owner); left alone"
+  [[ -e $lock && -n $(lsof -t -- "$lock" 2>/dev/null) ]] && die "$lock is held by a running inferd; left alone"
+  kb=0; [[ -d $tier ]] && kb=$(du -sk -- "$tier" | cut -f1)
+  rm -rf -- "$tier" && rm -f -- "$lock" || die "could not remove $tier"
+  [[ $dir == $def ]] && rmdir -- "$dir" 2>/dev/null
+  rm -f -- "$SPILLF"
+  print -r -- "run.sh: removed the SSD tier for port $PORT: $tier ($(printf %.1f $(( kb / 1048576.0 ))) GiB)"
   exit 0
 fi
 if [[ $CMD == status ]]; then
@@ -305,6 +332,7 @@ if [[ -e $SOCK || -L $SOCK ]]; then  # a stale socket would let the front end st
 fi
 
 rm -f -- "$LOGF"; print -r -- "$LOGS" > "$LOGF"
+rm -f -- "$SPILLF"; print -r -- "${SPILL_DIR:-}" > "$SPILLF"
 INFERD_HOME=$PWD DRAFT=${DRAFT:-} nohup ./build/inferd "$MODEL" "$SOCK" "$RUNNING" "$STEP" "$KV" "$SNAPS" "$MAXCTX" \
   > "$LOGS/inferd-$PORT.log" 2>&1 < /dev/null &
 print -r -- $! > "$IPID"

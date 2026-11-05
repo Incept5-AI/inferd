@@ -1,14 +1,15 @@
 #!/bin/zsh
-# run_all.sh MACHINE [URL]: runs every example against one inferd server as a self-test of that machine, keeps each
-# output with its wall time in results/MACHINE/, and ends with a PASS/FAIL table (exit code, plus the PASS/FAIL lines
+# run_all.sh [MACHINE] [URL]: runs every example against one inferd server as a self-test of that machine, keeps each
+# output with its wall time in results/MACHINE/ (MACHINE defaults to `hostname -s`), and ends with a PASS/FAIL table (exit code, plus the PASS/FAIL lines
 # a demo printed). Exits 1 if any demo failed. The server must be up first (see README.md, "Start the server");
 # clients can run on another Mac (e.g. through `ssh -N -L 18300:127.0.0.1:8300 <host>` and URL
 # http://127.0.0.1:18300/v1). ONLY=name1,name2 re-runs a subset into the same results (the summary then covers every
 # demo recorded there, each with its latest run).
 zmodload zsh/datetime
 cd "$(dirname $0)"
-M=$1; export INFERD_URL=${2:-http://127.0.0.1:8300/v1}
-[[ -z $M ]] && { echo "usage: run_all.sh MACHINE [URL]"; exit 2; }
+M=${1:-$(hostname -s)}; export INFERD_URL=${2:-http://127.0.0.1:8300/v1}
+[[ -z $M || $M == -* ]] && { echo "usage: run_all.sh [MACHINE] [URL]   (MACHINE: a name for results/MACHINE/, default this Mac's short host name)"; exit 2; }
+echo "run_all.sh: $M against $INFERD_URL; outputs in examples/results/$M/"
 PY=${PY:-python3}; R=results/$M; mkdir -p $R
 # LANGBENCH (a languages-benchmark checkout) passes through to coding-smoke, which clones one into
 # ~/.cache/inferd/languages-benchmark when it is unset.

@@ -1,7 +1,8 @@
 #!/bin/zsh
 # run.sh's named start (`run.sh start --model ...`): option parsing, the RAM-based sizing (INFERD_RAM_GB), --dry-run, and
 # where a named model is found (INFERD_MODELS, the Hugging Face cache, LM Studio: fake trees under HOME / HF_HUB_CACHE /
-# LMSTUDIO_MODELS), install.sh's use of a copy it finds (a stub `hf` records any download), and
+# LMSTUDIO_MODELS), install.sh's use of a copy it finds (a stub `hf` records any download), install.sh on a venv
+# without pip (as uv makes them: a stub `uv` records its call; ensurepip otherwise), `run.sh clean` (the SSD tier), and
 # a check that the positional form, stop and status behave exactly as in the run.sh before the named form
 # (BASE, default 19805b9: main just before the named start, after status learnt the start's log dir; read with git show). It runs copies of run.sh against a fake build/inferd and a fake front end
 # in a temporary directory: no model, no GPU, no network. Ports 18397 and 18398 must be free. Cleans up only what it
@@ -277,6 +278,33 @@ check "install.sh --list" eval '(( rc == 0 )) && has "27b: $T/dl/Qwen3.8-27B-4bi
 out=$(inst $T/dl $I --list --model 27b 2>&1); rc=$?
 check "install.sh --list with --model is refused" eval '(( rc != 0 )) && has "drop --model"'
 
+# --- install.sh on a venv without pip (as uv makes them): uv pip when uv is on PATH, else ensurepip, else a clear error
+mkdir -p $T/uvenv/bin $T/uvbin $T/nouv
+print -r -- '#!/bin/zsh
+print -r -- "$*" >> '$REC'/uvpy-calls.txt
+[[ $* == *version_info* ]] && { print 3.12; exit 0 }
+[[ $* == *"import pip"* ]] && { [[ -e '$T'/uvenv/pip-ok ]] && exit 0 || exit 1 }
+[[ $* == "-m ensurepip"* ]] && { [[ -e '$T'/uvenv/ensurepip-ok ]] && : > '$T'/uvenv/pip-ok && exit 0 || exit 1 }
+exit 0' > $T/uvenv/bin/python
+print -r -- '#!/bin/zsh
+print -r -- "$*" >> '$REC'/uv-calls.txt' > $T/uvbin/uv
+chmod +x $T/uvenv/bin/python $T/uvbin/uv
+for c in zsh sed shasum cut uname sw_vers mkdir; do ln -sf ${commands[$c]} $T/nouv/$c; done  # a PATH with no uv
+uvinst() { env PATH=$1 INFERD_VENV=$T/uvenv INFERD_RAM_GB=64 INFERD_MODELS=$X $I }
+rm -f $REC/uv-calls.txt $REC/uvpy-calls.txt
+out=$(uvinst $T/uvbin:$T/nouv 2>&1); rc=$?
+check "install.sh, venv without pip, uv on PATH: uv pip install into the venv" eval '(( rc == 0 )) && [[ $(<$REC/uv-calls.txt) == "pip install --python $T/uvenv/bin/python -q -r requirements.txt" ]] && has "installing with uv pip"'
+check "... and no pip or ensurepip was run" eval '[[ $(<$REC/uvpy-calls.txt) != *"-m pip"* && $(<$REC/uvpy-calls.txt) != *ensurepip* ]]'
+rm -f $REC/uv-calls.txt
+out=$(uvinst $T/uvbin:$T/nouv 2>&1); rc=$?
+check "... run again: requirements unchanged, nothing installed" eval '(( rc == 0 )) && [[ ! -e $REC/uv-calls.txt ]] && has "packages are installed (requirements.txt unchanged)"'
+rm -f $T/uvenv/.inferd-requirements.sha256 $REC/uvpy-calls.txt
+out=$(uvinst $T/nouv 2>&1); rc=$?
+check "no pip, no uv, ensurepip fails: a clear error" eval '(( rc != 0 )) && has "has no pip and ensurepip failed: install uv"'
+touch $T/uvenv/ensurepip-ok; rm -f $REC/uvpy-calls.txt
+out=$(uvinst $T/nouv 2>&1); rc=$?
+check "no pip, no uv: ensurepip, then pip install" eval '(( rc == 0 )) && [[ $(<$REC/uvpy-calls.txt) == *"-m ensurepip --upgrade"*"-m pip install --disable-pip-version-check -q -r requirements.txt"* ]] && [[ ! -e $REC/uv-calls.txt ]]'
+
 # --- a real start through the fakes: the named start runs what its dry run printed
 out=$(INFERD_RAM_GB=32 $R start --model 27b --port $P1 --dry-run 2>&1); dry=$(line "engine    ")
 out=$(INFERD_RAM_GB=32 $R start --model 27b --port $P1 --spill off 2>&1); rc=$?
@@ -291,6 +319,29 @@ fe=$(<$T/run/serve-$P1.pid) eng=$(<$T/run/inferd-$P1.pid)
 out=$($R stop $P1 2>&1); rc=$?
 check "stop after a named start" eval '(( rc == 0 )) && has "stopped 2 process"'
 check "both processes gone" eval 'gone $fe && gone $eng'
+
+# --- run.sh clean: removes only the port's SSD tier (the tier's own files), never while a server runs on the port
+mktier() { mkdir -p $1/inferd-spill && print 'inferd SSD tier' > $1/inferd-spill/.inferd-owner && print b > $1/inferd-spill/b0123 && : > $1/inferd-spill.lock }
+SP=$T/sp1; mktier $SP; print keep > $SP/keep.txt
+out=$(INFERD_RAM_GB=32 $R start --model 27b --port $P1 --spill $SP 2>&1); rc=$?
+check "start with --spill DIR comes up" eval '(( rc == 0 )) && has "up on 127.0.0.1:$P1"'
+out=$($R clean $P1 2>&1); rc=$?
+check "clean refuses while the server runs, and removes nothing" eval '(( rc != 0 )) && has "run.sh stop $P1 first" && [[ -f $SP/inferd-spill/b0123 && -e $SP/inferd-spill.lock ]]'
+out=$($R stop $P1 2>&1)
+out=$($R clean $P1 2>&1); rc=$?
+check "clean after stop removes the recorded SPILL_DIR's tier and lock" eval '(( rc == 0 )) && has "removed the SSD tier for port $P1: $SP/inferd-spill" && [[ ! -e $SP/inferd-spill && ! -e $SP/inferd-spill.lock ]]'
+check "... and nothing else in that directory" eval '[[ -d $SP && $(<$SP/keep.txt) == keep ]]'
+out=$($R clean $P1 2>&1); rc=$?
+check "clean again: nothing to clean, exit 0" eval '(( rc == 0 )) && has "nothing to clean"'
+C=$HOME/Library/Caches/inferd; mktier $C/spill-$P2; mktier $C/spill-$P1; print keep > $C/other.txt
+out=$($R clean $P2 2>&1); rc=$?
+check "clean with no start recorded: the default per-port directory, removed" eval '(( rc == 0 )) && [[ ! -e $C/spill-$P2 ]]'
+check "... other ports' tiers and other files untouched" eval '[[ -f $C/spill-$P1/inferd-spill/b0123 && -f $C/other.txt ]]'
+rm $C/spill-$P1/inferd-spill/.inferd-owner
+out=$($R clean $P1 2>&1); rc=$?
+check "clean leaves a directory without .inferd-owner alone" eval '(( rc != 0 )) && has "not an inferd SSD tier" && [[ -f $C/spill-$P1/inferd-spill/b0123 ]]'
+out=$($R clean abc 2>&1); rc=$?;   check "clean rejects a bad port" eval '(( rc != 0 )) && has "port must be an integer"'
+out=$($R --help 2>&1);             check "--help mentions clean" eval 'has "run.sh clean [port=8300]"'
 
 # --- the positional form, stop and status: the same as run.sh at BASE
 cmp_run() {  # description, env assignments..., --, args...: both run.shs, same exit code and output
