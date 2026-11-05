@@ -839,6 +839,9 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 | `LANE`, `LANE_MIN`, `LANE_MAX`, `LANE_SK` | 0, 2, 16, auto | lane4 small-batch GEMM (off; repacked copy) |
 | `QMST`, `QMST_MAX`, `QMST_NSG`, `QMST_TGS`, `QMST_SPREAD` | 0, 16, 2, 6, 1 | Splash-style staged-tile GEMM (off; repacked copy) |
 | `MOE_SORT_MIN` | 128 | routed rows from which MoE sorts by expert |
+| `MOE_QA8` | 1 | sorted-path MoE experts (Qwen3.6-35B-A3B, >= 16 rows) on int8 activations x packed 4-bit weights (`qa8g`); 0 = MLX's bf16 gathered qmm |
+| `MOE_QA8_WM`, `MOE_QA8_WN` | 1, 2 | `qa8g` tile (32 WM rows x 32 WN columns) |
+| `MOE_ROUTER_GEMM` | 64 | rows from which the 35B's 8-bit router runs as a GEMM with bf16 logits (as the reference); 0 = per-row GEMV |
 
 **Scheduling and speculation**
 
@@ -857,6 +860,7 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 | `DRAFT_VOCAB` | 0 | drafter vocabulary cut (e.g. 98304) |
 | `DRAFT_TAIL` | 248032 for a 248,320-token vocabulary | start of the special-token tail kept by the cut |
 | `DRAFT_CHUNK` | 64 | keys per drafter attention split |
+| `DRAFT_ATTN_MMA` | 1 | drafter attention for blocks of <= 8 rows on simdgroup matrices; 0 = the scalar kernels |
 | `DRAFT_ATTN_ONE` | unset | 8-row drafter attention in one simdgroup (slower) |
 | `TOP16_SHARDS` | 64 | shards for top-16; 0 = one threadgroup per row |
 | `DRAFT_SKIP` | 0 | timing only: 1 attention, 2 MLP, 4 head |

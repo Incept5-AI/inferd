@@ -256,9 +256,17 @@ struct Drafter {
       const int ng = dr == 5 || (dr == 8 && !grouped) ? 1 : dr / 4;
       const char* ak = dr == 5 ? "draft_attn5" : dr == 8 ? (grouped ? "draft_attn8g" : "draft_attn8") :
                        dr == 12 ? "draft_attn12g" : "draft_attn16g";
+      // DRAFT_ATTN_MMA (default on): blocks of up to 8 rows on simdgroup matrices (kernels/spec.metal draft_attn_mma)
+      static const bool mma = !getenv("DRAFT_ATTN_MMA") || atoi(getenv("DRAFT_ATTN_MMA"));
+      if (mma && dr <= 8 && D == 128 && chunk <= 64 && Hq == 4 * Hkv) {
+        e.k(rk(dr == 5 ? "draft_attn_mma5" : "draft_attn_mma8")).buf(0, q).buf(1, kr[l]).buf(2, vr[l])
+            .buf(3, b_pos).buf(4, b_start).buf(5, b_len).buf(6, b_slot).buf(7, part).args(8, aa);
+        e.groups(S3(Hkv, S, splits), S3(32 * ((4 * dr + 7) / 8)));
+      } else {
       e.k(rk(ak)).buf(0, q).buf(1, kr[l]).buf(2, vr[l])
           .buf(3, b_pos).buf(4, b_start).buf(5, b_len).buf(6, b_slot).buf(7, part).args(8, aa);
       e.groups(S3(Hkv, S, splits * ng), S3(32));
+      }
       const char* ck = dr == 5 ? "draft_attn_combine5" : dr == 8 ? "draft_attn_combine8" :
                        dr == 12 ? "draft_attn_combine12" : "draft_attn_combine16";
       e.k(ck).buf(0, part).buf(1, attn).buf(2, b_tseq).buf(3, b_start).args(4, aa);

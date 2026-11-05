@@ -354,7 +354,11 @@ struct Qwen35 {
     fn_gqmm_bm = env_int("FN_GQMM_BM", 0);
     fn_qsa_splits = env_int("FN_QSA_SPLITS", 0);
     fn_inj_norm = env_int("FN_INJ_NORM", 1);  // 4 measured no faster (16k prefill) once batches hold 128 tiles
+    moe_router_gemm = env_int("MOE_ROUTER_GEMM", 64);  // the 35B's router as a GEMM from this many rows (0 off)
+    moe_qa8 = env_int("MOE_QA8", 1), moe_qa8_min = env_int("MOE_QA8_MIN", 9);
+    moe_qa8_wm = env_int("MOE_QA8_WM", 1), moe_qa8_wn = env_int("MOE_QA8_WN", 2);
   }
+  int moe_router_gemm = 64;
   int fn_gqmm_bm = 0, fn_qsa_splits = 0, fn_inj_norm = 1;
   const char* fn_gqmm_sfx = getenv("FN_GQMM_SFX");  // experiments: "_w2" / "_n4" tiles (kernels/fnp_gather.metal)
   // Flash-Next prefill (2026-11-02 night): GDN conv / recurrence kernels for steps of >= fn_gdn_pf rows (fn_gdn_r
@@ -1779,6 +1783,28 @@ struct Qwen35 {
     }
     e.groups(S3((W.N + 63) / 64, tiles), S3(tgs));
   }
+  // QA8G (2026-11-05): the 35B-A3B's routed experts on int8 activations (one scale per row per 64-group, as QA8) x the
+  // packed 4-bit expert weights (kernels/qa8.metal qa8g_gemm) in every step that takes the sorted path (prefill chunks,
+  // verify steps of >= 16 rows), instead of MLX's bf16 gathered qmm: a 1,024-row turn at 8k 386 -> 320 ms, 8 x 8
+  // verify rows 67 -> 58 ms (M5 Pro). The four-launch path (<= 8 rows) is unchanged. MOE_QA8=0 off.
+  int moe_qa8 = 1, moe_qa8_min = 9, moe_qa8_wm = 1, moe_qa8_wn = 2;  // knobs()
+  bool qa8g_route(const Layer& ly, int T) const {
+    return moe_qa8 && qa8_on > 0 && g.nax && !cfg.qwen4 && T >= moe_qa8_min && ly.egu.bits == 4 && ly.edown.bits == 4 &&
+           cfg.hidden % 256 == 0 && cfg.moe_inter % 256 == 0 && cfg.experts <= 1024;
+  }
+  // A: activations [rows, W.K] bf16 (GA: the T token rows, sorted row m reads token mperm[m] / topk); C: [R, W.N] sorted.
+  void qa8g(Enc& e, const BufRef& A, int rows, const MoeW& W, const BufRef& C, int R, bool ga) {
+    const BufRef qa = mxs, qx = mxs.at((size_t)rows * W.K);  // mxs (the bf16 gather copy) is unused on this path
+    struct { int M, K, lda; } q{rows, W.K, W.K};
+    e.k("qa8_quant").buf(0, A).buf(1, qa).buf(2, qx).args(3, q);
+    e.threads(S3(W.K / 64 * 32, rows), S3(256));
+    const int WM = moe_qa8_wm, WN = moe_qa8_wn, BM = 32 * WM, BN = 32 * WN;
+    struct { int M, N, K; uint32_t xr; int E, div, MQ; } a{R, W.N, W.K, 0u, W.E, cfg.topk, rows};
+    char nm[32];
+    snprintf(nm, sizeof nm, "qa8g_%dx%d_ga%d", WM, WN, ga ? 1 : 0);
+    e.k(nm).buf(0, qa).buf(1, W.wq).buf(2, W.s).buf(3, W.b).buf(4, qx).buf(5, C).args(6, a).buf(7, moffs).buf(8, mperm);
+    e.groups(S3((W.N + BN - 1) / BN, (R + BM - 1) / BM + std::min(W.E, R)), S3(32 * WM * WN));
+  }
   void encode_moe(Enc& e, const Layer& ly, int T) {
     const int H = cfg.hidden, k = cfg.topk, R = T * k;
     if (!on("moe")) { if (cfg.qwen4 && on("hyper")) hyper_pre(e, ly.mhc, T, true, xn); return; }  // SKIP=moe: timing only
@@ -1840,6 +1866,15 @@ struct Qwen35 {
       flush_split(e);
       e.k("moe_route_bf").buf(0, rlog).buf(1, ridx).buf(2, rw).buf(3, rsg).args(4, ra);
       e.groups(S3(T), S3(32));
+    } else if (!cfg.qwen4 && g.nax && moe_router_gemm > 0 && T >= moe_router_gemm && ly.router.bits == 8 && ly.router.E == 1) {
+      // The 35B-A3B's 8-bit router (+ shared gate) as MLX's quantized GEMM with bf16 logits, as the reference's
+      // QuantizedLinear rounds them; a per-row GEMV (moe_qmv8f) cost 9% of a 1,024-row prefill step.
+      QLinear rq;
+      rq.wq = ly.router.wq, rq.s = ly.router.s, rq.b = ly.router.b;
+      rq.N = ly.router.N, rq.K = ly.router.K, rq.bits = 8;
+      mlx_qmm(e, xn, rq, rlog, T, 0, T <= 32 ? 32 : 64);
+      e.k("moe_route_bf").buf(0, rlog).buf(1, ridx).buf(2, rw).buf(3, rsg).args(4, ra);
+      e.groups(S3(T), S3(32));
     } else {
     moe_mv(e, xn, ly.router, rlog, T, 1, false, true);
     e.k("moe_route").buf(0, rlog).buf(1, ridx).buf(2, rw).buf(3, rsg).args(4, ra);
@@ -1862,6 +1897,15 @@ struct Qwen35 {
     struct { int R, E; } sa{R, cfg.experts};
     e.k("moe_sort").buf(0, ridx).buf(1, moffs).buf(2, mperm).buf(3, minv).args(4, sa);
     e.groups(S3(1), S3(1024));
+    if (qa8g_route(ly, T)) {  // int8 activations on the integer tensor path (QA8's prefill GEMM, per expert row tile)
+      qa8g(e, xn, T, ly.egu, egu_out, R, true);
+      e.k("moe_silu_mul").buf(0, egu_out).buf(1, eact).args(2, ma);
+      e.threads(S3(cfg.moe_inter, R), S3(256));
+      qa8g(e, eact, R, ly.edown, edown_out, R, false);
+      e.k("moe_combine_sorted").buf(0, dst).buf(1, edown_out).buf(2, rw).buf(3, sh_out).buf(4, rsg).args(5, ca).buf(6, minv);
+      e.threads(S3(H, T), S3(256));
+      return;
+    }
     struct { int K, div; } ga{H, k};
     e.k("moe_gather").buf(0, xn).buf(1, mperm).buf(2, mxs).args(3, ga);
     e.threads(S3(H, R), S3(256));

@@ -395,6 +395,131 @@ kernel void draft_attn(device const bfloat* q [[buffer(0)]],
   }
 }
 
+// draft_attn on simdgroup 8x8 float matrices (2026-11-05): the same partials as draft_attn<DMAXR> for one split of at
+// most 64 keys, from one threadgroup of ceil(4 DMAXR / 8) simdgroups per (kv head, sequence, split); simdgroup s takes
+// query vectors 8s..8s+7 (vector v = block row v / 4, head v % 4 of the kv head). S^T = K Q^T (K rows read as
+// contiguous pairs), a masked softmax over the split's keys through threadgroup memory, then O = P V. The scalar
+// kernel read the queries from threadgroup memory once per multiply-add (35B, 8 sequences x block 8: 8.9 of 92 ms
+// per cycle). grid (Hkv, S, splits), 32 x ceil(4 DMAXR / 8) threads.
+template <int DMAXR>
+kernel void draft_attn_mma(device const bfloat* q [[buffer(0)]],
+                           device const bfloat* Kr [[buffer(1)]],
+                           device const bfloat* Vr [[buffer(2)]],
+                           device const int* pos [[buffer(3)]],
+                           device const int* seq_start [[buffer(4)]],
+                           device const int* seq_len [[buffer(5)]],
+                           device const int* slot [[buffer(6)]],
+                           device float* part [[buffer(7)]],
+                           constant DattnArgs& p [[buffer(8)]],
+                           uint3 tg [[threadgroup_position_in_grid]],
+                           uint sg [[simdgroup_index_in_threadgroup]],
+                           uint lane [[thread_index_in_simdgroup]]) {
+  constexpr int NQT = DMAXR * DGQ, CH = 64, NSG = (NQT + 7) / 8;
+  threadgroup float sS[NSG][CH][8], sP[NSG][8][CH], sML[NSG][2][8];
+  const int kh = tg.x, b = tg.y, z = tg.z, v0 = int(sg) * 8;
+  const int R = min(seq_len[b], DMAXR), r0 = seq_start[b], q0 = pos[seq_start[b]];
+  const int hi = q0 + R, lo = max(0, q0 - p.window + 1);
+  const int p0 = lo + z * p.chunk, p1 = min(hi, p0 + min(p.chunk, CH));
+  const short qid = short(lane / 4), fm = (qid & 4) + short((lane / 2) % 4), fn = (qid & 2) * 2 + short(lane % 2) * 2;
+  const size_t rs = (size_t)p.Hkv * DD;
+  device const bfloat* kbase = Kr + ((size_t)slot[b] * p.ring * p.Hkv + kh) * DD;
+  device const bfloat* vbase = Vr + ((size_t)slot[b] * p.ring * p.Hkv + kh) * DD;
+  const size_t sb8 = (size_t)p.ring * p.Hkv * (DD + 4);
+  device const char* k8 = (device const char*)Kr + (size_t)slot[b] * sb8 + kh * DD;
+  device const char* v8 = (device const char*)Vr + (size_t)slot[b] * sb8 + kh * DD;
+  device const float* ks8 = (device const float*)((device const char*)Kr + (size_t)slot[b] * sb8 + (size_t)p.ring * p.Hkv * DD) + kh;
+  device const float* vs8 = (device const float*)((device const char*)Vr + (size_t)slot[b] * sb8 + (size_t)p.ring * p.Hkv * DD) + kh;
+  auto ld = [&](bool isv, int key, int d) -> float2 {  // two consecutive values of one key's row
+    const size_t rp = (size_t)(key % p.ring);
+    if (ring8) {
+      const float2 c = float2(*(device const char2*)((isv ? v8 : k8) + rp * rs + d));
+      return c * (isv ? vs8 : ks8)[rp * p.Hkv];
+    }
+    return float2(*(device const bfloat2*)((isv ? vbase : kbase) + rp * rs + d));
+  };
+  simdgroup_float8x8 O[DD / 8];
+  for (int i = 0; i < DD / 8; i++) O[i] = simdgroup_float8x8(0.f);
+  if (p1 > p0) {
+    // Q^T fragments: element (d = 8 ds + fm, vector v0 + fn (+1))
+    simdgroup_float8x8 qf[DD / 8];
+    for (int ds = 0; ds < DD / 8; ds++) {
+      for (int c = 0; c < 2; c++) {
+        const int v = v0 + fn + c, r = v / DGQ;
+        qf[ds].thread_elements()[c] = v < NQT && r < R ?
+            float(q[((size_t)(r0 + r) * p.Hq + kh * DGQ + v % DGQ) * DD + 8 * ds + fm]) * p.scale : 0.f;
+      }
+    }
+    for (int kt = 0; kt < CH / 8; kt++) {
+      const int key = min(p0 + 8 * kt + fm, p1 - 1);
+      simdgroup_float8x8 acc(0.f), kf;
+      for (int ds = 0; ds < DD / 8; ds++) {
+        const float2 kv = ld(false, key, 8 * ds + fn);
+        kf.thread_elements()[0] = kv.x, kf.thread_elements()[1] = kv.y;
+        simdgroup_multiply_accumulate(acc, kf, qf[ds], acc);
+      }
+      simdgroup_store(acc, &sS[sg][8 * kt][0], 8);
+    }
+    simdgroup_barrier(mem_flags::mem_threadgroup);
+    {  // softmax over the split's keys: lane -> vector q = lane % 8, keys part * 16 .. + 16
+      const int qv = int(lane % 8), part0 = int(lane / 8) * 16, v = v0 + qv, r = v / DGQ, qp = q0 + r;
+      float s[16], mx = -INFINITY;
+      for (int j = 0; j < 16; j++) {
+        const int key = p0 + part0 + j;
+        const bool ok = key < p1 && v < NQT && r < R && (key >= q0 ? (r >= p.seg || key < q0 + p.seg) : qp - key < p.window);
+        s[j] = ok ? sS[sg][part0 + j][qv] : -INFINITY;
+        mx = max(mx, s[j]);
+      }
+      mx = max(mx, simd_shuffle_xor(mx, 8));
+      mx = max(mx, simd_shuffle_xor(mx, 16));
+      float sum = 0;
+      for (int j = 0; j < 16; j++) {
+        const float e = s[j] == -INFINITY ? 0.f : exp(s[j] - mx);
+        sP[sg][qv][part0 + j] = e;
+        sum += e;
+      }
+      sum += simd_shuffle_xor(sum, 8);
+      sum += simd_shuffle_xor(sum, 16);
+      if (lane < 8) sML[sg][0][qv] = mx, sML[sg][1][qv] = sum;
+    }
+    simdgroup_barrier(mem_flags::mem_threadgroup);
+    for (int kt = 0; kt < CH / 8; kt++) {
+      if (p0 + 8 * kt >= p1) break;
+      simdgroup_float8x8 pf, vf;
+      simdgroup_load(pf, &sP[sg][0][8 * kt], CH);
+      const int key = min(p0 + 8 * kt + fm, p1 - 1);
+      for (int dt = 0; dt < DD / 8; dt++) {
+        const float2 vv = ld(true, key, 8 * dt + fn);
+        vf.thread_elements()[0] = vv.x, vf.thread_elements()[1] = vv.y;
+        simdgroup_multiply_accumulate(O[dt], pf, vf, O[dt]);
+      }
+    }
+  } else if (lane < 8) {
+    sML[sg][0][lane] = -INFINITY, sML[sg][1][lane] = 0.f;
+  }
+  simdgroup_barrier(mem_flags::mem_threadgroup);
+  const int stride = DD + 2;
+  device float* out0 = part + (((size_t)b * p.Hkv + kh) * p.splits + z) * NQT * stride;
+  const int v = v0 + fm;
+  if (v < NQT) {
+    device float* out = out0 + (size_t)v * stride;
+    for (int dt = 0; dt < DD / 8; dt++) {
+      out[8 * dt + fn] = O[dt].thread_elements()[0];
+      out[8 * dt + fn + 1] = O[dt].thread_elements()[1];
+    }
+  }
+  if (lane < 8 && v0 + int(lane) < NQT) {
+    device float* out = out0 + (size_t)(v0 + lane) * stride;
+    out[DD] = sML[sg][0][lane];
+    out[DD + 1] = sML[sg][1][lane];
+  }
+}
+template [[host_name("draft_attn_mma5")]] kernel void draft_attn_mma<5>(device const bfloat*, device const bfloat*,
+    device const bfloat*, device const int*, device const int*, device const int*, device const int*, device float*,
+    constant DattnArgs&, uint3, uint, uint);
+template [[host_name("draft_attn_mma8")]] kernel void draft_attn_mma<8>(device const bfloat*, device const bfloat*,
+    device const bfloat*, device const int*, device const int*, device const int*, device const int*, device float*,
+    constant DattnArgs&, uint3, uint, uint);
+
 // out[row, h*D + d] = merged attention. grid: threadgroups (Hq, rows), D threads.
 template <int DMAXR>
 kernel void draft_attn_combine(device const float* part [[buffer(0)]],

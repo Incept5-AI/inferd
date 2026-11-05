@@ -210,6 +210,9 @@ get trees, 1), `TREE_GPU` (build the trees on the GPU, 0), `TREE_TEMP` (1.5), `T
 `QA8` (int8-activation prefill GEMMs on the checkpoint's packed 4-bit weights, no copy; adapted from oMLX's
 `oq_a8_nax`, see NOTICE; -1 auto = on with neural accelerators except Flash-Next, and an auto `PF8` then stays off;
 0/1 force), `QA8_MIN` (rows, 256), `QA8_TILE` (tile index; default 2 = 128x64 on 30+ GPU cores, 1 = 64x64 below), `QA8_RF` (grid order, 0 = column tiles fastest).
+`MOE_QA8` (Qwen3.6-35B-A3B: routed experts on int8 activations in prefill and verify steps of 16+ rows, 1),
+`MOE_ROUTER_GEMM` (rows from which the 35B's router is a GEMM, 64; 0 off), `DRAFT_ATTN_MMA` (drafter attention on
+simdgroup matrices for blocks of up to 8 rows, 1).
 `WARMUP` (inferd runs two throwaway requests before it listens, so the first real request does not pay for the
 GPU's first use of the weights; 1, 0 off), `PSO_LOG` (log every pipeline creation and its time).
 See `CLAUDE.md` in the project root for the rest.
