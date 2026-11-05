@@ -17,36 +17,33 @@
 <text class="t" x="18" y="28">N agents start at once: time until the last one finishes (Qwen3.8-27B)</text>
 <line class="grid" x1="56" y1="298.0" x2="550" y2="298.0"/><text class="tick" x="49" y="302.0" text-anchor="end">0</text>
 <line class="grid" x1="56" y1="235.5" x2="550" y2="235.5"/><text class="tick" x="49" y="239.5" text-anchor="end">50</text>
-<line class="grid" x1="56" y1="173.0" x2="550" y2="173.0"/><text class="tick" x="49" y="177.0" text-anchor="end">100</text>
+<line class="grid" x1="56" y1="173.0" x2="550" y2="173.0"/><text class="tick" x="49" y="177.0" text-anchor="end">99</text>
 <line class="grid" x1="56" y1="110.5" x2="550" y2="110.5"/><text class="tick" x="49" y="114.5" text-anchor="end">149</text>
 <line class="grid" x1="56" y1="48.0" x2="550" y2="48.0"/><text class="tick" x="49" y="52.0" text-anchor="end">199</text>
 <text class="tick" x="56.0" y="315" text-anchor="middle">1</text>
-<text class="tick" x="126.6" y="315" text-anchor="middle">2</text>
-<text class="tick" x="197.1" y="315" text-anchor="middle">3</text>
-<text class="tick" x="267.7" y="315" text-anchor="middle">4</text>
-<text class="tick" x="338.3" y="315" text-anchor="middle">5</text>
-<text class="tick" x="408.9" y="315" text-anchor="middle">6</text>
-<text class="tick" x="479.4" y="315" text-anchor="middle">7</text>
+<text class="tick" x="138.3" y="315" text-anchor="middle">2</text>
+<text class="tick" x="220.7" y="315" text-anchor="middle">3</text>
+<text class="tick" x="303.0" y="315" text-anchor="middle">4</text>
+<text class="tick" x="385.3" y="315" text-anchor="middle">5</text>
+<text class="tick" x="467.7" y="315" text-anchor="middle">6</text>
 <text class="tick" x="550.0" y="315" text-anchor="middle">8</text>
 <text class="tick" x="303.0" y="331" text-anchor="middle">agents</text>
-<polyline class="ln k-us" points="56.0,256.5 126.6,232.3 197.1,213.9 267.7,195.4 338.3,166.5 408.9,151.3 479.4,133.4 550.0,117.4"/>
-<circle class="k-us" cx="56.0" cy="256.5" r="3.3"/>
-<circle class="k-us" cx="126.6" cy="232.3" r="3.3"/>
-<circle class="k-us" cx="197.1" cy="213.9" r="3.3"/>
-<circle class="k-us" cx="267.7" cy="195.4" r="3.3"/>
-<circle class="k-us" cx="338.3" cy="166.5" r="3.3"/>
-<circle class="k-us" cx="408.9" cy="151.3" r="3.3"/>
-<circle class="k-us" cx="479.4" cy="133.4" r="3.3"/>
-<circle class="k-us" cx="550.0" cy="117.4" r="3.3"/>
-<polyline class="ln k-o1" points="56.0,259.5 126.6,233.1 197.1,207.5 267.7,183.3 338.3,156.1 408.9,128.5 479.4,99.3 550.0,74.8"/>
-<circle class="k-o1" cx="56.0" cy="259.5" r="3.3"/>
-<circle class="k-o1" cx="126.6" cy="233.1" r="3.3"/>
-<circle class="k-o1" cx="197.1" cy="207.5" r="3.3"/>
-<circle class="k-o1" cx="267.7" cy="183.3" r="3.3"/>
-<circle class="k-o1" cx="338.3" cy="156.1" r="3.3"/>
-<circle class="k-o1" cx="408.9" cy="128.5" r="3.3"/>
-<circle class="k-o1" cx="479.4" cy="99.3" r="3.3"/>
+<polyline class="ln k-us" points="56.0,260.5 138.3,230.9 220.7,220.7 303.0,202.9 385.3,180.7 467.7,170.6 550.0,140.1"/>
+<circle class="k-us" cx="56.0" cy="260.5" r="3.3"/>
+<circle class="k-us" cx="138.3" cy="230.9" r="3.3"/>
+<circle class="k-us" cx="220.7" cy="220.7" r="3.3"/>
+<circle class="k-us" cx="303.0" cy="202.9" r="3.3"/>
+<circle class="k-us" cx="385.3" cy="180.7" r="3.3"/>
+<circle class="k-us" cx="467.7" cy="170.6" r="3.3"/>
+<circle class="k-us" cx="550.0" cy="140.1" r="3.3"/>
+<polyline class="ln k-o1" points="56.0,257.7 138.3,230.3 220.7,208.3 303.0,183.3 385.3,155.9 467.7,130.5 550.0,74.8"/>
+<circle class="k-o1" cx="56.0" cy="257.7" r="3.3"/>
+<circle class="k-o1" cx="138.3" cy="230.3" r="3.3"/>
+<circle class="k-o1" cx="220.7" cy="208.3" r="3.3"/>
+<circle class="k-o1" cx="303.0" cy="183.3" r="3.3"/>
+<circle class="k-o1" cx="385.3" cy="155.9" r="3.3"/>
+<circle class="k-o1" cx="467.7" cy="130.5" r="3.3"/>
 <circle class="k-o1" cx="550.0" cy="74.8" r="3.3"/>
-<text class="lab k-o1" x="558.0" y="78.8" style="font-weight:600">TensorFold 1.2.1 178</text>
-<text class="lab k-us" x="558.0" y="121.4" style="font-weight:600">inferd 144</text>
-<text class="note" x="18" y="346">Seconds, mean of 3 trials; both engines use the same DFlash2 drafter weights. Lower is better.</text></svg>
+<text class="lab k-o1" x="558.0" y="78.8" style="font-weight:600">TensorFold 1.2.2 178</text>
+<text class="lab k-us" x="558.0" y="144.1" style="font-weight:600">inferd 126</text>
+<text class="note" x="18" y="346">Seconds, mean of 3 trials (3–4 Nov); both engines use the same DFlash2 drafter weights. Lower is better.</text></svg>

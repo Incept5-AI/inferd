@@ -26,12 +26,12 @@
 <text class="tick" x="426.5" y="315" text-anchor="middle">16</text>
 <text class="tick" x="550.0" y="315" text-anchor="middle">32</text>
 <text class="tick" x="303.0" y="331" text-anchor="middle">agents</text>
-<polyline class="ln k-us" points="56.0,297.3 179.5,295.4 303.0,293.3 426.5,287.5 550.0,276.1"/>
-<circle class="k-us" cx="56.0" cy="297.3" r="3.3"/>
-<circle class="k-us" cx="179.5" cy="295.4" r="3.3"/>
-<circle class="k-us" cx="303.0" cy="293.3" r="3.3"/>
-<circle class="k-us" cx="426.5" cy="287.5" r="3.3"/>
-<circle class="k-us" cx="550.0" cy="276.1" r="3.3"/>
+<polyline class="ln k-us" points="56.0,297.2 179.5,295.7 303.0,294.2 426.5,290.8 550.0,282.6"/>
+<circle class="k-us" cx="56.0" cy="297.2" r="3.3"/>
+<circle class="k-us" cx="179.5" cy="295.7" r="3.3"/>
+<circle class="k-us" cx="303.0" cy="294.2" r="3.3"/>
+<circle class="k-us" cx="426.5" cy="290.8" r="3.3"/>
+<circle class="k-us" cx="550.0" cy="282.6" r="3.3"/>
 <polyline class="ln k-o1" points="56.0,297.1 179.5,293.1 303.0,261.7 426.5,196.8 550.0,74.8"/>
 <circle class="k-o1" cx="56.0" cy="297.1" r="3.3"/>
 <circle class="k-o1" cx="179.5" cy="293.1" r="3.3"/>
@@ -39,5 +39,5 @@
 <circle class="k-o1" cx="426.5" cy="196.8" r="3.3"/>
 <circle class="k-o1" cx="550.0" cy="74.8" r="3.3"/>
 <text class="lab k-o1" x="558.0" y="78.8" style="font-weight:600">Splash 1.5 49</text>
-<text class="lab k-us" x="558.0" y="280.1" style="font-weight:600">inferd 5</text>
-<text class="note" x="18" y="346">Seconds until the last agent&#x27;s first token. Lower is better. Same harness, machine and weights.</text></svg>
+<text class="lab k-us" x="558.0" y="286.6" style="font-weight:600">inferd 0.3.0 3</text>
+<text class="note" x="18" y="346">Seconds until the last agent&#x27;s first token; lower is better. inferd 0.3.0: mean of 2 trials, 5 Nov; Splash 30 Oct.</text></svg>

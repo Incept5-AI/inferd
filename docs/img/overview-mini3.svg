@@ -30,17 +30,17 @@
 <circle class="k-us" cx="220.7" cy="147.6" r="3.3"/>
 <circle class="k-us" cx="385.3" cy="101.6" r="3.3"/>
 <circle class="k-us" cx="550.0" cy="74.8" r="3.3"/>
-<polyline class="ln k-o4" points="56.0,260.3 220.7,211.3 385.3,209.7 550.0,208.0"/>
-<circle class="k-o4" cx="56.0" cy="260.3" r="3.3"/>
-<circle class="k-o4" cx="220.7" cy="211.3" r="3.3"/>
-<circle class="k-o4" cx="385.3" cy="209.7" r="3.3"/>
-<circle class="k-o4" cx="550.0" cy="208.0" r="3.3"/>
+<polyline class="ln k-o4" points="56.0,264.4 220.7,209.3 385.3,210.4 550.0,212.2"/>
+<circle class="k-o4" cx="56.0" cy="264.4" r="3.3"/>
+<circle class="k-o4" cx="220.7" cy="209.3" r="3.3"/>
+<circle class="k-o4" cx="385.3" cy="210.4" r="3.3"/>
+<circle class="k-o4" cx="550.0" cy="212.2" r="3.3"/>
 <polyline class="ln k-o2" points="56.0,266.7 220.7,231.3 385.3,223.6 550.0,218.6"/>
 <circle class="k-o2" cx="56.0" cy="266.7" r="3.3"/>
 <circle class="k-o2" cx="220.7" cy="231.3" r="3.3"/>
 <circle class="k-o2" cx="385.3" cy="223.6" r="3.3"/>
 <circle class="k-o2" cx="550.0" cy="218.6" r="3.3"/>
 <text class="lab k-us" x="558.0" y="78.8" style="font-weight:600">M5 Pro 64 GB 168</text>
-<text class="lab k-o4" x="558.0" y="212.0" style="font-weight:600">M6 32 GB 68</text>
-<text class="lab k-o2" x="558.0" y="227.0" style="font-weight:600">M4 Pro 64 GB 60</text>
+<text class="lab k-o4" x="558.0" y="216.2" style="font-weight:600">M6 32 GB 64</text>
+<text class="lab k-o2" x="558.0" y="231.2" style="font-weight:600">M4 Pro 64 GB 60</text>
 <text class="note" x="18" y="346">Total tok/s. The M6&#x27;s 2.4 GiB KV pool holds about four 16k contexts; the M4 Pro has no GPU neural accelerators.</text></svg>

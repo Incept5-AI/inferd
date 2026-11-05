@@ -21,26 +21,29 @@
 <line class="grid" x1="56" y1="110.5" x2="550" y2="110.5"/><text class="tick" x="49" y="114.5" text-anchor="end">140</text>
 <line class="grid" x1="56" y1="48.0" x2="550" y2="48.0"/><text class="tick" x="49" y="52.0" text-anchor="end">186</text>
 <text class="tick" x="56.0" y="315" text-anchor="middle">1</text>
-<text class="tick" x="154.8" y="315" text-anchor="middle">2</text>
-<text class="tick" x="253.6" y="315" text-anchor="middle">4</text>
-<text class="tick" x="352.4" y="315" text-anchor="middle">6</text>
-<text class="tick" x="451.2" y="315" text-anchor="middle">7</text>
+<text class="tick" x="138.3" y="315" text-anchor="middle">2</text>
+<text class="tick" x="220.7" y="315" text-anchor="middle">3</text>
+<text class="tick" x="303.0" y="315" text-anchor="middle">4</text>
+<text class="tick" x="385.3" y="315" text-anchor="middle">5</text>
+<text class="tick" x="467.7" y="315" text-anchor="middle">6</text>
 <text class="tick" x="550.0" y="315" text-anchor="middle">8</text>
 <text class="tick" x="303.0" y="331" text-anchor="middle">agents</text>
-<polyline class="ln k-us" points="56.0,247.9 154.8,218.7 253.6,165.3 352.4,129.3 451.2,112.9 550.0,100.6"/>
-<circle class="k-us" cx="56.0" cy="247.9" r="3.3"/>
-<circle class="k-us" cx="154.8" cy="218.7" r="3.3"/>
-<circle class="k-us" cx="253.6" cy="165.3" r="3.3"/>
-<circle class="k-us" cx="352.4" cy="129.3" r="3.3"/>
-<circle class="k-us" cx="451.2" cy="112.9" r="3.3"/>
-<circle class="k-us" cx="550.0" cy="100.6" r="3.3"/>
-<polyline class="ln k-o1" points="56.0,258.4 154.8,230.4 253.6,183.6 352.4,130.8 451.2,104.3 550.0,74.8"/>
-<circle class="k-o1" cx="56.0" cy="258.4" r="3.3"/>
-<circle class="k-o1" cx="154.8" cy="230.4" r="3.3"/>
-<circle class="k-o1" cx="253.6" cy="183.6" r="3.3"/>
-<circle class="k-o1" cx="352.4" cy="130.8" r="3.3"/>
-<circle class="k-o1" cx="451.2" cy="104.3" r="3.3"/>
+<polyline class="ln k-us" points="56.0,245.1 138.3,221.1 220.7,199.4 303.0,178.1 385.3,155.7 467.7,138.6 550.0,113.0"/>
+<circle class="k-us" cx="56.0" cy="245.1" r="3.3"/>
+<circle class="k-us" cx="138.3" cy="221.1" r="3.3"/>
+<circle class="k-us" cx="220.7" cy="199.4" r="3.3"/>
+<circle class="k-us" cx="303.0" cy="178.1" r="3.3"/>
+<circle class="k-us" cx="385.3" cy="155.7" r="3.3"/>
+<circle class="k-us" cx="467.7" cy="138.6" r="3.3"/>
+<circle class="k-us" cx="550.0" cy="113.0" r="3.3"/>
+<polyline class="ln k-o1" points="56.0,257.8 138.3,230.4 220.7,208.5 303.0,181.5 385.3,157.4 467.7,129.9 550.0,74.8"/>
+<circle class="k-o1" cx="56.0" cy="257.8" r="3.3"/>
+<circle class="k-o1" cx="138.3" cy="230.4" r="3.3"/>
+<circle class="k-o1" cx="220.7" cy="208.5" r="3.3"/>
+<circle class="k-o1" cx="303.0" cy="181.5" r="3.3"/>
+<circle class="k-o1" cx="385.3" cy="157.4" r="3.3"/>
+<circle class="k-o1" cx="467.7" cy="129.9" r="3.3"/>
 <circle class="k-o1" cx="550.0" cy="74.8" r="3.3"/>
-<text class="lab k-o1" x="558.0" y="78.8" style="font-weight:600">TensorFold 1.2.1 166</text>
-<text class="lab k-us" x="558.0" y="104.6" style="font-weight:600">inferd 147</text>
-<text class="note" x="18" y="346">Seconds, mean of 3 trials. TensorFold finishes sooner up to 5 agents; the two cross at about 6.</text></svg>
+<text class="lab k-o1" x="558.0" y="78.8" style="font-weight:600">TensorFold 1.2.2 166</text>
+<text class="lab k-us" x="558.0" y="117.0" style="font-weight:600">inferd 138</text>
+<text class="note" x="18" y="346">Seconds, mean of 3 trials (3–4 Nov). TensorFold finishes sooner up to 4 agents; level at 5; inferd sooner from 6.</text></svg>

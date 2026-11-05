@@ -16,38 +16,42 @@
 <rect class="bg" width="720" height="356" rx="10"/>
 <text class="t" x="18" y="28">Agents taking turns on 16k contexts (Mac Studio)</text>
 <line class="grid" x1="56" y1="298.0" x2="550" y2="298.0"/><text class="tick" x="49" y="302.0" text-anchor="end">0</text>
-<line class="grid" x1="56" y1="235.5" x2="550" y2="235.5"/><text class="tick" x="49" y="239.5" text-anchor="end">170</text>
-<line class="grid" x1="56" y1="173.0" x2="550" y2="173.0"/><text class="tick" x="49" y="177.0" text-anchor="end">340</text>
-<line class="grid" x1="56" y1="110.5" x2="550" y2="110.5"/><text class="tick" x="49" y="114.5" text-anchor="end">510</text>
-<line class="grid" x1="56" y1="48.0" x2="550" y2="48.0"/><text class="tick" x="49" y="52.0" text-anchor="end">680</text>
+<line class="grid" x1="56" y1="235.5" x2="550" y2="235.5"/><text class="tick" x="49" y="239.5" text-anchor="end">238</text>
+<line class="grid" x1="56" y1="173.0" x2="550" y2="173.0"/><text class="tick" x="49" y="177.0" text-anchor="end">475</text>
+<line class="grid" x1="56" y1="110.5" x2="550" y2="110.5"/><text class="tick" x="49" y="114.5" text-anchor="end">713</text>
+<line class="grid" x1="56" y1="48.0" x2="550" y2="48.0"/><text class="tick" x="49" y="52.0" text-anchor="end">951</text>
 <text class="tick" x="56.0" y="315" text-anchor="middle">1</text>
-<text class="tick" x="179.5" y="315" text-anchor="middle">4</text>
-<text class="tick" x="303.0" y="315" text-anchor="middle">8</text>
-<text class="tick" x="426.5" y="315" text-anchor="middle">16</text>
-<text class="tick" x="550.0" y="315" text-anchor="middle">32</text>
+<text class="tick" x="138.3" y="315" text-anchor="middle">4</text>
+<text class="tick" x="220.7" y="315" text-anchor="middle">8</text>
+<text class="tick" x="303.0" y="315" text-anchor="middle">16</text>
+<text class="tick" x="385.3" y="315" text-anchor="middle">32</text>
+<text class="tick" x="467.7" y="315" text-anchor="middle">48</text>
+<text class="tick" x="550.0" y="315" text-anchor="middle">64</text>
 <text class="tick" x="303.0" y="331" text-anchor="middle">agents</text>
-<polyline class="ln k-us" points="56.0,247.9 179.5,160.9 303.0,121.4 426.5,89.1 550.0,74.8"/>
-<circle class="k-us" cx="56.0" cy="247.9" r="3.3"/>
-<circle class="k-us" cx="179.5" cy="160.9" r="3.3"/>
-<circle class="k-us" cx="303.0" cy="121.4" r="3.3"/>
-<circle class="k-us" cx="426.5" cy="89.1" r="3.3"/>
+<polyline class="ln k-us" points="56.0,258.6 138.3,195.1 220.7,167.5 303.0,142.0 385.3,108.0 467.7,107.6 550.0,74.8"/>
+<circle class="k-us" cx="56.0" cy="258.6" r="3.3"/>
+<circle class="k-us" cx="138.3" cy="195.1" r="3.3"/>
+<circle class="k-us" cx="220.7" cy="167.5" r="3.3"/>
+<circle class="k-us" cx="303.0" cy="142.0" r="3.3"/>
+<circle class="k-us" cx="385.3" cy="108.0" r="3.3"/>
+<circle class="k-us" cx="467.7" cy="107.6" r="3.3"/>
 <circle class="k-us" cx="550.0" cy="74.8" r="3.3"/>
-<polyline class="ln k-o1" points="56.0,234.8 179.5,167.9 303.0,162.3 426.5,162.1"/>
-<circle class="k-o1" cx="56.0" cy="234.8" r="3.3"/>
-<circle class="k-o1" cx="179.5" cy="167.9" r="3.3"/>
-<circle class="k-o1" cx="303.0" cy="162.3" r="3.3"/>
-<circle class="k-o1" cx="426.5" cy="162.1" r="3.3"/>
-<polyline class="ln k-o2" points="56.0,234.9 179.5,235.2 303.0,232.3 426.5,271.3"/>
-<circle class="k-o2" cx="56.0" cy="234.9" r="3.3"/>
-<circle class="k-o2" cx="179.5" cy="235.2" r="3.3"/>
-<circle class="k-o2" cx="303.0" cy="232.3" r="3.3"/>
-<circle class="k-o2" cx="426.5" cy="271.3" r="3.3"/>
-<polyline class="ln k-o3" points="56.0,224.2 179.5,247.4 303.0,272.1"/>
-<circle class="k-o3" cx="56.0" cy="224.2" r="3.3"/>
-<circle class="k-o3" cx="179.5" cy="247.4" r="3.3"/>
-<circle class="k-o3" cx="303.0" cy="272.1" r="3.3"/>
-<text class="lab k-us" x="558.0" y="78.8" style="font-weight:600">inferd 607</text>
-<text class="lab k-o1" x="434.5" y="166.1" style="font-weight:600">Splash 1.5 369</text>
-<text class="lab k-o2" x="434.5" y="275.3" style="font-weight:600">Kapitsa 73</text>
-<text class="lab k-o3" x="311.0" y="290.3" style="font-weight:600">mlx-serve 70</text>
-<text class="note" x="18" y="346">Total tok/s, Qwen3.8-27B 4-bit with DFlash2 drafting. Higher is better. Missing points were not run or refused.</text></svg>
+<polyline class="ln k-o1" points="56.0,252.8 138.3,205.0 220.7,201.0 303.0,200.8"/>
+<circle class="k-o1" cx="56.0" cy="252.8" r="3.3"/>
+<circle class="k-o1" cx="138.3" cy="205.0" r="3.3"/>
+<circle class="k-o1" cx="220.7" cy="201.0" r="3.3"/>
+<circle class="k-o1" cx="303.0" cy="200.8" r="3.3"/>
+<polyline class="ln k-o2" points="56.0,252.9 138.3,253.1 220.7,251.0 303.0,278.9"/>
+<circle class="k-o2" cx="56.0" cy="252.9" r="3.3"/>
+<circle class="k-o2" cx="138.3" cy="253.1" r="3.3"/>
+<circle class="k-o2" cx="220.7" cy="251.0" r="3.3"/>
+<circle class="k-o2" cx="303.0" cy="278.9" r="3.3"/>
+<polyline class="ln k-o3" points="56.0,245.3 138.3,261.9 220.7,279.5"/>
+<circle class="k-o3" cx="56.0" cy="245.3" r="3.3"/>
+<circle class="k-o3" cx="138.3" cy="261.9" r="3.3"/>
+<circle class="k-o3" cx="220.7" cy="279.5" r="3.3"/>
+<text class="lab k-us" x="558.0" y="78.8" style="font-weight:600">inferd 0.3.0 849</text>
+<text class="lab k-o1" x="311.0" y="204.8" style="font-weight:600">Splash 1.5 369</text>
+<text class="lab k-o2" x="311.0" y="282.9" style="font-weight:600">Kapitsa 73</text>
+<text class="lab k-o3" x="228.7" y="297.9" style="font-weight:600">mlx-serve 70</text>
+<text class="note" x="18" y="346">Total tok/s, Qwen3.8-27B 4-bit + DFlash2. inferd 0.3.0: mean of 3 trials, 5 Nov; others 30 Oct. Higher is better.</text></svg>
