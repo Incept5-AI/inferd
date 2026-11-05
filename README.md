@@ -10,44 +10,49 @@ inferd is young, experimental software. It leads where agents pile up on one Mac
 single stream, and it was built on the shoulders of the projects listed under [Acknowledgements](#acknowledgements).
 Primary model: **Qwen3.8-27B** (4-bit) with the **incoai Qwen3.8-27B-DFlash2** drafter.
 
+**Website: [inferd.incept5.ai](https://inferd.incept5.ai)**: what it is in plain language, the measurements as charts,
+and getting started.
+
 <p align="center"><img src="docs/img/overview-fleet.svg" alt="Total tok/s with 1-32 agents on 16k contexts: inferd, Splash, Kapitsa, mlx-serve" width="720"></p>
 
 ## Getting started
 
-Needs a Mac with Apple Silicon, macOS 26 or 27, and Python 3.12. The 27B 4-bit with its drafter runs from 32 GB.
+Up and running in four steps. You need a Mac with Apple Silicon on macOS 27 or 26, and Python 3.12; Qwen3.8-27B with
+its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
+**[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-**1. Download, verify and unpack** the file for **your macOS** from the
-[v0.3.0 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.3.0) (no Xcode needed):
-
-| Your Mac runs | Download | Checksum | Status |
-|---|---|---|---|
-| **macOS 27** | [inferd-0.3.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz) | [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz.sha256) | the platform inferd is tested on (Mac Studio M5 Ultra; Mac mini M6, M5 Pro, M4 Pro; MacBook Pro M5 Max, M4 Max, M3 Max) |
-| **macOS 26** | build from source (below: `./build.sh`, under a minute) | | the kernels must be built on the Mac's own macOS; a source build passed every check on an M4 Max with macOS 26. 0.2.0 has a beta macOS 26 file |
-
-The macOS 27 build refuses to start on macOS 26 (`install.sh` and `run.sh` check). Never run a build made for macOS 26 on
-macOS 27: its kernels compute wrong logits there at prefill chunks of 256+ rows.
+**1. Download and check** [inferd-0.3.0-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.3.0/inferd-0.3.0-macos27-arm64.tar.gz.sha256)
+from the [v0.3.0 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.3.0). No Xcode needed.
 
 ```bash
-cd ~/Downloads && shasum -a 256 -c inferd-0.3.0-macos27-arm64.tar.gz.sha256       # prints OK
+cd ~/Downloads && shasum -a 256 -c inferd-0.3.0-macos27-arm64.tar.gz.sha256   # prints OK
 tar xzf inferd-0.3.0-macos27-arm64.tar.gz && cd inferd-0.3.0
 ```
 
-**2. Install** the front end (a Python 3.12 venv in `~/.venvs/inferd`) and download Qwen3.8-27B 4-bit
-(`mlx-community/Qwen3.8-27B-4bit`) with its drafter (`incoai/Qwen3.8-27B-DFlash2`) into `~/models`. Safe to run again.
+On **macOS 26**, build it instead (needs Xcode with its Metal compiler: `xcodebuild -downloadComponent MetalToolchain`,
+once), then carry on from step 2 in `engine/`:
+
+```bash
+git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.3.0 && cd engine
+./build.sh                                   # under a minute
+```
+
+**2. Install.** One command sets up the small Python front end and downloads Qwen3.8-27B with its draft model into
+`~/models` (about 17 GB). Safe to run again.
 
 ```bash
 ./install.sh --model 27b
 ```
 
-**3. Start** the server on port 8300, sized from your Mac's memory ([docs/MACHINES.md](docs/MACHINES.md)). Add
-`--dry-run` to see the command lines it resolves; `--agents`, `--context`, `--kv` and `--port` override the sizing.
-Below 256 GB it also turns on the SSD tier, in `~/Library/Caches/inferd` (up to 64–96 GiB; `--spill off` to disable).
+**3. Start it.** The engine and its OpenAI-compatible server start on port 8300, sized for your Mac's memory.
 
 ```bash
 ./run.sh start --model 27b
 ```
 
-**4. Call it** with any OpenAI client:
+**4. Talk to it** from anything that speaks the OpenAI API (agent frameworks connect by changing the base URL to
+`http://localhost:8300/v1`):
 
 ```bash
 curl localhost:8300/v1/chat/completions -H 'Content-Type: application/json' \
@@ -63,11 +68,26 @@ reply = client.chat.completions.create(
 print(reply.choices[0].message.content)
 ```
 
-`./run.sh status` and `./run.sh stop` manage it; `./run.sh --help` lists everything. Other models:
-`--model 27b-8bit` (64 GB and up), `--model flash-next` (Mac Studio, 256 GB), or `--model <checkpoint dir>` with
-`--draft <drafter dir>`. Optional check of the build on your Mac, a few minutes with no other model running:
-`PY=~/.venvs/inferd/bin/python tools/release_gate.sh ~/models/Qwen3.8-27B-4bit ~/models/Qwen3.8-27B-DFlash2`.
-(Release 0.2.0's files hold only `build/`: unpack one into `engine/` of a `v0.2.0` checkout instead.)
+<details><summary><b>More on these steps</b>: other models, options, checks, macOS versions</summary>
+
+- `./run.sh status` and `./run.sh stop` manage the server; `./run.sh --help` lists everything. `--dry-run` prints the
+  command lines it resolves; `--agents`, `--context`, `--kv` and `--port` override the sizing
+  ([docs/MACHINES.md](docs/MACHINES.md)). Below 256 GB it also turns on the SSD tier, in `~/Library/Caches/inferd`
+  (up to 64–96 GiB; `--spill off` to disable).
+- Other models: `--model 27b-8bit` (64 GB and up), `--model flash-next` (Mac Studio, 256 GB), or
+  `--model <checkpoint dir>` with `--draft <drafter dir>`. `install.sh --model 27b` downloads
+  `mlx-community/Qwen3.8-27B-4bit` and `incoai/Qwen3.8-27B-DFlash2`.
+- The vLLM-style API (completions, logprobs, guided output, `/metrics`, …): [docs/API-COMPAT.md](docs/API-COMPAT.md).
+- Optional check of the build on your Mac, a few minutes with no other model running:
+  `PY=~/.venvs/inferd/bin/python tools/release_gate.sh ~/models/Qwen3.8-27B-4bit ~/models/Qwen3.8-27B-DFlash2`.
+- **macOS versions.** The macOS 27 file is tested on Mac Studio M5 Ultra, Mac mini M6, M5 Pro and M4 Pro, and MacBook Pro
+  M5 Max, M4 Max and M3 Max; it refuses to start on macOS 26 (`install.sh` and `run.sh` check). On macOS 26 the
+  kernels must be built on the Mac itself (a source build passed every check on an M4 Max with macOS 26); 0.2.0 has a
+  beta macOS 26 file. Never run a build made for macOS 26 on macOS 27: its kernels compute wrong logits there at
+  prefill chunks of 256+ rows.
+- Release 0.2.0's files hold only `build/`: unpack one into `engine/` of a `v0.2.0` checkout instead.
+
+</details>
 
 ## Where it stands (5 November 2026, release 0.3.0)
 
