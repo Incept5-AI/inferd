@@ -1516,6 +1516,28 @@ Reading: level at 1–4 agents, 2–5% faster from 8 agents up (the drafter-atte
 3%. Raw: [results/studio/st041-27b-16k-followups.jsonl](../results/studio/st041-27b-16k-followups.jsonl). The README
 chart now uses these for the 27B's 1–64 points.
 
+## (ad) Release 0.4.1 on the Mac minis, and the 27B at 128 agents x 3 (5 November)
+
+**Mac minis, the published 0.4.1 tarball** (`./install.sh --model 27b`, `./run.sh start --model 27b`, the release's
+defaults), Qwen3.8-27B 4-bit + DFlash2, `bench/studio/conc.py --mode followup`, 16k contexts, 512 tokens out, 3 trials
+each on a fresh server, 0 errors. Total tok/s, mean (min-max), and the slowest first token:
+
+| Mac | 1 | 2 | 4 | 8 | 16 | 32 |
+|---|---:|---:|---:|---:|---:|---:|
+| M6, 32 GB, defaults (8-bit KV) | 27.5 | 43.4 | 71.4 | 67.3 (37.7 s) | | |
+| M6, 32 GB, `KV4=1` | 34.8 | 53.1 | 76.9 | **98.4** (95.7-100.6; 3.3 s) | | |
+| M5 Pro, 64 GB, defaults | 49.3 | | 119.3 | 152.8 | 177.8 (4.9 s) | 179.4 (52.3 s) |
+
+On the 32 GB M6 the default 8-bit KV pool holds about 91k tokens, fewer than 8 x 16k, so eight agents take turns through
+the SSD tier; `KV4=1` doubles the pool and keeps all eight resident (its accuracy cost is in (o)). The M5 Pro levels off
+from 16 agents at 16k. `examples/run_all.sh` passed 14 of 16 demos on both minis; the two coding-smoke demos need Node
+and `tsx`, which those minis do not have. Raw: [results/minis-041-2026-11-05](../results/minis-041-2026-11-05/).
+
+**Mac Studio, Qwen3.8-27B at 128 agents, three runs** (`bench/quick64.py`, 16k contexts, 2 rounds, every answer
+checked, the 0.4.0 engine): 950.8 / 936.6 / 935.5 tok/s, mean 941.0; wall power 292-294 W, 3.18-3.26 tokens per joule;
+256/256 answers right and all 128 agents generating at once in every run. The README chart's 128-agent 27B point is
+now this mean. Raw: [results/agents-at-once-2026-11-05](../results/agents-at-once-2026-11-05/) (`run-b27-128*`).
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

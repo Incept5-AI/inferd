@@ -40,7 +40,7 @@
 <circle class="k-us" cx="426.5" cy="93.2" r="3.3"/>
 <circle class="k-us" cx="488.2" cy="75.2" r="3.3"/>
 <circle class="k-us" cx="550.0" cy="74.8" r="3.3"/>
-<polyline class="ln k-o4" points="56.0,275.1 117.8,238.4 179.5,219.2 241.2,202.9 303.0,185.2 364.8,184.5 426.5,161.3 488.2,141.6 550.0,152.6"/>
+<polyline class="ln k-o4" points="56.0,275.1 117.8,238.4 179.5,219.2 241.2,202.9 303.0,185.2 364.8,184.5 426.5,161.3 488.2,141.6 550.0,154.1"/>
 <circle class="k-o4" cx="56.0" cy="275.1" r="3.3"/>
 <circle class="k-o4" cx="117.8" cy="238.4" r="3.3"/>
 <circle class="k-o4" cx="179.5" cy="219.2" r="3.3"/>
@@ -49,7 +49,7 @@
 <circle class="k-o4" cx="364.8" cy="184.5" r="3.3"/>
 <circle class="k-o4" cx="426.5" cy="161.3" r="3.3"/>
 <circle class="k-o4" cx="488.2" cy="141.6" r="3.3"/>
-<circle class="k-o4" cx="550.0" cy="152.6" r="3.3"/>
+<circle class="k-o4" cx="550.0" cy="154.1" r="3.3"/>
 <text class="lab k-us" x="558.0" y="78.8" style="font-weight:600">Qwen3.8-Flash-Next 1460</text>
-<text class="lab k-o4" x="558.0" y="156.6" style="font-weight:600">Qwen3.8-27B + drafter 951</text>
+<text class="lab k-o4" x="558.0" y="158.1" style="font-weight:600">Qwen3.8-27B + drafter 941</text>
 <text class="note" x="18" y="346">Total tok/s. 1-64 agents: mean of 3 trials (Flash-Next on 0.4.0, the 27B on 0.4.1); 100 / 128: measured rounds on the 0.4.0 engine, every answer checked.</text></svg>
