@@ -15,7 +15,7 @@ table before reusing them.
 | Numerics | int8 prefill GEMM (PF8) | Shipped (auto) | on for 27B-class models where the KV pool still fits after the int8 copies (Studio; 128 GB laptops); off on 32–64 GB minis; Flash-Next opt-in (`PF8=1`) |
 | Scheduling | Continuous batching, chunked prefill, KV-budget admission, preemption | Shipped | |
 | Scheduling | Prefill ordering (`PREFILL_SHORT`, `PREFILL_PRIORITY`) | Shipped | |
-| Scheduling | Prefill budget beside decoders (`PREFILL_PRIO=16`), admission lookahead with aging (`ADMIT_LOOKAHEAD=8`) | Shipped | docs/RESULTS.md (k) |
+| Scheduling | Prefill budget beside decoders (`PREFILL_PRIO`, default `max_running` since 8 Nov), MTP verify rows by load (`MTP_WIDE`), a start-up warning when an explicit KV pool exceeds the GPU budget (`KV_FIT=1` fits it), admission lookahead with aging (`ADMIT_LOOKAHEAD=8`) | Shipped | docs/RESULTS.md (k), (ae) |
 | Speculation | Flash-Next copy drafts at any load (`COPY_SOLO=1` for the old rule) | Shipped | |
 | Cache | Prefix trie + recurrent-state snapshots, branch-point and decode snapshots | Shipped | `SNAP_GEN_FORCE` opt-in |
 | Cache | SSD tier (`SPILL_DIR`), checksummed entries | Opt-in | off unless `SPILL_DIR` is set |

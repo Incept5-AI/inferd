@@ -277,7 +277,10 @@ int main(int argc, char** argv) {
     // budget (recommendedMaxWorkingSetSize, the stock GPU limit), less a margin (KV_MARGIN_GIB, 1.5), as Splash does.
     const bool auto_kv = kv_gib <= 0;
     if (!auto_kv && kv_gib * (1ull << 30) / block_bytes > (1 << 28)) { fprintf(stderr, "inferd: kv_gib too large\n"); return 1; }
-    int n_blocks = auto_kv ? 4 : (int)(kv_gib * (1ull << 30) / block_bytes);
+    // The pool is allocated once everything else is (also for an explicit kv_gib, since 8 Nov), so it can be fitted to
+    // the budget: req_blocks is the explicit request, n_blocks what exists until alloc_kv below.
+    const int req_blocks = auto_kv ? 0 : (int)(kv_gib * (1ull << 30) / block_bytes);
+    int n_blocks = 4;
     int max_blocks = max_ctx / KV_BLOCK + 1;
     const double gib = 1ull << 30;
     // PREFILL_STEP: rows a step may hold while nothing decodes (Scheduler::prefill_step); default 8,192 for Flash-Next
@@ -368,7 +371,8 @@ int main(int argc, char** argv) {
         // the same margin the auto KV sizing below keeps (KV_MARGIN_GIB, the ANE split, VISION_MARGIN_GIB for a vision
         // tower in the front end), so PF8 never takes room a vision checkpoint needs
         const double room = auto_kv ? budget - used0 - margin - copies
-                                    : budget - g.dev.currentAllocatedSize / gib - copies - 0.08 * budget - vision_margin;
+                                    : budget - g.dev.currentAllocatedSize / gib - req_blocks * (double)block_bytes / gib -
+                                      copies - 0.08 * budget - vision_margin;
         const bool ok = g.nax && (auto_kv ? room >= need : room >= 0);
         m.pf8_on = ok;
         snprintf(buf, sizeof buf, "%s (auto: %s; KV room after copies %.1f GiB, need %.1f for %d x %d tokens)", ok ? "on" : "off",
@@ -390,6 +394,38 @@ int main(int argc, char** argv) {
       m.alloc_kv(n_blocks);
       if (vision_margin > 0) printf("inferd: KV sizing leaves %.1f GiB for the front end's vision tower (VISION=1 / VISION_MARGIN_GIB)\n", vision_margin);
     }
+    std::string kv_fit;  // an explicit pool over Metal's working-set budget: a warning, or (KV_FIT=1) lowered to fit
+    if (!auto_kv) {
+      // 8 Nov, Studio, Flash-Next 160 x 16k (results/s128-2026-11-07): 229.6 GiB allocated on a 222.7 GiB budget ran 1,420
+      // tok/s with the GPU ~80% busy and inferd at 33-61% CPU; with RESIDENCY=1 it ran out of GPU memory. Fitted by
+      // giving up snapshot slots (288 instead of 352, KV kept at 52 GiB) it ran 1,655.8 (5 runs); fitted by lowering
+      // the KV pool instead (KV_FIT=1: 52 -> 45.2 GiB, 2.6M tokens for ~2.9M of contexts) only 494, every round
+      // re-reading evicted contexts. So the default warns and says what to lower; KV_FIT=1 lowers the pool. No margin
+      // here: an explicit pool keeps its size up to the budget itself.
+      const int fit_blocks = (int)std::min<double>((budget - used) * gib / block_bytes, 1 << 28);
+      const bool fit = getenv("KV_FIT") && atoi(getenv("KV_FIT"));
+      n_blocks = req_blocks;
+      char buf[320];
+      if (req_blocks > fit_blocks && fit) {
+        if (fit_blocks < 64) {
+          fprintf(stderr, "inferd: no room for a KV pool inside the GPU budget (%.1f GiB, %.1f used): lower max_running or "
+                          "snapshots, or KV_FIT=0 to allocate over it\n", budget, used);
+          return 1;
+        }
+        n_blocks = fit_blocks;
+        snprintf(buf, sizeof buf, "inferd: KV pool lowered from %.1f to %.1f GiB to stay inside the GPU budget (%.1f GiB, "
+                 "KV_FIT=1)\n", req_blocks * (double)block_bytes / gib, n_blocks * (double)block_bytes / gib, budget);
+        kv_fit = buf;
+      } else if (req_blocks > fit_blocks) {
+        snprintf(buf, sizeof buf, "inferd: WARNING: the allocation is %.1f GiB over the GPU budget (%.1f GiB): expect stalls "
+                 "or GPU out-of-memory errors. Lower snapshots first (%.2f GiB a slot), then kv_gib, or pass 0 for kv_gib to "
+                 "size the pool automatically (KV_FIT=1 lowers the pool to fit)\n",
+                 (req_blocks - fit_blocks) * (double)block_bytes / gib, budget, m.slot_bytes() / gib);
+        kv_fit = buf;
+      }
+      m.alloc_kv(n_blocks);
+    }
+    if (!kv_fit.empty()) fputs(kv_fit.c_str(), stdout);
     printf("inferd: memory: GPU budget %.1f GiB; model + state + scratch %.1f, drafter %.1f, PF8 %.1f, KV %.1f%s -> %.1f allocated\n",
            budget, after_model - pf8_in_model, used - after_model - (m.pf8_bytes / gib - pf8_in_model), m.pf8_bytes / gib, n_blocks * (double)block_bytes / gib, auto_kv ? " (auto)" : "",
            g.dev.currentAllocatedSize / gib);

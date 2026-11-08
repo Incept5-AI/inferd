@@ -357,7 +357,13 @@ allocation: aligned groups of 4 blocks (128 keys) kept physically contiguous whe
   128k–256k *(study log: "v11: grouped KV allocation" and "Diagnosed 2026-10-30: a full KV pool handed out pages in
   descending order")*. Anything that takes blocks off the pool must go through `alloc_block`/`push_free`.
 - **Pool sizing.** `kv_gib` on the command line, or `kv_gib ≤ 0` to size from Metal's `recommendedMaxWorkingSetSize`
-  less the model, drafter, state and scratch and a margin (`KV_MARGIN_GIB` 1.5, plus `ANE_MARGIN_GIB` 0.5 with the
+  less the model, drafter, state and scratch and a margin. Since 8 Nov an explicit `kv_gib` that puts the total over
+  the budget gets a warning on start-up (`run.sh` repeats it). Studio, Flash-Next, 160 agents:
+  - 7 GiB over budget ran 1,420 tok/s, with the GPU ~80% busy;
+  - fitted by giving up snapshot slots, 1,656;
+  - fitted by shrinking the KV pool below the agents' contexts (`KV_FIT=1`), 494.
+
+  So the warning says to lower snapshots first. The pool is allocated last in both cases (`KV_MARGIN_GIB` 1.5, plus `ANE_MARGIN_GIB` 0.5 with the
   ANE split). On the Mac Studio use an explicit size: auto-sizing with a small model filled 222.5 of 224 GiB and hung
   the first request *(study log: "Diagnosed 2026-11-01: a server that hung …")*.
 
@@ -783,6 +789,7 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 | `PY` | (run.sh) | Python interpreter for the front end |
 | `INFERD_HOME` | `.` | directory containing `build/core.metallib` |
 | `KV_MARGIN_GIB` | 1.5 | margin left when the KV pool is auto-sized |
+| `KV_FIT` | 0 | an explicit `kv_gib` that puts the allocation over Metal's working-set budget: 0 warns (lower snapshots first, then `kv_gib`), 1 lowers the pool to fit |
 | `ANE_MARGIN_GIB` | 0.5 | extra margin with the ANE split (its service's buffers are outside Metal's count) |
 | `SPILL_DIR` | unset | enables the SSD tier in this directory |
 | `SPILL_GIB` | 64 | SSD tier quota |
@@ -848,6 +855,8 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 | knob | default | effect |
 |---|---|---|
 | `ADMIT_RESERVE` | 512 | generated tokens budgeted per admitted turn |
+| `PREFILL_PRIO` | `max_running` (16 before 8 Nov) | waiting prompts take a full prefill step beside up to this many decoders; 0 off |
+| `MTP_WIDE` | 96 | MTP (Flash-Next): above this many decoders a cycle verifies 3 rows (2 drafts); 0 off |
 | `FANOUT_MIN` | 1024 | shared prefix length worth waiting for a leader; 0 = off |
 | `SNAP_BRANCH_MIN` | 256 | minimum tokens for a system-prompt (`snap_at`) or branch-point snapshot; 0 = off |
 | `SPEC_AUTO` | 1 | BlockTuner chooses the block per regime |

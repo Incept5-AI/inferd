@@ -1538,6 +1538,63 @@ checked, the 0.4.0 engine): 950.8 / 936.6 / 935.5 tok/s, mean 941.0; wall power 
 256/256 answers right and all 128 agents generating at once in every run. The README chart's 128-agent 27B point is
 now this mean. Raw: [results/agents-at-once-2026-11-05](../results/agents-at-once-2026-11-05/) (`run-b27-128*`).
 
+## (ae) 128 and 160 agents on the Studio: past 1,600 tok/s, and three new defaults (7–8 November)
+
+**Setup.** Mac Studio M5 Ultra, Qwen3.8-Flash-Next oQ4e + MTP.
+- **Engine:** release 0.4.1, with only the server's settings varied.
+- **Benchmark:** `bench/quick64.py`, unmodified. Each run primes N agents on 16k contexts, then runs 3 rounds of all
+  agents taking a turn at once (512 tokens each, every answer checked).
+- **Score:** the 3-round mean.
+- **Power:** at the wall.
+- **Trials:** a fresh server for every run.
+
+Every run, its server line and its rounds are in [results/s128-2026-11-07](../results/s128-2026-11-07/) (`runs.tsv`,
+one JSONL per run).
+
+**128 agents, five runs per setting** (4 Nov's setting first; each row adds one change):
+
+| setting | runs (tok/s) | mean | > 1,500 |
+|---|---|---:|---:|
+| `128 2048 64 256` (5 Nov) | 1,489.6 · 1,477.8 · 1,486.6 · 1,473.4 · 1,493.4 | 1,484.2 | 0/5 |
+| + `PREFILL_PRIO=128` | 1,518.8 · 1,538.3 · 1,507.8 · 1,501.1 · 1,523.8 | 1,518.0 | 5/5 |
+| + 384 snapshots, 48 GiB KV | 1,578.1 · 1,583.6 · 1,587.0 · 1,588.2 · 1,563.1 | 1,580.0 | 5/5 |
+| **+ `MTP_K=2`** | 1,591.3 · 1,612.7 · 1,598.0 · 1,612.5 · 1,609.1 | **1,604.7** | **5/5** |
+| (rejected) + 4,096-token steps instead | 1,562.5 · 1,572.6 · 1,552.5 · 1,562.9 · 1,568.5 | 1,563.8 | 5/5 |
+| (rejected) + `SNAP_GEN=512` instead | 1,532.9 · 1,526.4 · 1,531.0 · 1,542.9 · 1,540.1 | 1,534.7 | 5/5 |
+
+What fixed what:
+
+- **Late starts.** With the old `PREFILL_PRIO` (16), a round's new turns got only what 128 × 4 verify rows left of
+  each step, so the slowest agent waited 38 s for its first token. With `PREFILL_PRIO=128` it waits 16 s.
+- **Re-reading.** Too few snapshot slots made agents re-read their own last turn.
+- **Step cost.** At 128 decoders, 3-row MTP blocks make every step cheaper.
+
+Round 1 is ~1,390–1,460 in every setting, because there is no earlier reply for context-copy drafts to reuse.
+
+**160 agents** (`160 2048 52 288`, `PREFILL_PRIO=160 MTP_K=2`, 222.7 GiB on a 222.7 GiB budget): 1,673.9 · 1,644.6 ·
+1,656.7 · 1,635.9 · 1,668.0, mean **1,655.8 tok/s**, 5.51 tok/J, 2,400/2,400 answers correct.
+
+The same 160 agents with 352 snapshot slots allocated 229.6 GiB (7 GiB over Metal's working-set budget), and over
+budget there is no good way out:
+
+| over-budget layout (229.6 GiB) | result |
+|---|---|
+| as is | 1,420.1 tok/s; GPU ~80% busy, the engine at 33–61% CPU |
+| + `RESIDENCY=1` | ran out of GPU memory at the prime |
+| KV pool lowered to fit (`KV_FIT=1`) | 494 tok/s; the pool no longer held the agents' contexts |
+
+**New defaults (8 November)**, checked on a build of this change with no tuning settings:
+
+- **`PREFILL_PRIO` = `max_running`** (was 16).
+  - Flash-Next 128 agents, F's layout: 1,604.7 tok/s.
+  - 27B 64 × 16k: 974.4 tok/s against 963.6 with the old 16; round 3's slowest first token 6.8 s instead of 17.3.
+- **`MTP_WIDE` = 96:** above 96 decoders, MTP verifies 3 rows.
+- **An over-budget start-up warning:** it names what to lower, snapshot slots first; `run.sh` repeats it on stderr.
+  `KV_FIT=1` lowers the pool instead, but as the table shows that is rarely the right fix.
+
+Logits are byte-identical to the previous build at chunks 1, 24, 256 and 1,536, and speculative output equals plain
+decode (one exact tie). The new defaults are single trials, except where noted.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

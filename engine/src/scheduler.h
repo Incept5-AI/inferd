@@ -287,8 +287,11 @@ struct Scheduler {
   // and the prompts run at the large-step rate. 0: off (the decoders' rows come out of step_tokens). Default 16 since
   // 3 Nov (Studio wall.py, 14k prompts + 6,400 tokens, 2 trials: Flash-Next N=8 last first token 32.5 -> 29.5 s, total
   // 149.2 -> 144.9 s, N=4 99.4 -> 98.2; 27B with PF8 neutral within the spread (N=4 70.0 -> 72.9, N=8 123.0 / 175.1
-  // -> 123.8 / 122.6 per trial); conc 16k x 8/16/32 level for both).
-  int prefill_prio = getenv("PREFILL_PRIO") ? atoi(getenv("PREFILL_PRIO")) : 16;
+  // -> 123.8 / 122.6 per trial); conc 16k x 8/16/32 level for both). Default max_running since 8 Nov: with 16 the
+  // budget stopped at 16 decoders, so at 128 agents a round's new turns got only what 128 x 4 verify rows left of the
+  // step, and half the agents waited 13-42 s for a first token (Studio, Flash-Next, 128 x 16k quick64, 5 runs each:
+  // 1,484.2 -> 1,518.0 tok/s, slowest round-3 first token 38 -> 16 s; results/s128-2026-11-07).
+  int prefill_prio = getenv("PREFILL_PRIO") ? atoi(getenv("PREFILL_PRIO")) : max_running;
   // PREFILL_MIN: prompt rows every step keeps for prefill even when the decoders' rows use up step_tokens (a floor:
   // without it a step with many wide verify blocks can starve new prompts). 0: off.
   int prefill_min = getenv("PREFILL_MIN") ? atoi(getenv("PREFILL_MIN")) : 0;
@@ -301,6 +304,12 @@ struct Scheduler {
   // Most decoders that still get the full (8-token) block. 16k follow-ups, block 8 vs 5: N=4 339 vs 314 tok/s,
   // N=8 405 vs 445, N=16 450 vs 515 (real agent text accepts less than the spec_test prompts suggest).
   int spec_wide = getenv("SPEC_WIDE") ? atoi(getenv("SPEC_WIDE")) : 4;
+  // MTP (Flash-Next): above mtp_wide decoders a cycle verifies 3 rows (2 drafts) instead of MTP_K + 1, since each step
+  // is then priced by its rows. Studio, Flash-Next, 128 x 16k quick64, 5 runs each: MTP_K=3 1,580.0 vs MTP_K=2
+  // 1,604.7 tok/s (round 1, with nothing yet to copy-draft from, 1,461 vs 1,396; rounds 2-3 1,695 / 1,585 vs
+  // 1,708 / 1,711); 160 agents ran on 2 drafts too (results/s128-2026-11-07). Untested between 16 and 96 decoders,
+  // so the default only engages where it was measured. 0 off; SPEC_BLOCKS overrides.
+  int mtp_wide = (int)env_knob("MTP_WIDE", 96, 0, 1 << 16);
   // Blocks past 8 (12, 16: 2026-11-02) only while decoders x block stays within spec_wide_rows verify rows: one stream
   // verifies 16 rows for about the price of 8 (the linears are weight-bandwidth-bound and W4A8 runs 16-row tiles), so
   // block 16 pays alone and for a few streams; fleets keep 4-8. The fixed rule (SPEC_AUTO=0) uses the widest such block.
@@ -1509,6 +1518,7 @@ struct Scheduler {
     if (d && L > 5 && !m.g.nax) L = 5;
     if (!m.g.nax) tuner.far_every = 4;
     for (auto [n, l] : spec_blocks) if (n_dec > n) L = l;
+    if (mtp && spec_blocks.empty() && mtp_wide > 0 && n_dec > mtp_wide) L = std::min(L, 3);
     if (mtp) L = std::max(2, std::min(L, mtp->block));
     // Without SPEC_BLOCKS: drop to L-1 when that saves a 32-row W4A8 tile in every linear layer (a tile pass costs
     // ~13-17 ms; the last draft position ~13% of the accepted tokens). 8 agents: 40 -> 32 rows, 16: 80 -> 64.

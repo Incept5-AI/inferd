@@ -364,3 +364,5 @@ health || { print -u2 'front end failed:'; tail -5 "$LOGS/serve-$PORT.log"; stop
              stop_pid $ipid inferd; rm -f -- "$SPID" "$IPID"; exit 1; }
 print "up on $HOST:$PORT (inferd pid $ipid, front end pid $spid, socket $SOCK)"
 cat -- "$LOGS/inferd-$PORT.log"
+# An explicit kv_gib over Metal's working-set budget: inferd lowers the pool to fit (or warns with KV_FIT=0); say so.
+grep -E "KV pool lowered|WARNING: the allocation" "$LOGS/inferd-$PORT.log" | sed 's/^inferd: /run.sh: note: /' >&2 || true
