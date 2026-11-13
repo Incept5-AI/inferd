@@ -1595,6 +1595,79 @@ budget there is no good way out:
 Logits are byte-identical to the previous build at chunks 1, 24, 256 and 1,536, and speculative output equals plain
 decode (one exact tie). The new defaults are single trials, except where noted.
 
+## (af) External Mac Studio M5 Max 128 GB, 0.4.1: default 128 GB sizing and a 32-agent run (9 and 13 November)
+
+An external tester's Mac Studio M5 Max (40-core GPU, 128 GB; a desktop, not the development laptop), macOS 27.2
+(26B118), the v0.4.1 macos27 prebuilt (`4ad756ad`), Qwen3.8-27B 4-bit (`mlx-community` @ 10c35caa) + DFlash2
+(`incoai` @ 015e795). Xcode is not installed on this machine, so the official prebuilt was used. No non-default
+`KV8` / `SPEC*` / `W4A8` / `ANE*` / `NAX` / `LANE` / `QMST` / `ADMIT` / `CASCADE` knobs. Listen 127.0.0.1:8300,
+`step_tokens` 1024, `max_ctx` 147456. Greedy, thinking off, `max_tokens` 512. Host uptime was about 7 days on
+9 November and about 11 days on 13 November. LM Studio was present but not serving; another local
+OpenAI-compatible server on port 8000 was stopped for the runs. Raw:
+[results/m5max-studio-128g-0.4.1/](../results/m5max-studio-128g-0.4.1/).
+
+**9 November, `./run.sh start --model 27b`** (the 128 GB default: 16 agents, 24 GiB KV, 30 snapshots, max ctx
+147456, SSD tier 96 GiB). Start-up: `GPU budget 107.5 GiB; model + state + scratch 21.9, drafter 2.8, PF8 0.0, KV 24.0 -> 48.7 allocated`.
+Fresh server after `release_gate.sh` (PASS). `conc.py --mode followup` at 16k, single trial, 0 errors:
+
+| 16k × N | 1 | 4 | 8 | 16 |
+|---|---:|---:|---:|---:|
+| total tok/s | 90.4 | 221.0 | 266.0 | 314.7 |
+| first token median / max (s) | 0.21 / 0.21 | 0.53 / 0.53 | 0.93 / 0.93 | 2.86 / 3.1 |
+
+`examples/agents-at-once` (`quick64.py`): 8 × 4k PASS 16/16, 356.1 tok/s; 16 × 16k PASS 32/32, 371.4 tok/s, all
+agents decoding at once. Against the published Studio M5 Ultra 27B + DFlash2 cells in (b1), these totals are about
+55–62% (half the GPU cores).
+
+**13 November, the same machine and build, at 32 agents** (`./run.sh start --model 27b --agents 32 --kv 48 --snapshots 64`),
+requested on issue #3 to see whether a desktop 128 GB Mac can use more than the laptop-like default. Every 32-agent
+start printed the same memory line: `GPU budget 107.5 GiB; model + state + scratch 29.1, drafter 4.3, PF8 0.0, KV 48.0 -> 81.4 allocated`
+(under budget; 48,395 KV blocks, ~1.5M tokens, 96 slots).
+
+Three `conc.py --mode followup` sweeps at 16k × 1/4/8/16/32, 0 errors in all 15 cells. Rep 1 was the first sweep after
+a fresh start, with no cooldown. Before each later rep, inferd was stopped, the machine sat 240 s with the port closed,
+the server was started, the sweep ran immediately, and the server was stopped again. The SSD spill directory was left
+in place across restarts, as `run.sh` does by default. `thermalState` 0 (nominal) at the start and end of every
+cooldown-protocol run; no `pmset` thermal warnings. Median (range) of the three reps:
+
+| 16k × N | 1 | 4 | 8 | 16 | 32 |
+|---|---:|---:|---:|---:|---:|
+| total tok/s, median (range) | 94.5 (93.8–98.9) | 231.1 (226.2–235.3) | 312.2 (308.3–318.2) | 306.5 (305.7–315.7) | 344.5 (342.1–347.5) |
+| per-stream median tok/s, median (range) | 98.1 (97.2–102.7) | 64.8 (63.1–65.6) | 42.7 (42.2–43.3) | 21.8 (21.6–22.2) | 12.7 (12.5–12.7) |
+| first token median, range (s) | 0.20–0.20 | 0.56–0.61 | 0.94–0.99 | 2.53–2.94 | 6.31–6.82 |
+| first token max, range (s) | 0.20–0.20 | 0.56–0.61 | 0.94–1.00 | 2.77–3.18 | 6.69–8.06 |
+
+Per-rep total tok/s (rep 1 had no cooldown):
+
+| 16k × N | 1 | 4 | 8 | 16 | 32 |
+|---|---:|---:|---:|---:|---:|
+| rep 1 | 94.5 | 235.3 | 312.2 | 305.7 | 342.1 |
+| rep 2 | 93.8 | 226.2 | 318.2 | 306.5 | 344.5 |
+| rep 3 | 98.9 | 231.1 | 308.3 | 315.7 | 347.5 |
+
+Per-rep first token median / max (s):
+
+| 16k × N | 1 | 4 | 8 | 16 | 32 |
+|---|---|---|---|---|---|
+| rep 1 | 0.20 / 0.20 | 0.61 / 0.61 | 0.99 / 1.00 | 2.94 / 3.18 | 6.82 / 8.06 |
+| rep 2 | 0.20 / 0.20 | 0.57 / 0.57 | 0.94 / 0.94 | 2.65 / 2.90 | 6.82 / 7.33 |
+| rep 3 | 0.20 / 0.20 | 0.56 / 0.56 | 0.95 / 0.95 | 2.53 / 2.77 | 6.31 / 6.69 |
+
+On the same evening, two default-sizing cells (`./run.sh start --model 27b`, 16 / 24 / 30) used the same stop / 240 s
+cooldown / restart protocol: 323.7 and 324.6 tok/s, first token 2.05 / 2.30 and 2.13 / 2.42 s. Their start-up memory
+line matched 9 November (48.7 allocated, 24,197 KV blocks, 46 slots). That default is about 6% faster at N=16 than the
+32-agent sizing's median 306.5 (first token 2.53–3.18 s). The 32-agent sizing's benefit is that N=32 runs cleanly, at
+a median 344.5 tok/s (342.1–347.5).
+
+The N=16 dip in the sweep (median 306.5 tok/s) looks like a run-order effect rather than the 32-agent
+sizing: in a follow-up check on 14 November 2026 JST with the same 32-agent sizing, N=16 run alone after a
+fresh restart gave about 345 tok/s aggregate (two runs: 345.8, 343.8), versus about 330 when run right after
+N=8. Those follow-up runs had `INFERD_DEBUG=1` enabled; the cause of the order effect is not yet identified.
+
+`agents_at_once` 32 × 16k (`quick64.py`), on the rep 1 server without a restart: PASS, 64/64 answers correct, all 32
+decoding at once; 320.0 then 425.1 tok/s, overall 372.6; prime 421.8 s. (The 9 November 16 × 16k cell was 371.4
+overall.) The SSD spill tier reached its 96 GiB cap during that first session.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).
