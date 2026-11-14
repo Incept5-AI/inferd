@@ -371,6 +371,17 @@ struct Qwen35 {
   bool on(const char* what) const { return skip.find(what) == std::string::npos; }
   Qwen35Config cfg;
   std::vector<Layer> L;
+  // GDN recurrent state in bf16 (STATE_BF16=1, opt-in): half the slot memory and state traffic; the arithmetic stays
+  // fp32 in registers. KL vs mlx_lm +0.0001-0.0003 at 8k/32k, flat over 2,048 decode steps (NOTES 2026-11-13).
+  bool state_bf16 = getenv("STATE_BF16") && atoi(getenv("STATE_BF16")) != 0;
+  size_t state_elem() const { return state_bf16 ? 2 : 4; }
+  const char* sk(const char* base) const {  // the state kernel's name for this precision
+    static std::map<std::string, std::string> names;
+    if (!state_bf16) return base;
+    auto& n = names[base];
+    if (n.empty()) n = std::string(base) + "_s16";
+    return n.c_str();
+  }
   QLinear embed, lm_head;
   BufRef final_norm;
 
@@ -675,7 +686,7 @@ struct Qwen35 {
     block_table = g.alloc((size_t)max_seqs * max_blocks * 4);
     for (int i = 0; i < ng; i++) {
       conv_state.push_back(g.alloc((size_t)n_slots * (cfg.conv_k - 1) * cfg.conv_dim() * 2));
-      ssm_state.push_back(g.alloc((size_t)n_slots * cfg.lhv * cfg.ldv * cfg.ldk * 4));
+      ssm_state.push_back(g.alloc((size_t)n_slots * cfg.lhv * cfg.ldv * cfg.ldk * state_elem()));
     }
     alloc_kv(n_blocks);
   }
@@ -950,7 +961,7 @@ struct Qwen35 {
   void encode_copy_slot(id<MTLBlitCommandEncoder> b, int src, int dst) {
     if (const size_t ps = ple_slot_bytes())
       [b copyFromBuffer:ple_state.buf sourceOffset:src * ps toBuffer:ple_state.buf destinationOffset:dst * ps size:ps];
-    size_t cs = (size_t)(cfg.conv_k - 1) * cfg.conv_dim() * 2, ss = (size_t)cfg.lhv * cfg.ldv * cfg.ldk * 4;
+    size_t cs = (size_t)(cfg.conv_k - 1) * cfg.conv_dim() * 2, ss = (size_t)cfg.lhv * cfg.ldv * cfg.ldk * state_elem();
     for (size_t i = 0; i < conv_state.size(); i++) {
       [b copyFromBuffer:conv_state[i].buf sourceOffset:src * cs toBuffer:conv_state[i].buf destinationOffset:dst * cs size:cs];
       [b copyFromBuffer:ssm_state[i].buf sourceOffset:src * ss toBuffer:ssm_state[i].buf destinationOffset:dst * ss size:ss];
@@ -958,14 +969,14 @@ struct Qwen35 {
   }
   void encode_zero_slot(id<MTLBlitCommandEncoder> b, int s) {
     if (const size_t ps = ple_slot_bytes()) [b fillBuffer:ple_state.buf range:NSMakeRange(s * ps, ps) value:0];
-    size_t cs = (size_t)(cfg.conv_k - 1) * cfg.conv_dim() * 2, ss = (size_t)cfg.lhv * cfg.ldv * cfg.ldk * 4;
+    size_t cs = (size_t)(cfg.conv_k - 1) * cfg.conv_dim() * 2, ss = (size_t)cfg.lhv * cfg.ldv * cfg.ldk * state_elem();
     for (size_t i = 0; i < conv_state.size(); i++) {
       [b fillBuffer:conv_state[i].buf range:NSMakeRange(s * cs, cs) value:0];
       [b fillBuffer:ssm_state[i].buf range:NSMakeRange(s * ss, ss) value:0];
     }
   }
   size_t slot_bytes() const {
-    return ple_slot_bytes() + conv_state.size() * ((size_t)(cfg.conv_k - 1) * cfg.conv_dim() * 2 + (size_t)cfg.lhv * cfg.ldv * cfg.ldk * 4);
+    return ple_slot_bytes() + conv_state.size() * ((size_t)(cfg.conv_k - 1) * cfg.conv_dim() * 2 + (size_t)cfg.lhv * cfg.ldv * cfg.ldk * state_elem());
   }
 
   // Allocate what speculative verify needs: logits/argmax for every row of up to max_seqs blocks, the hidden
@@ -1026,7 +1037,7 @@ struct Qwen35 {
   void reset_slot(int s) {
     if (const size_t ps = ple_slot_bytes()) memset(ple_state.ptr<char>() + s * ps, 0, ps);
     for (size_t i = 0; i < conv_state.size(); i++) {
-      size_t cs = (size_t)(cfg.conv_k - 1) * cfg.conv_dim() * 2, ss = (size_t)cfg.lhv * cfg.ldv * cfg.ldk * 4;
+      size_t cs = (size_t)(cfg.conv_k - 1) * cfg.conv_dim() * 2, ss = (size_t)cfg.lhv * cfg.ldv * cfg.ldk * state_elem();
       memset(conv_state[i].ptr<char>() + s * cs, 0, cs);
       memset(ssm_state[i].ptr<char>() + s * ss, 0, ss);
     }
@@ -2312,11 +2323,13 @@ struct Qwen35 {
   // (chunks 1,024 / 2,048): 14 units 159 / 160, 22 201 / 208, 26 212 / 218, 30 197 / 202, 34 187 / 194. There the
   // GPU's quantized GEMM is at ~6.2 TFLOPS and the Neural Engine runs the FFN at ~10.3 (tools/ane_probe). Not
   // measured on M1-M3 or the M4 Max (a 40-core GPU leaves the Neural Engine a smaller share): try ANE_UNITS there.
+  // 0.4.2: off everywhere unless ANE_UNITS is set. With several agents at once and a drafter, a speculative verify
+  // block that shares a split step can commit an end-of-turn token in place of the draft (replies cut to 2-3 tokens:
+  // M4 Pro 0.4.1 defaults, 13 of 16 agent turns at 8 agents; M6 ANE_UNITS=24, up to 42 of 48). Single streams and
+  // no-drafter runs are unaffected, and prefill logits pass. Back on once the cause is fixed (NOTES 2026-11-14).
   int ane_units_default() const {
     if (const char* v = getenv("ANE_UNITS")) return atoi(v);
-    const std::string name = g.dev.name.UTF8String;
-    const bool m4 = name.find("Apple M4") != std::string::npos && name.find("Max") == std::string::npos;
-    return !g.nax && m4 && g.cores <= 20 ? 26 : 0;
+    return 0;
   }
   void commit_early(id<MTLCommandBuffer> __strong& cb) {
     [cb commit];
@@ -2546,17 +2559,17 @@ struct Qwen35 {
       e.groups(S3(2 * cfg.lhk + 1, T), S3(cfg.ldk));
       if (fpf && fn_gdn_r > 1) {
         char sn[24];
-        snprintf(sn, sizeof sn, "gdn_step_r%d", fn_gdn_r);
+        snprintf(sn, sizeof sn, "gdn_step_r%d%s", fn_gdn_r, state_bf16 ? "_s16" : "");
         e.k(sn).buf(0, co).buf(1, gb).buf(2, bb).buf(3, ssm_state[ly.idx]).buf(4, ybuf).buf(5, slot)
             .args(6, ga).buf(7, seq_start).buf(8, seq_len).buf(9, spec);
         e.threads(S3(32, cfg.ldv / fn_gdn_r, S * cfg.lhv), S3(32, 4, 1));
       } else if (!tree_only) {
-        e.k("gdn_step").buf(0, co).buf(1, gb).buf(2, bb).buf(3, ssm_state[ly.idx]).buf(4, ybuf).buf(5, slot)
+        e.k(sk("gdn_step")).buf(0, co).buf(1, gb).buf(2, bb).buf(3, ssm_state[ly.idx]).buf(4, ybuf).buf(5, slot)
             .args(6, ga).buf(7, seq_start).buf(8, sl).buf(9, spec);
         e.threads(S3(32, cfg.ldv, S * cfg.lhv), S3(32, 4, 1));
       }
       if (n_tree && !(tree_skip & 4)) {
-        e.k("gdn_step_tree").buf(0, co).buf(1, gb).buf(2, bb).buf(3, ssm_state[ly.idx]).buf(4, ybuf).buf(5, slot)
+        e.k(sk("gdn_step_tree")).buf(0, co).buf(1, gb).buf(2, bb).buf(3, ssm_state[ly.idx]).buf(4, ybuf).buf(5, slot)
             .args(6, ga).buf(7, seq_start).buf(8, seq_len).buf(9, tseqs).buf(10, tpar).buf(11, tdep).buf(12, tanc);
         e.threads(S3(32, cfg.ldv, n_tree * cfg.lhv), S3(32, 4, 1));
       }
@@ -2915,7 +2928,7 @@ struct Qwen35 {
         e.k("gdn_conv_replay").buf(0, tape_x[ly.idx]).buf(1, conv_state[ly.idx]).buf(2, slot).buf(3, seq_start)
             .buf(4, commit).buf(5, spec).args(6, ra);
         e.threads(S3(cfg.conv_dim(), S), S3(256));
-        e.k("gdn_replay").buf(0, tape_c[ly.idx]).buf(1, tape_g[ly.idx]).buf(2, tape_b[ly.idx]).buf(3, ssm_state[ly.idx])
+        e.k(sk("gdn_replay")).buf(0, tape_c[ly.idx]).buf(1, tape_g[ly.idx]).buf(2, tape_b[ly.idx]).buf(3, ssm_state[ly.idx])
             .buf(4, slot).buf(5, seq_start).buf(6, commit).buf(7, spec).args(8, ra);
         e.threads(S3(32, cfg.ldv, S * cfg.lhv), S3(32, 4, 1));
       }
@@ -2987,7 +3000,7 @@ struct Qwen35 {
         e.k("gdn_conv_replay_tree").buf(0, tape_x[ly.idx]).buf(1, conv_state[ly.idx]).buf(2, slot).buf(3, seq_start)
             .buf(4, commit).buf(5, tseqs).args(6, ra).buf(7, tpath);
         e.threads(S3(cfg.conv_dim(), n_tree), S3(256));
-        e.k("gdn_replay_tree").buf(0, tape_c[ly.idx]).buf(1, tape_g[ly.idx]).buf(2, tape_b[ly.idx])
+        e.k(sk("gdn_replay_tree")).buf(0, tape_c[ly.idx]).buf(1, tape_g[ly.idx]).buf(2, tape_b[ly.idx])
             .buf(3, ssm_state[ly.idx]).buf(4, slot).buf(5, seq_start).buf(6, commit).buf(7, tseqs).args(8, ra)
             .buf(9, tpath);
         e.threads(S3(32, cfg.ldv, n_tree * cfg.lhv), S3(32, 4, 1));

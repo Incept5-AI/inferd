@@ -699,10 +699,11 @@ kernel void gdn_prep(device bfloat* conv_out [[buffer(0)]],
 // Recurrence over each sequence's tokens, per (sequence, value head, value row). The state row stays in
 // registers across the run. state: [nslots, Hv, Dv, Dk] float.
 // grid: threads (32, Dv, S*Hv), threadgroup (32, 4, 1). Each simdgroup owns one Dv row.
+template <typename ST>
 kernel void gdn_step(device const bfloat* conv_out [[buffer(0)]],
                      device const float* g [[buffer(1)]],
                      device const float* beta [[buffer(2)]],
-                     device float* state [[buffer(3)]],
+                     device ST* state [[buffer(3)]],
                      device bfloat* y [[buffer(4)]],
                      device const int* slot [[buffer(5)]],
                      constant GdnArgs& p [[buffer(6)]],
@@ -714,10 +715,10 @@ kernel void gdn_step(device const bfloat* conv_out [[buffer(0)]],
   const int n = gid.z, b = n / p.Hv, hv = n % p.Hv, hk = hv / (p.Hv / p.Hk);
   const int dv = gid.y;
   constexpr int NPT = 4;  // Dk / 32 for Dk = 128
-  device float* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv) * p.Dk;
+  device ST* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv) * p.Dk;
   float s[NPT];
 #pragma unroll
-  for (int i = 0; i < NPT; i++) s[i] = st[NPT * lane + i];
+  for (int i = 0; i < NPT; i++) s[i] = float(st[NPT * lane + i]);
   int t0 = seq_start[b], nt = seq_len[b];
   for (int j = 0; j < nt; j++) {
     int t = t0 + j;
@@ -745,8 +746,11 @@ kernel void gdn_step(device const bfloat* conv_out [[buffer(0)]],
   }
   if (p.verify && spec[b]) return;
 #pragma unroll
-  for (int i = 0; i < NPT; i++) st[NPT * lane + i] = s[i];
+  for (int i = 0; i < NPT; i++) st[NPT * lane + i] = ST(s[i]);
 }
+template [[host_name("gdn_step")]] kernel void gdn_step<float>(device const bfloat*, device const float*, device const float*, device float*, device bfloat*, device const int*, constant GdnArgs&, device const int*, device const int*, device const int*, uint3, uint);
+template [[host_name("gdn_step_s16")]] kernel void gdn_step<bfloat>(device const bfloat*, device const float*, device const float*, device bfloat*, device bfloat*, device const int*, constant GdnArgs&, device const int*, device const int*, device const int*, uint3, uint);
+
 
 // out = rmsnorm(y_head) * w * silu(z), per (sequence, value head). Dv threads per threadgroup.
 kernel void gdn_out_norm(device const bfloat* y [[buffer(0)]],

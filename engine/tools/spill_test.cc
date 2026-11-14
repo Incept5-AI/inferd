@@ -30,6 +30,7 @@ struct Qwen35 {
   size_t kv_elem() const { return 2; }
   bool kv4 = false;
   int kv4_rot = 0;
+  bool state_bf16 = false;
   size_t kv_bytes(size_t elems) const { return elems * kv_elem(); }
   size_t kv_ns() const { return NS; }
   Qwen35() {

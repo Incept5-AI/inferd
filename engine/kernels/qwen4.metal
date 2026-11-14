@@ -1379,11 +1379,11 @@ kernel void gdn_conv_pf_state(device const bfloat* proj [[buffer(0)]],
 // gdn_step with R value rows per simdgroup (R independent recurrences interleaved: more work in flight per token,
 // one wave of simdgroups for a lone sequence) and the next token's inputs loaded before the current token's update.
 // Per row the arithmetic is gdn_step's, in the same order. grid: threads (32, Dv / R, S * Hv), threadgroup (32, 4, 1).
-template <int R>
+template <int R, typename ST>
 kernel void gdn_step_r(device const bfloat* conv_out [[buffer(0)]],
                        device const float* g [[buffer(1)]],
                        device const float* beta [[buffer(2)]],
-                       device float* state [[buffer(3)]],
+                       device ST* state [[buffer(3)]],
                        device bfloat* y [[buffer(4)]],
                        device const int* slot [[buffer(5)]],
                        constant FnpGdnArgs& p [[buffer(6)]],
@@ -1395,10 +1395,10 @@ kernel void gdn_step_r(device const bfloat* conv_out [[buffer(0)]],
   const int n = gid.z, b = n / p.Hv, hv = n % p.Hv, hk = hv / (p.Hv / p.Hk);
   const int dv0 = gid.y * R;
   constexpr int NPT = 4;  // Dk / 32 for Dk = 128
-  device float* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv0) * p.Dk;
+  device ST* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv0) * p.Dk;
   float s[R][NPT];
   for (int r = 0; r < R; r++)
-    for (int i = 0; i < NPT; i++) s[r][i] = st[(size_t)r * p.Dk + NPT * lane + i];
+    for (int i = 0; i < NPT; i++) s[r][i] = float(st[(size_t)r * p.Dk + NPT * lane + i]);
   const int t0 = seq_start[b], nt = seq_len[b];
   const int qo = hk * p.Dk + NPT * lane, ko = p.Hk * p.Dk + hk * p.Dk + NPT * lane, vo = 2 * p.Hk * p.Dk + hv * p.Dv + dv0;
   float kk[NPT], qq[NPT], vv[R], gg = 0, bt = 0;
@@ -1445,12 +1445,16 @@ kernel void gdn_step_r(device const bfloat* conv_out [[buffer(0)]],
   }
   if (p.verify && spec[b]) return;
   for (int r = 0; r < R; r++)
-    for (int i = 0; i < NPT; i++) st[(size_t)r * p.Dk + NPT * lane + i] = s[r][i];
+    for (int i = 0; i < NPT; i++) st[(size_t)r * p.Dk + NPT * lane + i] = ST(s[r][i]);
 }
+// _s16: the recurrent state stored in bf16 (STATE_BF16=1), arithmetic in fp32 as above.
 #define GDN_STEP_R(R)                                                                                                  \
-  template [[host_name("gdn_step_r" #R)]] kernel void gdn_step_r<R>(device const bfloat*, device const float*,         \
+  template [[host_name("gdn_step_r" #R)]] kernel void gdn_step_r<R, float>(device const bfloat*, device const float*,  \
       device const float*, device float*, device bfloat*, device const int*, constant FnpGdnArgs&, device const int*,     \
-      device const int*, device const int*, uint3, uint);
+      device const int*, device const int*, uint3, uint);                                                              \
+  template [[host_name("gdn_step_r" #R "_s16")]] kernel void gdn_step_r<R, bfloat>(device const bfloat*,                 \
+      device const float*, device const float*, device bfloat*, device bfloat*, device const int*, constant FnpGdnArgs&, \
+      device const int*, device const int*, device const int*, uint3, uint);
 GDN_STEP_R(2)
 GDN_STEP_R(4)
 GDN_STEP_R(8)

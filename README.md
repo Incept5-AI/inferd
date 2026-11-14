@@ -21,28 +21,28 @@ Up and running in four steps (click a step to open it). You need a Mac with Appl
 its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
 **[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.1 release</summary>
+<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.2 release</summary>
 
-Download [inferd-0.4.1-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos27-arm64.tar.gz)
-and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos27-arm64.tar.gz.sha256)
-from the [v0.4.1 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.1). No Xcode needed.
+Download [inferd-0.4.2-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.2/inferd-0.4.2-macos27-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.2/inferd-0.4.2-macos27-arm64.tar.gz.sha256)
+from the [v0.4.2 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.2). No Xcode needed.
 
 ```bash
-cd ~/Downloads && shasum -a 256 -c inferd-0.4.1-macos27-arm64.tar.gz.sha256   # prints OK
-tar xzf inferd-0.4.1-macos27-arm64.tar.gz && cd inferd-0.4.1
+cd ~/Downloads && shasum -a 256 -c inferd-0.4.2-macos27-arm64.tar.gz.sha256   # prints OK
+tar xzf inferd-0.4.2-macos27-arm64.tar.gz && cd inferd-0.4.2
 ```
 
-On **macOS 26**, use [inferd-0.4.1-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz)
-and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz.sha256)
-the same way (built natively on macOS 26.6 with Xcode 26.5; the same engine and toolchain as 0.4.0's, whose macOS 26 file passed
-the full release gate on two testers' Macs on macOS 26.6: a 128 GB Mac and a MacBook Pro M4 Max, 36 GB). During the gate
-macOS may show a Python crash report: `test_image_decode` aborts a helper process on purpose, and it is not a failure. Or build it yourself, then carry on from step 2
+On **macOS 26** there is no 0.4.2 prebuilt yet: build it yourself (below), or use
+[inferd-0.4.1-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz)
+(its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz.sha256)), and on
+an **M4 or M4 Pro** start it with `ANE_UNITS=0` (see the v0.4.2 release notes). During the gate
+macOS may show a Python crash report: `test_image_decode` aborts a helper process on purpose, and it is not a failure. To build it yourself, then carry on from step 2
 in `engine/`. That needs Xcode, not just the Command Line Tools, with its Metal toolchain (once:
 `xcodebuild -downloadComponent MetalToolchain`); `./build.sh` uses `/Applications/Xcode.app` by itself when the
 Command Line Tools are the active developer directory (see [Building from source](#building-from-source)):
 
 ```bash
-git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.1 && cd engine
+git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.2 && cd engine
 ./build.sh                                   # under a minute
 ```
 
@@ -148,7 +148,7 @@ every table and the raw file behind each number: [docs/RESULTS.md](docs/RESULTS.
 | M5 Pro, 64 GB | 35B, 32 agents taking turns on 4k / 16k contexts, total tok/s | **610 / 467** |
 | M5 Pro, 64 GB | 27B on 32k contexts, 16 agents: the slowest agent's first token | **5.8–7.5 s** |
 | M5 Pro, 64 GB | agents resumed after unrelated load (35B / 27B): first token | **0.14 s / 0.25 s** |
-| M4 Pro, 64 GB | 27B, one agent, 8k prompt: first token (the Neural Engine helps on M4) | **42.8 s** (0.3.0: 64.2 s) |
+| M4 Pro, 64 GB | 27B, one agent, 8k prompt: first token (with the opt-in Neural Engine split, `ANE_UNITS=26`) | **42.8 s** (0.3.0: 64.2 s) |
 
 <details><summary><b>How the minis compare with other engines</b> (Splash 1.5, TensorFold 1.2.2, mlx_lm)</summary>
 

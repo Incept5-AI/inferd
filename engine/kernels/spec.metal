@@ -152,10 +152,11 @@ kernel void gdn_conv_replay(device const bfloat* tape_x [[buffer(0)]],
 
 // Replay the recurrence of speculative sequences over their committed rows, from the per-layer tape of
 // normalised q/k/v (conv_out), g and beta. Same arithmetic as gdn_step. grid (32, Dv, S*Hv), tg (32, 4, 1).
+template <typename ST>
 kernel void gdn_replay(device const bfloat* conv_out [[buffer(0)]],
                        device const float* g [[buffer(1)]],
                        device const float* beta [[buffer(2)]],
-                       device float* state [[buffer(3)]],
+                       device ST* state [[buffer(3)]],
                        device const int* slot [[buffer(4)]],
                        device const int* seq_start [[buffer(5)]],
                        device const int* commit [[buffer(6)]],
@@ -167,9 +168,9 @@ kernel void gdn_replay(device const bfloat* conv_out [[buffer(0)]],
   if (!spec[b]) return;
   const int dv = gid.y;
   constexpr int NPT = 4;
-  device float* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv) * p.Dk;
+  device ST* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv) * p.Dk;
   float s[NPT];
-  for (int i = 0; i < NPT; i++) s[i] = st[NPT * lane + i];
+  for (int i = 0; i < NPT; i++) s[i] = float(st[NPT * lane + i]);
   int t0 = seq_start[b], nt = commit[b];
   for (int j = 0; j < nt; j++) {
     int t = t0 + j;
@@ -187,8 +188,11 @@ kernel void gdn_replay(device const bfloat* conv_out [[buffer(0)]],
     float delta = (v - kv) * bt;
     for (int i = 0; i < NPT; i++) s[i] += kk[i] * delta;
   }
-  for (int i = 0; i < NPT; i++) st[NPT * lane + i] = s[i];
+  for (int i = 0; i < NPT; i++) st[NPT * lane + i] = ST(s[i]);
 }
+template [[host_name("gdn_replay")]] kernel void gdn_replay<float>(device const bfloat*, device const float*, device const float*, device float*, device const int*, device const int*, device const int*, device const int*, constant ReplayArgs&, uint3, uint);
+template [[host_name("gdn_replay_s16")]] kernel void gdn_replay<bfloat>(device const bfloat*, device const float*, device const float*, device bfloat*, device const int*, device const int*, device const int*, device const int*, constant ReplayArgs&, uint3, uint);
+
 
 // dst[i, :] = src[rows[i], :]. grid (cols, n).
 struct GatherArgs { int cols; };

@@ -209,6 +209,9 @@ The full comparison is in [docs/RESULTS.md](../docs/RESULTS.md).
 ## Tuning knobs (environment)
 
 `KV8` (default 1), `KV4` (4-bit KV, opt-in, 0: twice the tokens of 8-bit KV at a measured accuracy cost, see above),
+`STATE_BF16` (0.4.2, opt-in, 0: the Gated DeltaNet state stored in bf16, arithmetic still fp32; half the state memory and
+traffic, +3-7% total tok/s at 8-16 agents on the M5 Pro, M6 and Studio, and the M6's slowest 16k first token at 16
+agents 55 s → 6 s; KL vs mlx_lm +0.0001-0.0003),
 `RING8` (8-bit drafter context rings: drafts only, the output stays exact; 1, 0 = bf16), `ATTN_IQ` (int8 queries, 1; 0 under `KV4`), `SPEC_AUTO` (self-tuning block, 1), `DRAFT_BLOCK` (widest block, 16; the drafter's trained block is 8),
 `SPEC_BLOCKS` (fixed block by load, e.g. `8:4,16:3`), `ADMIT_RESERVE` (generated tokens budgeted per admitted turn,
 512), `SPILL_DIR`/`SPILL_GIB`, `W4A8` (1), `INFERD_DEBUG` (per-step logs and the tuner table), `SPILL_DEBUG`,
@@ -244,7 +247,7 @@ See `CLAUDE.md` in the project root for the rest.
   endpoints answer a clean 501 ([docs/API-COMPAT.md](../docs/API-COMPAT.md)). Qwen3.6-35B-A3B fleets: int8 experts on the
   QA8 path, the router as a matmul from 64 rows, drafter attention on simdgroup matrices (M5 Pro fleet 60–71 → 81–93
   turns/min), and decode snapshots off when a chat template drops earlier reasoning (Studio 16k x 32: 269 → 1,079 tok/s).
-  M4 / M4 Pro: the Neural Engine FFN split on by default (8k prompt 64.2 → 42.8 s). `install.sh` / `run.sh start` find
+  M4 / M4 Pro: the Neural Engine FFN split (8k prompt 64.2 → 42.8 s; on by default in 0.4.0-0.4.1, opt-in since 0.4.2). `install.sh` / `run.sh start` find
   models in `~/models`, the Hugging Face cache and LM Studio, and accept known equivalent builds (with a note; `--exact`
   for exact repo ids). `run.sh start` sizing: the Mac Studio gets 192 snapshots (27B fleet at 64 in flight 59.6 → 95.3
   turns/min), Flash-Next 64 running / 128 snapshots (64 agents at 16k: 209–287 → 1,289–1,323 tok/s). A macOS 26 build

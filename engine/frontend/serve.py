@@ -59,7 +59,7 @@ def _version():
                 return ln.split(None, 1)[1].strip()
     except OSError:
         pass
-    return "0.4.1"
+    return "0.4.2"
 
 
 VERSION = _version()  # inferd; GET /version

@@ -131,7 +131,7 @@ What each machine taught us:
 | Verify attention on whole-tile matmuls (`attn_mpp`) | on; needs bf16 KV at first, 8-bit KV variant since 31 Oct | on | the minis' early 8-bit KV runs used the older kernel | on |
 | 8-bit KV | default (halves KV memory; 10–12% faster verify steps at 64k–128k) | default | default (memory) | on; bf16 for Gemma-4 |
 | Residency set over every buffer | no measured gain (`RESIDENCY=1` opt-in) | – | required with the Neural Engine split | on only with `ANE_UNITS` |
-| Neural Engine FFN split | not used | no gain | M6: on (24 units); M5 Pro: off | off (`ANE_UNITS=0`), except M4 / M4 Pro: 26 units by default |
+| Neural Engine FFN split | not used | no gain | M6: on (24 units); M5 Pro: off | off by default since 0.4.2 (`ANE_UNITS` opt-in; 0.4.1 put 26 units on M4 / M4 Pro: see below) |
 | Drafter linears | 4-bit (`DRAFT_BITS=4`) | 4-bit | 4-bit (the fleet scripts once pinned 8-bit; 4-bit gives 0.8 GiB back for KV) | 4-bit |
 
 Sources: the study log sections "Mac minis (2026-10-30)", "Lessons from the mlx.fast competition", "attn_mpp", "Splash at
@@ -158,8 +158,8 @@ Pro row", `16 1024 24 30 147456`); 256 GB and up the Studio row below. `--dry-ru
 |---|---|---|---|
 | Mac Studio M5 Ultra, 256 GB | `8300 64 2048 140 192 262144` | defaults (`KV8=1`, `SPEC_AUTO=1`, `LANE=0`, `ANE_UNITS=0`); `SPILL_DIR` optional | Give the KV size explicitly; never 0 with a small model. Restart the server between long benchmark sweeps |
 | Mac mini M5 Pro, 64 GB | `8300 16 1024 24 30 147456` (README); the overnight fleets used `8300 32 1024 0 16 <window>` | `SPILL_DIR=… SPILL_GIB=96`, `DRAFT_BITS=4` | GPU only: the Neural Engine split gains ~3% here |
-| Mac mini M6, 32 GB | `8300 4 1024 3 8 40960` (README); the overnight fleets used 8 running, auto KV (3.1–4 GiB), 16 snapshots | `SPILL_DIR=… SPILL_GIB=64` (README) or 96 (fleets), `ANE_UNITS=24` (`ANE_MIN_ROWS` defaults to 1,024), `DRAFT_BITS=4` | The Neural Engine split is worth +8–17% in fleets. Agents beyond the KV pool queue and swap through the SSD |
-| Mac mini M4 Pro, 64 GB (no GPU neural accelerators) | `8300 16 1024 0 8 40960` (the 5 Nov measurements) | `DRAFT=…`; the Neural Engine split is on by default (26 units; `ANE_UNITS=0` off) | Prefill ~1.5x with the split (RESULTS.md (v)); decode unchanged. Qwen3.6-35B-A3B: leave the drafter off from 4 agents (`--draft none`): 4k x 4 / 16 agents 152 / 211 tok/s without vs 83 / 133 with it (5 Nov); with 1 agent the drafter wins (107 vs 86) |
+| Mac mini M6, 32 GB | `8300 4 1024 3 8 40960` (README); the overnight fleets used 8 running, auto KV (3.1–4 GiB), 16 snapshots | `SPILL_DIR=… SPILL_GIB=64` (README) or 96 (fleets), `DRAFT_BITS=4` | Leave the Neural Engine split off with several agents and a drafter (see below): its fleet gains came from replies cut short. Agents beyond the KV pool queue and swap through the SSD |
+| Mac mini M4 Pro, 64 GB (no GPU neural accelerators) | `8300 16 1024 0 8 40960` (the 5 Nov measurements) | `DRAFT=…`; the Neural Engine split is opt-in since 0.4.2 (`ANE_UNITS=26`; single agents only, see below) | Prefill ~1.5x with the split (RESULTS.md (v)); decode unchanged. Qwen3.6-35B-A3B: leave the drafter off from 4 agents (`--draft none`): 4k x 4 / 16 agents 152 / 211 tok/s without vs 83 / 133 with it (5 Nov); with 1 agent the drafter wins (107 vs 86) |
 | MacBook Pro M5 Max | as the M5 Pro row | as the M5 Pro row | Benchmark on AC power and expect thermal drift; confirm small kernel wins on the Studio |
 
 The README's mini rows were written for 0.1.0 before the auto-sized pool; the overnight values are what produced the
@@ -208,7 +208,11 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
 - **Still wrong on the M4, off the default path:** `NAX_MPP=0` (`attn_paged_nax`). **Not rerouted, probably wrong
   there (untested):** bf16 checkpoints (`mlx_gemm`). The Neural Engine split's K-slice GEMM (MLX's `mlx_qmm_sgw` on
   these GPUs) is correct: the release gate passes with the split on (5 Nov, below).
-- **Prefill, 5 Nov: the Neural Engine split is on by default on M4 / M4 Pro** (26 of the 27B's 34 FFN units;
+- **14 Nov: off by default again (0.4.2).** With several agents at once and a drafter, a speculative verify block that
+  shares a split step can commit an end-of-turn token in place of its draft, so replies stop after 2-3 tokens (M4 Pro,
+  0.4.1 defaults, 8k agent fleet: 13 of 16 turns at 8 agents, 4 of 32 at 16; 0 with `ANE_UNITS=0`). Single agents and
+  runs without a drafter are unaffected and prefill logits pass the gate. `ANE_UNITS` still turns it on.
+- **Prefill, 5 Nov: the Neural Engine split was on by default on M4 / M4 Pro** (until 0.4.2) (26 of the 27B's 34 FFN units;
   `ANE_UNITS` overrides, `0` turns it off; `Qwen35::ane_units_default`). Where the time went before (8k, 2,048-row
   chunks, `PROF_KERNELS=1`): MLX's quantized GEMM 93.0%, attention 3.8%, GDN 1.7%, the rest < 1% each. That GEMM already
   runs at ~6.2 TFLOPS, level with mlx_lm (engine prefill 125 tok/s at 8k vs mlx_lm's 130.6), so a faster GPU kernel had

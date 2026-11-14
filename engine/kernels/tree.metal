@@ -211,8 +211,9 @@ inline float gdn_update(thread float* s, thread const GdnRow& r) {
 // state after the root (kept in registers) by replaying the parent's ancestors below the root (tanc): no per-node
 // state is stored (a register stack spilled, a threadgroup one cost occupancy). Same arithmetic as gdn_step.
 // grid (32, Dv, ntree * Hv), threadgroup (32, 4, 1).
+template <typename ST>
 kernel void gdn_step_tree(device const bfloat* conv_out [[buffer(0)]], device const float* g [[buffer(1)]],
-                          device const float* beta [[buffer(2)]], device const float* state [[buffer(3)]],
+                          device const float* beta [[buffer(2)]], device const ST* state [[buffer(3)]],
                           device bfloat* y [[buffer(4)]], device const int* slot [[buffer(5)]],
                           constant GdnArgs& p [[buffer(6)]], device const int* seq_start [[buffer(7)]],
                           device const int* seq_len [[buffer(8)]], device const int* tseqs [[buffer(9)]],
@@ -222,7 +223,7 @@ kernel void gdn_step_tree(device const bfloat* conv_out [[buffer(0)]], device co
   constexpr int NPT = 4;
   const int n = gid.z, b = tseqs[n / p.Hv], hv = n % p.Hv, hk = hv / (p.Hv / p.Hk);
   const int dv = gid.y;
-  device const float* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv) * p.Dk;
+  device const ST* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv) * p.Dk;
   const int t0 = seq_start[b], nt = seq_len[b];
   auto load = [&](int t) {
     GdnRow r;
@@ -237,7 +238,7 @@ kernel void gdn_step_tree(device const bfloat* conv_out [[buffer(0)]], device co
   };
   float s[NPT], sr[NPT];  // the current state; the state after the root
 #pragma unroll
-  for (int i = 0; i < NPT; i++) s[i] = st[NPT * lane + i];
+  for (int i = 0; i < NPT; i++) s[i] = float(st[NPT * lane + i]);
   for (int j = 0; j < nt; j++) {
     const int t = t0 + j, td = tdep[t];
     if (td & 0x200) {
@@ -261,6 +262,9 @@ kernel void gdn_step_tree(device const bfloat* conv_out [[buffer(0)]], device co
       for (int i = 0; i < NPT; i++) sr[i] = s[i];
   }
 }
+template [[host_name("gdn_step_tree")]] kernel void gdn_step_tree<float>(device const bfloat*, device const float*, device const float*, device const float*, device bfloat*, device const int*, constant GdnArgs&, device const int*, device const int*, device const int*, device const int*, device const int*, device const uint*, uint3, uint);
+template [[host_name("gdn_step_tree_s16")]] kernel void gdn_step_tree<bfloat>(device const bfloat*, device const float*, device const float*, device const bfloat*, device bfloat*, device const int*, constant GdnArgs&, device const int*, device const int*, device const int*, device const int*, device const int*, device const uint*, uint3, uint);
+
 
 // Greedy acceptance for tree sequences (after spec_accept, whose results for them it replaces): from the root,
 // follow the child whose token is the target's argmax after the current node. commit = path length (root
@@ -311,8 +315,9 @@ kernel void gdn_conv_replay_tree(device const bfloat* tape_x [[buffer(0)]], devi
   st[2 * p.conv_dim + c] = bfloat(s2);
 }
 
+template <typename ST>
 kernel void gdn_replay_tree(device const bfloat* conv_out [[buffer(0)]], device const float* g [[buffer(1)]],
-                            device const float* beta [[buffer(2)]], device float* state [[buffer(3)]],
+                            device const float* beta [[buffer(2)]], device ST* state [[buffer(3)]],
                             device const int* slot [[buffer(4)]], device const int* seq_start [[buffer(5)]],
                             device const int* commit [[buffer(6)]], device const int* tseqs [[buffer(7)]],
                             constant ReplayArgs& p [[buffer(8)]], device const int* tpath [[buffer(9)]],
@@ -320,9 +325,9 @@ kernel void gdn_replay_tree(device const bfloat* conv_out [[buffer(0)]], device 
   const int n = gid.z, b = tseqs[n / p.Hv], hv = n % p.Hv, hk = hv / (p.Hv / p.Hk);
   const int dv = gid.y;
   constexpr int NPT = 4;
-  device float* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv) * p.Dk;
+  device ST* st = state + (((size_t)slot[b] * p.Hv + hv) * p.Dv + dv) * p.Dk;
   float s[NPT];
-  for (int i = 0; i < NPT; i++) s[i] = st[NPT * lane + i];
+  for (int i = 0; i < NPT; i++) s[i] = float(st[NPT * lane + i]);
   const int t0 = seq_start[b], nt = commit[b];
   for (int j = 0; j < nt; j++) {
     const int t = t0 + tpath[b * MAX_BLOCK + j];
@@ -340,8 +345,11 @@ kernel void gdn_replay_tree(device const bfloat* conv_out [[buffer(0)]], device 
     float delta = (v - kv) * bt;
     for (int i = 0; i < NPT; i++) s[i] += kk[i] * delta;
   }
-  for (int i = 0; i < NPT; i++) st[NPT * lane + i] = s[i];
+  for (int i = 0; i < NPT; i++) st[NPT * lane + i] = ST(s[i]);
 }
+template [[host_name("gdn_replay_tree")]] kernel void gdn_replay_tree<float>(device const bfloat*, device const float*, device const float*, device float*, device const int*, device const int*, device const int*, device const int*, constant ReplayArgs&, device const int*, uint3, uint);
+template [[host_name("gdn_replay_tree_s16")]] kernel void gdn_replay_tree<bfloat>(device const bfloat*, device const float*, device const float*, device bfloat*, device const int*, device const int*, device const int*, device const int*, constant ReplayArgs&, device const int*, uint3, uint);
+
 
 // Move the accepted path's K/V (and 8-bit scales) of one attention layer from slots pos0 + tpath[j] to pos0 + j.
 // Path nodes ascend with i_j >= j, so walking j upward reads every source before anything overwrites it.
