@@ -21,18 +21,18 @@ Up and running in four steps (click a step to open it). You need a Mac with Appl
 its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
 **[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.2 release</summary>
+<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.3 release</summary>
 
-Download [inferd-0.4.2-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.2/inferd-0.4.2-macos27-arm64.tar.gz)
-and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.2/inferd-0.4.2-macos27-arm64.tar.gz.sha256)
-from the [v0.4.2 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.2). No Xcode needed.
+Download [inferd-0.4.3-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.3/inferd-0.4.3-macos27-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.3/inferd-0.4.3-macos27-arm64.tar.gz.sha256)
+from the [v0.4.3 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.3). No Xcode needed.
 
 ```bash
-cd ~/Downloads && shasum -a 256 -c inferd-0.4.2-macos27-arm64.tar.gz.sha256   # prints OK
-tar xzf inferd-0.4.2-macos27-arm64.tar.gz && cd inferd-0.4.2
+cd ~/Downloads && shasum -a 256 -c inferd-0.4.3-macos27-arm64.tar.gz.sha256   # prints OK
+tar xzf inferd-0.4.3-macos27-arm64.tar.gz && cd inferd-0.4.3
 ```
 
-On **macOS 26** there is no 0.4.2 prebuilt yet: build it yourself (below), or use
+On **macOS 26** there is no 0.4.3 prebuilt yet: build it yourself (below), or use
 [inferd-0.4.1-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz)
 (its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz.sha256)), and on
 an **M4 or M4 Pro** start it with `ANE_UNITS=0` (see the v0.4.2 release notes). During the gate
@@ -42,7 +42,7 @@ in `engine/`. That needs Xcode, not just the Command Line Tools, with its Metal 
 Command Line Tools are the active developer directory (see [Building from source](#building-from-source)):
 
 ```bash
-git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.2 && cd engine
+git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.3 && cd engine
 ./build.sh                                   # under a minute
 ```
 
