@@ -218,8 +218,13 @@ agents 55 s → 6 s; KL vs mlx_lm +0.0001-0.0003),
 `SPEC_ROWS` (verify rows to size the drafter and GDN tapes for; default from the block policy, 0 = the old
 max_running x 16 sizing), `SNAP_GEN` (decode snapshot interval, 128; 0 off; taken only for requests the front end marks, see `INFERD_GEN_SNAP`), `SNAP_GEN_FORCE` (N > 0: with N or more decoders, shorten blocks to land
 every `SNAP_GEN`; 0, default: cost 4-6%), `SNAP_REDUNDANT` (evict snapshots superseded on their chain first, 1), `PREFIX_ANY` (pure-attention models resume at any cached block without a snapshot slot, 1),
-`TREE` (token-tree verification for one greedy decoder: nodes per tree, 16; 0 = chains), `TREE_SEQS` (decoders that
+`TREE` (token-tree verification for one greedy decoder: nodes per tree, 16, or 8 under `SG_POLICY`; 0 = chains), `TREE_SEQS` (decoders that
 get trees, 1), `TREE_GPU` (build the trees on the GPU, 0), `TREE_TEMP` (1.5), `TREE_KIDS` (4).
+`SG_TILES` (no neural accelerators: 8-row GEMM tiles from 6 rows; on up to 40 GPU cores, measured on an M3 Max only; 0 =
+the 0.4.2 routing), `SG_POLICY` (the block policy for those tiles, 1: start at 8 for one or two decoders and 4 above,
+tuner 2/3/4/5/8, 8-node trees), `SPEC_FILL` (the spare rows of a step's last GEMM row tile go out as extra verify rows,
+up to this many a sequence; 8 with `SG_TILES`, 0 with neural accelerators until measured there; +8-15% at 3, 5 and 7
+streams on the M3 Max), `SPEC_FILL_PRIO` (best acceptance first, 1).
 `QA8` (int8-activation prefill GEMMs on the checkpoint's packed 4-bit weights, no copy; adapted from oMLX's
 `oq_a8_nax`, see NOTICE; -1 auto = on with neural accelerators except Flash-Next, and an auto `PF8` then stays off;
 0/1 force), `QA8_MIN` (rows, 256), `QA8_TILE` (tile index; default 2 = 128x64 on 30+ GPU cores, 1 = 64x64 below), `QA8_RF` (grid order, 0 = column tiles fastest).

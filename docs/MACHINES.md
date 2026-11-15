@@ -57,7 +57,7 @@ fleet's wall time is prefill (the study log, "Neural Engine FFN split"). On the 
 decode-bound instead. Sources: the study log "Agent fleets (2026-10-30 evening)", "Mac minis (2026-10-30)",
 [ane-prefill logs](../results/night/m6/ane-prefill.log).
 
-### The Neural Engine split pays on the M6 and the M4 Pro, not on the M5 generation
+### The Neural Engine split pays on the M6, the M4 Pro and the M3 Max, not on the M5 generation
 
 `ANE_UNITS` moves part of every FFN layer (in 512-channel units, of 34) to the Neural Engine during prefill steps. It
 pays only where the Neural Engine is fast relative to the GPU:
@@ -65,16 +65,19 @@ pays only where the Neural Engine is fast relative to the GPU:
 | Machine | Neural Engine, one FFN unit (1,024 rows) | GPU, one unit | Prefill sweep, GPU alone → best split | In the server |
 |---|---|---|---|---|
 | Mac mini M6 | 0.71 ms (22.7 TFLOPS) | ~2.1 ms at 2,048 rows | 259 → 335 tok/s at 24 units (+29%) | 8k fleet prime 31.2 → 25.5 s; fleets +13–17% at 8k, +8–13% at 16k |
-| Mac mini M4 Pro (no GPU neural accelerators) | 1.63 ms (9.9 TFLOPS); 3.1 ms at 2,048 rows (10.3) | ~5.2 ms at 2,048 rows (MLX's `mlx_qmm_sg` at ~6.2 TFLOPS) | 114 → 218 tok/s at 26 units (+91%, 2,048-row chunks; 122 → 212 at 1,024) | **default since 5 Nov** (26 units): cold first token 8k 64.2 → 42.1–43.5 s, 32k 286 → 188–191 s; follow-ups level |
+| Mac mini M4 Pro (no GPU neural accelerators) | 1.63 ms (9.9 TFLOPS); 3.1 ms at 2,048 rows (10.3) | ~5.2 ms at 2,048 rows (MLX's `mlx_qmm_sg` at ~6.2 TFLOPS) | 114 → 218 tok/s at 26 units (+91%, 2,048-row chunks; 122 → 212 at 1,024) | default in 0.4.0–0.4.1 (26 units), opt-in since 0.4.2 (the 14 and 15 Nov notes below): cold first token 8k 64.2 → 42.1–43.5 s, 32k 286 → 188–191 s; follow-ups level |
+| MacBook Pro M3 Max, 30-core GPU (no GPU neural accelerators) | 2.19 ms (7.4 TFLOPS), 1.92 ms with int8 activations; 1.42 ms a unit inside a 20-unit function (11.3) | 2.15 ms beside the Neural Engine (30.1 ms for the 14 units it keeps at 1,024 rows) | 175 → 257 tok/s at 20 units (+47%, 1,024-row chunks; 176 → 270 at 2,048, +53%) | **default since 15 Nov on the 96 GB configuration** (20 units; off on the 36 GB one, not measured): 8 agents on cold 2k prompts, all first tokens 95.5 → 71.4 s; 4 agents 47.7 → 35.6 s; decode level |
 | Mac mini M5 Pro | 1.44 ms (11.2 TFLOPS) | ~0.55 ms | 475 → 488 tok/s at 14 units (+3%) | not used (gain below noise) |
 | MacBook Pro M5 Max | 1.40 ms (11.5 TFLOPS); 0.99 ms with int8 activations | stronger than the Neural Engine | no gain (730–875 tok/s either way, noisy) | not used |
 | Mac Studio M5 Ultra | not measured | – | – | not used (Splash's own calibration gives the split 3.8% there) |
 
 Sources: the study log "Neural Engine FFN split for prefill (2026-11-01 night)" and its "Diagnosed" section;
 [M6 sweep](../results/night/m6/ane-prefill.log), [M5 Pro sweep](../results/night/m5p/ane-prefill.log), and the fleet
-files in RESULTS.md (a). Splash 1.5.0's own split share is 0.74 on the M6 and 0.41 on the M5 Pro.
+files in RESULTS.md (a). M3 Max: RESULTS.md (ag). Splash 1.5.0's own split share is 0.74 on the M6 and 0.41 on the M5
+Pro.
 
-Two things are required for the split to pay inside the server, both now defaults when `ANE_UNITS` is set:
+Two things are required for the split to pay inside the server, both defaults when the split is on, and a third for
+it to be correct:
 
 - **A residency set over every buffer and the Neural Engine surfaces.** Without it, macOS unwired GPU memory while the
   GPU waited on the Neural Engine and re-wired it every layer: the M6's fleet prime went from 31 to 42–44 s (slower
@@ -82,9 +85,14 @@ Two things are required for the split to pay inside the server, both now default
 - **`ANE_MIN_ROWS` = 1,024.** Mixed agent-turn steps of a few hundred prompt rows paid three command buffers and two
   host waits per layer: an M6 8-agent fleet ran 6.42 turns/min with the split at ≥ 512 rows, 10.88 at ≥ 1,024, and
   9.67 on the GPU alone.
+- **Host-built token trees go in before the step is encoded.** A step that takes the split runs while it is encoded
+  (three command buffers per layer, committed and waited on), so anything the scheduler writes into the step's input
+  rows afterwards is too late. Until 15 Nov a lone decoder's token tree was written after `encode_step`: in a step it
+  shared with another agent's prompt chunk, the tree rows were verified as the previous step's tokens. That was the
+  cause of the replies cut after 2–3 tokens in 0.4.1 (RESULTS.md (ag)).
 
-The split also reserves 2.5 GiB of extra headroom, because the Neural Engine service's own buffers are outside Metal's
-memory accounting.
+The split also reserves 0.5 GiB of extra headroom (`ANE_MARGIN_GIB`; 2.5 at first, which starved the KV pool), because
+the Neural Engine service's own buffers are outside Metal's memory accounting.
 
 ### Memory budgets, KV pool and state slots
 
@@ -131,7 +139,7 @@ What each machine taught us:
 | Verify attention on whole-tile matmuls (`attn_mpp`) | on; needs bf16 KV at first, 8-bit KV variant since 31 Oct | on | the minis' early 8-bit KV runs used the older kernel | on |
 | 8-bit KV | default (halves KV memory; 10–12% faster verify steps at 64k–128k) | default | default (memory) | on; bf16 for Gemma-4 |
 | Residency set over every buffer | no measured gain (`RESIDENCY=1` opt-in) | – | required with the Neural Engine split | on only with `ANE_UNITS` |
-| Neural Engine FFN split | not used | no gain | M6: on (24 units); M5 Pro: off | off by default since 0.4.2 (`ANE_UNITS` opt-in; 0.4.1 put 26 units on M4 / M4 Pro: see below) |
+| Neural Engine FFN split | not used | no gain | M6: on (24 units); M5 Pro: off | 20 units on a 96 GB 30-core M3 Max since 15 Nov; off elsewhere since 0.4.2 (`ANE_UNITS` opt-in; 0.4.1 put 26 units on M4 / M4 Pro: see below) |
 | Drafter linears | 4-bit (`DRAFT_BITS=4`) | 4-bit | 4-bit (the fleet scripts once pinned 8-bit; 4-bit gives 0.8 GiB back for KV) | 4-bit |
 
 Sources: the study log sections "Mac minis (2026-10-30)", "Lessons from the mlx.fast competition", "attn_mpp", "Splash at
@@ -159,7 +167,7 @@ Pro row", `16 1024 24 30 147456`); 256 GB and up the Studio row below. `--dry-ru
 | Mac Studio M5 Ultra, 256 GB | `8300 64 2048 140 192 262144` | defaults (`KV8=1`, `SPEC_AUTO=1`, `LANE=0`, `ANE_UNITS=0`); `SPILL_DIR` optional | Give the KV size explicitly; never 0 with a small model. Restart the server between long benchmark sweeps |
 | Mac mini M5 Pro, 64 GB | `8300 16 1024 24 30 147456` (README); the overnight fleets used `8300 32 1024 0 16 <window>` | `SPILL_DIR=… SPILL_GIB=96`, `DRAFT_BITS=4` | GPU only: the Neural Engine split gains ~3% here |
 | Mac mini M6, 32 GB | `8300 4 1024 3 8 40960` (README); the overnight fleets used 8 running, auto KV (3.1–4 GiB), 16 snapshots | `SPILL_DIR=… SPILL_GIB=64` (README) or 96 (fleets), `DRAFT_BITS=4` | Leave the Neural Engine split off with several agents and a drafter (see below): its fleet gains came from replies cut short. Agents beyond the KV pool queue and swap through the SSD |
-| Mac mini M4 Pro, 64 GB (no GPU neural accelerators) | `8300 16 1024 0 8 40960` (the 5 Nov measurements) | `DRAFT=…`; the Neural Engine split is opt-in since 0.4.2 (`ANE_UNITS=26`; single agents only, see below) | Prefill ~1.5x with the split (RESULTS.md (v)); decode unchanged. Qwen3.6-35B-A3B: leave the drafter off from 4 agents (`--draft none`): 4k x 4 / 16 agents 152 / 211 tok/s without vs 83 / 133 with it (5 Nov); with 1 agent the drafter wins (107 vs 86) |
+| Mac mini M4 Pro, 64 GB (no GPU neural accelerators) | `8300 16 1024 0 8 40960` (the 5 Nov measurements) | `DRAFT=…`; the Neural Engine split is opt-in since 0.4.2 (`ANE_UNITS=26`; single agents only until the 15 Nov fix has been run on this machine, see below) | Prefill ~1.5x with the split (RESULTS.md (v)); decode unchanged. Qwen3.6-35B-A3B: leave the drafter off from 4 agents (`--draft none`): 4k x 4 / 16 agents 152 / 211 tok/s without vs 83 / 133 with it (5 Nov); with 1 agent the drafter wins (107 vs 86) |
 | MacBook Pro M5 Max | as the M5 Pro row | as the M5 Pro row | Benchmark on AC power and expect thermal drift; confirm small kernel wins on the Studio |
 
 The README's mini rows were written for 0.1.0 before the auto-sized pool; the overnight values are what produced the
@@ -178,7 +186,9 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
     accelerators the quantized GEMMs no longer touch them: 1-10 rows go to MLX's `qmv_wide`, 11 rows and more
     (`SG_MIN`) to MLX's simdgroup `mlx_qmm_sg`, both with bf16 activations, so W4A8 is unused by default (`SG_MIN=0`
     sends 11+ rows back to it); every multi-row chunk runs on the key-split `attn_shared` path. (The first fix kept
-    every GEMM on W4A8; this routing replaced it.)
+    every GEMM on W4A8; this routing replaced it.) Since 15 November, on GPUs of up to 40 cores, `SG_TILES` moves the
+    boundary to 5 / 6 rows and gives `mlx_qmm_sg` row tiles in 8-row steps; measured on an M3 Max only (RESULTS (af)),
+    `SG_TILES=0` restores the routing above.
     `NAX_GPU=0/1` overrides the detection. Our own `attn_paged_nax` (used only with `NAX_MPP=0`) is also wrong there.
   - **On every machine:** the DFlash2 drafter's input layer (`fc`, K = 25,600) is wider than the W4A8 activation
     scratch was sized for; a prefill chunk of more than ~0.68 x max_tokens rows overflowed it and filled the draft
@@ -212,6 +222,12 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
   shares a split step can commit an end-of-turn token in place of its draft, so replies stop after 2-3 tokens (M4 Pro,
   0.4.1 defaults, 8k agent fleet: 13 of 16 turns at 8 agents, 4 of 32 at 16; 0 with `ANE_UNITS=0`). Single agents and
   runs without a drafter are unaffected and prefill logits pass the gate. `ANE_UNITS` still turns it on.
+- **15 Nov: the cause, found and fixed on an M3 Max; the default here stays off.** A step that takes the split runs
+  while it is encoded, and the scheduler wrote a lone decoder's host-built token tree into the step's input rows after
+  that, so the tree's rows were verified as the previous step's tokens. Reproduced on a 30-core M3 Max with 8 cold
+  streams and 20 units: 2 wrong tokens of 1,024 (65 with `TREE_SEQS=8`), 0 with the fix, which installs the trees
+  before such a step is encoded (RESULTS.md (ag)). Not re-run on an M4 or M4 Pro: an agent fleet there with
+  `ANE_UNITS=26` at 8 and 16 agents would say whether the 26-unit default can come back.
 - **Prefill, 5 Nov: the Neural Engine split was on by default on M4 / M4 Pro** (until 0.4.2) (26 of the 27B's 34 FFN units;
   `ANE_UNITS` overrides, `0` turns it off; `Qwen35::ane_units_default`). Where the time went before (8k, 2,048-row
   chunks, `PROF_KERNELS=1`): MLX's quantized GEMM 93.0%, attention 3.8%, GDN 1.7%, the rest < 1% each. That GEMM already
@@ -221,11 +237,16 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
   40960`): 2k 16.1 → 12.4–12.8 s, 8k 64.2 → 42.1–43.5 s, 32k 286 → 188–191 s (~115 → ~173 tok/s; mlx_lm 118.8 at 32k).
   8k follow-ups at 1 / 4 / 16 agents 25.4 / 49.0 / 61.1 → 25.7 / 47.8 / 63.5 tok/s total. The split reserves its
   margin from the KV pool (29.7 → 28.8 GiB auto). Release gate passed with it on (logits at chunks 1/24/256/1536, cos
-  >= 0.9995 on seqs 1-3, KL <= 0.0024). Not measured on M1-M3 or the M4 Max (a 40-core GPU leaves the Neural Engine
-  a smaller share; try `ANE_UNITS` 14-26 there). Tables: [RESULTS.md (v)](RESULTS.md).
-- **Long prompts are still slow on the M3 family.** The Neural Engine split's default covers M4 / M4 Pro only; on M3 it
-  is off and untested. An external M3 Max (30-core GPU, 36 GB, 0.4.0) took 50.4 s to the first word of one ~8k-token
-  prompt (RESULTS.md (ab)). Try `ANE_UNITS` (e.g. 14-26) there and check the release gate with it on.
+  >= 0.9995 on seqs 1-3, KL <= 0.0024). Not measured on M1, M2, the M3 chips other than the 30-core M3 Max (below) or
+  the M4 Max (a 40-core GPU leaves the Neural Engine a smaller share; try `ANE_UNITS` 14-26 there). Tables:
+  [RESULTS.md (v)](RESULTS.md).
+- **Long prompts on the M3 family: the 96 GB 30-core M3 Max has the split by default since 15 Nov** (20 of the 34
+  units; 4k prefill 175 → 257–270 tok/s, RESULTS.md (ag); the rule is a 30-core M3 Max with a Metal budget above
+  64 GiB). On the other M3 chips, the 40-core M3 Max included, it is off and untested: try `ANE_UNITS` (e.g. 14-26)
+  there and check the release gate with it on. An external M3 Max (30-core GPU, 36 GB, 0.4.0, no split) took 50.4 s
+  to the first word of one ~8k-token prompt (RESULTS.md (ab)). That configuration stays off by default: the split
+  was not run on it, and loaded it takes about 0.8 GiB from an automatic KV pool (0.3 GiB of buffers plus the
+  server's 0.5 GiB `ANE_MARGIN_GIB`), which is a few GiB there. `ANE_UNITS=20` is the setting to try on it.
 - **External M4 Pro MacBook Pro (48 GB), 98a2b19 (the 0.4.0 engine + docs), 5 Nov, 2 trials each:** prefill 1.5-1.9x
   faster at 4k / 16k with the Neural Engine split on by default (speed.py first token 22.7 vs 35.3 s at 4k, 92.7 vs 157 s
   at 16k; decode unchanged). 4k follow-ups, drafter on vs off, total decode tok/s at 1 / 4 / 8 / 16 agents: 23.9-22.8 /

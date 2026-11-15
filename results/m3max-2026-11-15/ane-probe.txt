@@ -1,0 +1,13 @@
+A8=0 64 10240 | compiled in 0.30 s, loaded in 0.03 s max rel err (12 samples) 0.0077 R=64 C=10240 (20 units of 512): best 4.79 ms, mean 5.42 ms, 0.24 ms per unit, 4.2 TFLOPS 
+A8=0 256 10240 | compiled in 0.97 s, loaded in 0.01 s max rel err (12 samples) 0.0039 R=256 C=10240 (20 units of 512): best 9.52 ms, mean 10.23 ms, 0.48 ms per unit, 8.5 TFLOPS 
+A8=0 1024 10240 | compiled in 1.80 s, loaded in 0.01 s max rel err (12 samples) 0.0028 R=1024 C=10240 (20 units of 512): best 35.08 ms, mean 35.73 ms, 1.75 ms per unit, 9.2 TFLOPS 
+A8=0 2048 10240 | compiled in 2.93 s, loaded in 0.01 s max rel err (12 samples) 0.0019 R=2048 C=10240 (20 units of 512): best 66.83 ms, mean 67.33 ms, 3.34 ms per unit, 9.6 TFLOPS 
+A8=0 1024 512 | compiled in 0.21 s, loaded in 0.01 s max rel err (12 samples) 0.0010 R=1024 C=512 (1 units of 512): best 2.19 ms, mean 2.50 ms, 2.19 ms per unit, 7.4 TFLOPS 
+A8=0 64 512 | compiled in 0.09 s, loaded in 0.01 s max rel err (12 samples) 0.0012 R=64 C=512 (1 units of 512): best 0.64 ms, mean 0.71 ms, 0.64 ms per unit, 1.6 TFLOPS 
+A8=1 64 10240 | compiled in 0.17 s, loaded in 0.01 s max rel err (12 samples) 0.0004 R=64 C=10240 (20 units of 512): best 4.86 ms, mean 5.14 ms, 0.24 ms per unit, 4.1 TFLOPS 
+A8=1 256 10240 | compiled in 0.50 s, loaded in 0.01 s max rel err (12 samples) 0.0006 R=256 C=10240 (20 units of 512): best 8.62 ms, mean 9.39 ms, 0.43 ms per unit, 9.3 TFLOPS 
+A8=1 1024 10240 | compiled in 1.64 s, loaded in 0.01 s max rel err (12 samples) 0.0006 R=1024 C=10240 (20 units of 512): best 28.40 ms, mean 29.64 ms, 1.42 ms per unit, 11.3 TFLOPS 
+A8=1 2048 10240 | compiled in 2.75 s, loaded in 0.01 s max rel err (12 samples) 0.0006 R=2048 C=10240 (20 units of 512): best 53.34 ms, mean 54.49 ms, 2.67 ms per unit, 12.1 TFLOPS 
+A8=1 1024 512 | compiled in 0.19 s, loaded in 0.01 s max rel err (12 samples) 0.0002 R=1024 C=512 (1 units of 512): best 1.92 ms, mean 2.15 ms, 1.92 ms per unit, 8.4 TFLOPS 
+A8=1 64 512 | compiled in 0.07 s, loaded in 0.01 s max rel err (12 samples) 0.0001 R=64 C=512 (1 units of 512): best 0.59 ms, mean 0.77 ms, 0.59 ms per unit, 1.7 TFLOPS 
+done 18:36

@@ -1,0 +1,39 @@
+up: pid 68453, log srv-base8t8.log
+{"label": "base8t8", "n": 8, "ptoks": 2048, "first_s": 96.59, "wall_s": 106.35, "ttft": [17.54, 29.31, 41.09, 53.02, 64.95, 77.33, 89.79, 96.59], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "length", "length", "length", "length", "length", "length"], "cached": [0, 0, 0, 0, 0, 0, 0, 0]}
+stopped
+up: pid 70737, log srv-pre8t8.log
+{"label": "pre8t8", "n": 8, "ptoks": 2048, "first_s": 70.75, "wall_s": 84.36, "ttft": [11.83, 20.66, 29.51, 38.42, 47.35, 56.4, 65.51, 70.75], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "length", "length", "length", "length", "length", "length"], "cached": [0, 0, 0, 0, 0, 0, 0, 0]}
+stopped
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+up: pid 72499, log srv-fix8t8.log
+{"label": "fix8t8", "n": 8, "ptoks": 2048, "first_s": 70.58, "wall_s": 80.33, "ttft": [11.84, 20.65, 29.48, 38.37, 47.28, 56.31, 65.38, 70.58], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "length", "length", "length", "length", "length", "length"], "cached": [0, 0, 0, 0, 0, 0, 0, 0]}
+stopped
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+  stream 0: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 1: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 56, above 0.5: []
+  stream 2: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 3: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 4: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 55, above 0.5: []
+  stream 5: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 6: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 25, above 0.5: []
+  stream 7: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+selfcheck cold-base8t8.out: 1024 tokens, 0 above the 0.5 gap, worst 0.125
+  stream 0: 128 tokens, 16 not the reference top-1, max gap 24.109 at token 2, above 0.5: [(2, 24.109), (4, 18.469), (6, 11.812), (7, 11.969), (9, 5.0), (12, 1.0), (13, 6.062), (14, 1.188)] ...
+  stream 1: 128 tokens, 18 not the reference top-1, max gap 17.562 at token 2, above 0.5: [(2, 17.562), (4, 11.75), (5, 11.625), (7, 8.438), (8, 0.562), (12, 10.844), (14, 0.625), (15, 0.75)] ...
+  stream 2: 128 tokens, 14 not the reference top-1, max gap 20.688 at token 2, above 0.5: [(2, 20.688), (4, 18.766), (6, 13.125), (7, 12.219), (9, 3.75), (10, 2.812), (11, 2.25), (12, 5.375)] ...
+  stream 3: 128 tokens, 8 not the reference top-1, max gap 18.188 at token 2, above 0.5: [(2, 18.188), (4, 12.438), (5, 13.0), (6, 0.938), (8, 13.25), (10, 15.625), (13, 4.875), (16, 1.5)]
+  stream 4: 128 tokens, 11 not the reference top-1, max gap 19.156 at token 2, above 0.5: [(2, 19.156), (4, 15.406), (6, 15.469), (8, 9.688), (9, 13.688), (10, 5.25), (13, 1.25), (15, 2.625)] ...
+  stream 5: 128 tokens, 4 not the reference top-1, max gap 19.531 at token 2, above 0.5: [(2, 19.531), (4, 16.562), (6, 17.68), (8, 0.625)]
+  stream 6: 128 tokens, 5 not the reference top-1, max gap 17.688 at token 2, above 0.5: [(2, 17.688)]
+  stream 7: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+selfcheck cold-pre8t8.out: 1024 tokens, 65 above the 0.5 gap, worst 24.109
+  stream 0: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 1: 128 tokens, 2 not the reference top-1, max gap 0.125 at token 56, above 0.5: []
+  stream 2: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 3: 128 tokens, 1 not the reference top-1, max gap 0.375 at token 8, above 0.5: []
+  stream 4: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 5: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 6: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 25, above 0.5: []
+  stream 7: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+selfcheck cold-fix8t8.out: 1024 tokens, 0 above the 0.5 gap, worst 0.375
+done 19:34

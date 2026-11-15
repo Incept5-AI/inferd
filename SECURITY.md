@@ -22,7 +22,9 @@ inferd is built for a **trusted local user** on a single Mac:
   `INFERD_IMAGE_DECODE_TIMEOUT` seconds (10); any other format is refused before a decoder runs, whatever media type
   the data URI claims.
 - The Neural Engine prefill split uses private Apple APIs and may stop working with an OS update. It is off unless
-  `ANE_UNITS` is set.
+  `ANE_UNITS` is set, except on a 96 GB 30-core M3 Max, where it is on by default (`ANE_UNITS=0` turns it off). There
+  is no GPU fallback: if the Neural Engine cannot run a function the server exits with a message that names
+  `ANE_UNITS=0`.
 
 ## Reporting a vulnerability
 

@@ -1,0 +1,193 @@
+The build with the 20-unit default, checked beyond ane-default-verify.txt. Builds are named by the time they were
+made on 15 November: 17:54 = before the fix, 18:59 ("fix1859") = with the fix, 19:43 = with the 20-unit default,
+20:18 = plus the ANE_UNITS=0 hint in the Neural Engine's failure messages, 20:27 = plus the memory condition of the
+default (the committed source).
+
+== A. warm decode with the split loaded against ANE_UNITS=0, the 19:43 build (raw rows: ane-default-ab.jsonl).
+==    tok/s while all n streams decode, 3 rounds x 256 tokens; p1 and p2 are the two alternating passes (off first).
+==    Then decode_test bench three times, straight after the seven minutes of server load.
+start 20:04:24
+  n=1 def-p1: sat tok/s 55.5 55.5 55.6
+  n=1 off-p1: sat tok/s 55.7 55.7 55.4
+  n=1 def-p2: sat tok/s 49.8 49.6 50.0
+  n=1 off-p2: sat tok/s 51.7 51.5 50.7
+  n=2 def-p1: sat tok/s 67.0 60.7 66.6
+  n=2 off-p1: sat tok/s 66.9 60.6 66.4
+  n=2 def-p2: sat tok/s 64.0 59.3 61.6
+  n=2 off-p2: sat tok/s 64.1 57.8 63.3
+  n=4 def-p1: sat tok/s 83.8 81.4 82.7
+  n=4 off-p1: sat tok/s 83.7 81.2 81.5
+  n=4 def-p2: sat tok/s 80.6 80.0 79.7
+  n=4 off-p2: sat tok/s 78.1 78.2 78.5
+== bench 1 20:11:44
+B=  1 L=  2048 R=1  step   63.51 ms (GPU   62.71)  =    15.7 rows/s total,   15.7/stream
+B=  4 L=  2048 R=1  step   91.12 ms (GPU   90.43)  =    43.9 rows/s total,   11.0/stream
+B=  8 L=  2048 R=1  step  108.72 ms (GPU  107.92)  =    73.6 rows/s total,    9.2/stream
+B= 16 L=  2048 R=1  step  155.57 ms (GPU  154.82)  =   102.8 rows/s total,    6.4/stream
+== bench 2 20:11:51
+B=  1 L=  2048 R=1  step   59.53 ms (GPU   58.81)  =    16.8 rows/s total,   16.8/stream
+B=  4 L=  2048 R=1  step   94.22 ms (GPU   93.34)  =    42.5 rows/s total,   10.6/stream
+B=  8 L=  2048 R=1  step  105.66 ms (GPU  104.90)  =    75.7 rows/s total,    9.5/stream
+B= 16 L=  2048 R=1  step  154.15 ms (GPU  153.34)  =   103.8 rows/s total,    6.5/stream
+== bench 3 20:11:59
+B=  1 L=  2048 R=1  step   60.91 ms (GPU   60.13)  =    16.4 rows/s total,   16.4/stream
+B=  4 L=  2048 R=1  step   91.45 ms (GPU   90.42)  =    43.7 rows/s total,   10.9/stream
+B=  8 L=  2048 R=1  step  104.88 ms (GPU  104.09)  =    76.3 rows/s total,    9.5/stream
+B= 16 L=  2048 R=1  step  156.04 ms (GPU  155.26)  =   102.5 rows/s total,    6.4/stream
+done 20:12:07
+
+== B. decode_test bench a minute later, the 18:59 build and the 19:43 build in turn
+== fix1859 pass 1 20:13:08
+B=  1 L=  2048 R=1  step   57.57 ms (GPU   56.83)  =    17.4 row
+B=  4 L=  2048 R=1  step   85.25 ms (GPU   84.56)  =    46.9 row
+B=  8 L=  2048 R=1  step   98.56 ms (GPU   97.67)  =    81.2 row
+B= 16 L=  2048 R=1  step  151.67 ms (GPU  150.87)  =   105.5 row
+== default pass 1 20:13:15
+B=  1 L=  2048 R=1  step   57.16 ms (GPU   56.37)  =    17.5 row
+B=  4 L=  2048 R=1  step   77.83 ms (GPU   77.00)  =    51.4 row
+B=  8 L=  2048 R=1  step   98.58 ms (GPU   97.74)  =    81.2 row
+B= 16 L=  2048 R=1  step  151.69 ms (GPU  150.83)  =   105.5 row
+== fix1859 pass 2 20:13:23
+B=  1 L=  2048 R=1  step   57.27 ms (GPU   56.51)  =    17.5 row
+B=  4 L=  2048 R=1  step   81.49 ms (GPU   80.66)  =    49.1 row
+B=  8 L=  2048 R=1  step   98.51 ms (GPU   97.65)  =    81.2 row
+B= 16 L=  2048 R=1  step  151.67 ms (GPU  150.82)  =   105.5 row
+== default pass 2 20:13:30
+B=  1 L=  2048 R=1  step   57.50 ms (GPU   56.75)  =    17.4 row
+B=  4 L=  2048 R=1  step   77.81 ms (GPU   76.96)  =    51.4 row
+B=  8 L=  2048 R=1  step   98.74 ms (GPU   97.91)  =    81.0 row
+B= 16 L=  2048 R=1  step  151.68 ms (GPU  150.82)  =   105.5 row
+
+== C. logits at chunk 256 under the default, the 19:43 build
+== chunk 256, defaults (4 x 256 = 1,024-row steps take the split): against mlx_lm
+seq 0: cos 0.99814  max|diff| 1.469  KL 0.00122  top1 ok  top5 overlap 4/5
+seq 1: cos 0.99976  max|diff| 0.312  KL 0.00010  top1 ok  top5 overlap 5/5
+seq 2: cos 0.99951  max|diff| 0.562  KL 0.00335  top1 ok  top5 overlap 5/5
+seq 3: cos 0.99717  max|diff| 2.188  KL 0.00000  top1 ok  top5 overlap 5/5
+compare: 4/4 sequences pass
+== chunk 256, ANE_UNITS=0 20:14:13
+chunk 256, ANE_UNITS=0: byte-identical to the 18:59 build
+== chunk 256, defaults, repeat (is the split deterministic?) 20:15:02
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1024 rows, W8A8 gate/up (rotated)
+chunk 256, defaults: byte-identical to the first run
+
+== D. the 20:18 build, checked again
+== 1. logits, nothing in the environment 20:19:36
+chunk 24: byte-identical to the 19:43 build
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1024 rows, W8A8 gate/up (rotated)
+chunk 256: byte-identical to the 19:43 build
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+chunk 1536: byte-identical to the 19:43 build
+== 2. bench 20:21:46
+B=  1 L=  2048 R=1  step   58.48 ms (GPU   57.69)  =    17.1 rows/s total,   17.1/stream
+B=  4 L=  2048 R=1  step   85.11 ms (GPU   84.21)  =    47.0 rows/s total,   11.7/stream
+B=  8 L=  2048 R=1  step  100.60 ms (GPU   99.79)  =    79.5 rows/s total,    9.9/stream
+B= 16 L=  2048 R=1  step  152.29 ms (GPU  151.45)  =   105.1 rows/s total,    6.6/stream
+== 3. 8 cold streams x 128, nothing in the environment 20:21:53
+up: pid 35571, log srv-re8.log
+{"label": "re8", "n": 8, "ptoks": 2048, "first_s": 71.37, "wall_s": 80.39, "ttft": [11.83, 20.66, 29.49, 38.33, 47.18, 56.07, 64.97, 71.37], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "length", "length", "length", "length", "length", "length"], "cached": [0, 0, 0, 0, 0, 0, 0, 0]}
+stopped
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+{"label": "re8", "n": 8, "ptoks": 2048, "first_s": 71.37, "wall_s": 80.39, "ttft": [11.83, 20.66, 29.49, 38.33, 47.18, 56.07, 64.97, 71.37], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "length", "length", "length", "length", "length", "length"], "cached": [0, 0, 
+== 4. whole-stream check (mlx_lm) 20:23:25
+  stream 0: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 1: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 117, above 0.5: []
+  stream 2: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 3: 128 tokens, 1 not the reference top-1, max gap 0.375 at token 8, above 0.5: []
+  stream 4: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 5: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 6: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 7: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+selfcheck cold-re8.out: 1024 tokens, 0 above the 0.5 gap, worst 0.375
+done 20:25:15
+
+== E. the 20:27 build (the committed source), checked again
+== 1. logits, nothing in the environment 20:28:03
+chunk 24: byte-identical to the 19:43 build
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1024 rows, W8A8 gate/up (rotated)
+chunk 256: byte-identical to the 19:43 build
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+chunk 1536: byte-identical to the 19:43 build
+== 2. bench 20:30:13
+B=  1 L=  2048 R=1  step   58.34 ms (GPU   57.54)  =    17.1 rows/s total,   17.1/stream
+B=  4 L=  2048 R=1  step   87.03 ms (GPU   86.26)  =    46.0 rows/s total,   11.5/stream
+B=  8 L=  2048 R=1  step  100.51 ms (GPU   99.73)  =    79.6 rows/s total,    9.9/stream
+B= 16 L=  2048 R=1  step  152.28 ms (GPU  151.39)  =   105.1 rows/s total,    6.6/stream
+== 3. 8 cold streams x 128, nothing in the environment 20:30:20
+up: pid 45122, log srv-re8b.log
+{"label": "re8b", "n": 8, "ptoks": 2048, "first_s": 71.29, "wall_s": 80.33, "ttft": [11.82, 20.62, 29.43, 38.27, 47.09, 56.0, 64.89, 71.29], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "length", "length", "length", "length", "length", "length"], "cached": [0, 0, 0, 0, 0, 0, 0, 0]}
+stopped
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+{"label": "re8b", "n": 8, "ptoks": 2048, "first_s": 71.29, "wall_s": 80.33, "ttft": [11.82, 20.62, 29.43, 38.27, 47.09, 56.0, 64.89, 71.29], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "length", "length", "length", "length", "length", "length"], "cached": [0, 0, 
+== 4. whole-stream check (mlx_lm) 20:31:52
+  stream 0: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 1: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 117, above 0.5: []
+  stream 2: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 3: 128 tokens, 1 not the reference top-1, max gap 0.375 at token 8, above 0.5: []
+  stream 4: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 5: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 6: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 7: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+selfcheck cold-re8b.out: 1024 tokens, 0 above the 0.5 gap, worst 0.375
+done 20:33:44
+
+== F. the 20:27 build: the automatic KV pool with and without the split (KV argument 0), then spec_test against
+==    plain decode (SPEC_STRICT=1, 128 tokens) on 4 x 24-token prompts (short.txt) and on 4 x 2,048-token prompts
+==    (toks.txt; these prefill through the split). Exit 3 = some sequence differs from plain decode.
+start 20:34:00
+== automatic KV pool, nothing set
+up: pid 49511, log srv-kv0def.log
+inferd: drafter memory: 2.27 GiB own (context rings 0.81 for 40 slots, 8-bit), 0.43 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows)
+inferd: memory: GPU budget 77.8 GiB; model + state + scratch 20.8, drafter 2.7, PF8 0.0, KV 44.5 (auto) -> 67.9 allocated
+inferd: 8-bit KV, 44828 KV blocks (44 GiB, 1.4M tokens), 40 slots (5.7 GiB state), max ctx 8192
+stopped
+== automatic KV pool, ANE_UNITS=0
+up: pid 49909, log srv-kv0off.log
+inferd: drafter memory: 2.27 GiB own (context rings 0.81 for 40 slots, 8-bit), 0.43 GiB verify scratch (GDN tapes 0.29 for 144 rows; 144 output rows)
+inferd: memory: GPU budget 77.8 GiB; model + state + scratch 20.5, drafter 2.7, PF8 0.0, KV 45.3 (auto) -> 68.4 allocated
+inferd: 8-bit KV, 45649 KV blocks (45 GiB, 1.5M tokens), 40 slots (5.7 GiB state), max ctx 8192
+stopped
+== spec_test, short.txt, 128 tokens, SPEC_STRICT=1 20:34:52
+exit 3
+lossless: 2/4 identical, 2 diverged: seqs 0,1
+== spec_test, toks.txt, 128 tokens, SPEC_STRICT=1 20:35:34
+exit 3
+lossless: 3/4 identical, 1 diverged: seqs 1
+done 20:37:31
+-- spec_test, short.txt
+plain: host 81.3 ms per cycle, 80.9 ms of it in commit+wait, 0.3 ms submit->GPU start
+plain: 922 kernel dispatches per cycle
+plain: 516 tokens in 10.41 s = 49.6 tok/s total over 4 seqs, 1.01 tokens per cycle, 80.4 ms GPU per cycle
+spec : host 483.2 ms per cycle, 482.5 ms of it in commit+wait, 0.3 ms submit->GPU start
+spec : 1101 kernel dispatches per cycle
+spec : 843 tokens in 8.70 s = 96.9 tok/s total over 4 seqs, 11.71 tokens per cycle, 482.1 ms GPU per cycle
+seq 0 diverges after 69 generated tokens (plain 271 vs spec 37550)
+seq 1 diverges after 117 generated tokens (plain 331 vs spec 727)
+lossless check: 2/4 sequences identical over 128 tokens
+lossless: 2/4 identical, 2 diverged: seqs 0,1
+-- spec_test, toks.txt
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+plain: host 89.7 ms per cycle, 89.3 ms of it in commit+wait, 0.3 ms submit->GPU start
+plain: 922 kernel dispatches per cycle
+plain: 516 tokens in 11.48 s = 45.0 tok/s total over 4 seqs, 1.01 tokens per cycle, 88.8 ms GPU per cycle
+spec : host 500.5 ms per cycle, 500.0 ms of it in commit+wait, 0.3 ms submit->GPU start
+spec : 1102 kernel dispatches per cycle
+spec : 881 tokens in 23.03 s = 38.3 tok/s total over 4 seqs, 4.79 tokens per cycle, 499.5 ms GPU per cycle
+seq 1 diverges after 75 generated tokens (plain 4011 vs spec 46170)
+lossless check: 3/4 sequences identical over 128 tokens
+lossless: 3/4 identical, 1 diverged: seqs 1
+
+== G. the near-tie check of those differences (tools/tie_check.py, mlx_lm logits of the two competing tokens).
+==    0.4.2 on this machine differs from plain decode on short.txt at the same two positions with the same tokens
+==    (0.4.2-smoke.txt).
+start 20:40:09
+== tie_check, spec_out_short.txt, --max-gap 0.5 --ignore-seqs 0
+seq 0 @ 93: plain 271 (18.000)  spec 37550 (16.500)  gap 1.500  ref top3 [(271, 18.0), (37550, 16.5), (10919, 14.5)]  ignored (not judged)
+seq 1 @ 141: plain 331 (21.625)  spec 727 (21.625)  gap 0.000  ref top3 [(727, 21.625), (331, 21.625), (1302, 21.375)]  near-tie (<= 0.5)
+tie_check: 2 diverged, 1 judged, 0 above the 0.5 gap
+exit 0
+== tie_check, spec_out_toks.txt, --max-gap 0.5 --ignore-seqs 0
+seq 1 @ 2123: plain 4011 (16.500)  spec 46170 (16.625)  gap 0.125  ref top3 [(46170, 16.625), (4011, 16.5), (1593, 15.75)]  near-tie (<= 0.5)
+tie_check: 1 diverged, 1 judged, 0 above the 0.5 gap
+exit 0
+done 20:40:29

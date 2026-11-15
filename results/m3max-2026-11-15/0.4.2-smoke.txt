@@ -1,0 +1,100 @@
+== check ==
+Sun 15 Nov 2026 08:43:24 GMT
+-- chunk 1
+loaded in 4.9 s
+wrote 4 x 248320 logits (chunk 1)
+compare: T 2048: cos >= 0.995 / KL <= 0.03 (seq 0: 0.99 / 0.05)
+seq 0: cos 0.99880  max|diff| 1.297  KL 0.00074  top1 ok  top5 overlap 4/5  (' dog')
+seq 1: cos 0.99981  max|diff| 0.250  KL 0.00145  top1 ok  top5 overlap 5/5  ('),')
+seq 2: cos 0.99984  max|diff| 0.266  KL 0.00092  top1 ok  top5 overlap 5/5  (' ')
+seq 3: cos 0.99811  max|diff| 1.938  KL 0.00000  top1 ok  top5 overlap 4/5  (' ')
+compare: 4/4 sequences pass
+-- chunk 24
+loaded in 6.4 s
+wrote 4 x 248320 logits (chunk 24)
+compare: T 2048: cos >= 0.995 / KL <= 0.03 (seq 0: 0.99 / 0.05)
+seq 0: cos 0.99920  max|diff| 1.008  KL 0.00010  top1 ok  top5 overlap 4/5  (' dog')
+seq 1: cos 0.99981  max|diff| 0.268  KL 0.00144  top1 ok  top5 overlap 5/5  ('),')
+seq 2: cos 0.99984  max|diff| 0.352  KL 0.00119  top1 ok  top5 overlap 5/5  (' ')
+seq 3: cos 0.99721  max|diff| 2.102  KL 0.00000  top1 ok  top5 overlap 5/5  (' ')
+compare: 4/4 sequences pass
+-- chunk 256
+loaded in 4.7 s
+wrote 4 x 248320 logits (chunk 256)
+compare: T 2048: cos >= 0.995 / KL <= 0.03 (seq 0: 0.99 / 0.05)
+seq 0: cos 0.99859  max|diff| 1.281  KL 0.00032  top1 ok  top5 overlap 4/5  (' dog')
+seq 1: cos 0.99981  max|diff| 0.273  KL 0.00014  top1 ok  top5 overlap 5/5  ('),')
+seq 2: cos 0.99972  max|diff| 0.395  KL 0.00194  top1 ok  top5 overlap 5/5  (' ')
+seq 3: cos 0.99781  max|diff| 1.688  KL 0.00000  top1 ok  top5 overlap 5/5  (' ')
+compare: 4/4 sequences pass
+-- chunk 1536
+loaded in 4.5 s
+wrote 4 x 248320 logits (chunk 1536)
+compare: T 2048: cos >= 0.995 / KL <= 0.03 (seq 0: 0.99 / 0.05)
+seq 0: cos 0.99915  max|diff| 1.039  KL 0.00027  top1 ok  top5 overlap 4/5  (' dog')
+seq 1: cos 0.99979  max|diff| 0.273  KL 0.00162  top1 ok  top5 overlap 5/5  ('),')
+seq 2: cos 0.99979  max|diff| 0.348  KL 0.00138  top1 ok  top5 overlap 5/5  (' ')
+seq 3: cos 0.99881  max|diff| 1.359  KL 0.00000  top1 ok  top5 overlap 5/5  (' ')
+compare: 4/4 sequences pass
+== bench ==
+Sun 15 Nov 2026 08:52:38 GMT
+loaded in 5.5 s
+B=  1 L=  2048 R=1  step   60.05 ms (GPU   59.31)  =    16.7 rows/s total,   16.7/stream
+B= 16 L=  2048 R=1  step  160.34 ms (GPU  158.92)  =    99.8 rows/s total,    6.2/stream
+B= 64 L=  2048 R=1  step  517.28 ms (GPU  516.40)  =   123.7 rows/s total,    1.9/stream
+loaded in 9.5 s
+B=  1 L=  2048 R=5  step   87.02 ms (GPU   86.26)  =    57.5 rows/s total,   57.5/stream
+B=  8 L=  2048 R=5  step  268.44 ms (GPU  267.55)  =   149.0 rows/s total,   18.6/stream
+B= 16 L=  2048 R=5  step  618.33 ms (GPU  617.54)  =   129.4 rows/s total,    8.1/stream
+loaded in 2.0 s
+B=  1 L=  2048 R=8  step  139.10 ms (GPU  138.26)  =    57.5 rows/s total,   57.5/stream
+B=  2 L=  2048 R=8  step  138.25 ms (GPU  137.37)  =   115.7 rows/s total,   57.9/stream
+B=  4 L=  2048 R=8  step  232.96 ms (GPU  232.11)  =   137.4 rows/s total,   34.3/stream
+== spec ==
+Sun 15 Nov 2026 08:53:25 GMT
+-- B=1
+spec : host 175.9 ms per cycle, 159.0 ms of it in commit+wait, 0.4 ms submit->GPU start
+spec : 1101 kernel dispatches per cycle
+spec : 141 tokens in 2.11 s = 66.8 tok/s total over 1 seqs, 11.75 tokens per cycle, 158.4 ms GPU per cycle
+  commit histogram (tokens: cycles): 1:2 9:1 11:1 12:1 13:1 14:1 15:1 16:4
+seq 0 diverges after 113 generated tokens (plain 15217 vs spec 271)
+outputs: /var/folders/80/f_tyrk39493dqbmm3ppbz1z00000gn/T/spec_out-CMZlJ4.txt
+lossless check: 0/1 sequences identical over 128 tokens
+lossless: 0/1 identical, 1 diverged: seqs 0
+-- B=2
+spec : 1101 kernel dispatches per cycle
+spec : 365 tokens in 4.96 s = 73.6 tok/s total over 2 seqs, 10.14 tokens per cycle, 269.6 ms GPU per cycle
+  commit histogram (tokens: cycles): 1:5 2:2 4:2 8:3 9:1 10:3 11:2 12:3 13:2 14:3 15:3 16:7
+seq 0 diverges after 113 generated tokens (plain 15217 vs spec 271)
+seq 1 diverges after 117 generated tokens (plain 331 vs spec 727)
+outputs: /var/folders/80/f_tyrk39493dqbmm3ppbz1z00000gn/T/spec_out-5lpftn.txt
+lossless check: 0/2 sequences identical over 128 tokens
+lossless: 0/2 identical, 2 diverged: seqs 0,1
+-- B=4
+spec : 1101 kernel dispatches per cycle
+spec : 847 tokens in 8.95 s = 94.6 tok/s total over 4 seqs, 11.76 tokens per cycle, 482.7 ms GPU per cycle
+  commit histogram (tokens: cycles): 1:6 2:2 3:1 4:2 6:2 8:3 9:2 10:3 11:2 12:5 13:7 14:7 15:13 16:17
+seq 0 diverges after 69 generated tokens (plain 271 vs spec 37550)
+seq 1 diverges after 117 generated tokens (plain 331 vs spec 727)
+outputs: /var/folders/80/f_tyrk39493dqbmm3ppbz1z00000gn/T/spec_out-pQ0cIH.txt
+lossless check: 2/4 sequences identical over 128 tokens
+lossless: 2/4 identical, 2 diverged: seqs 0,1
+-- B=8
+  commit histogram (tokens: cycles): 1:12 2:4 3:2 4:4 6:4 8:6 9:4 10:6 11:4 12:10 13:14 14:14 15:26 16:34
+seq 0 diverges after 69 generated tokens (plain 271 vs spec 37550)
+seq 1 diverges after 117 generated tokens (plain 331 vs spec 727)
+seq 4 diverges after 69 generated tokens (plain 271 vs spec 37550)
+seq 5 diverges after 117 generated tokens (plain 331 vs spec 727)
+outputs: /var/folders/80/f_tyrk39493dqbmm3ppbz1z00000gn/T/spec_out-AnIuBE.txt
+lossless check: 4/8 sequences identical over 128 tokens
+lossless: 4/8 identical, 4 diverged: seqs 0,1,4,5
+-- B=16
+seq 5 diverges after 119 generated tokens (plain 24991 vs spec 15843)
+seq 8 diverges after 113 generated tokens (plain 15217 vs spec 271)
+seq 9 diverges after 119 generated tokens (plain 24991 vs spec 15843)
+seq 12 diverges after 113 generated tokens (plain 15217 vs spec 271)
+seq 13 diverges after 119 generated tokens (plain 24991 vs spec 15843)
+outputs: /var/folders/80/f_tyrk39493dqbmm3ppbz1z00000gn/T/spec_out-JXT0SS.txt
+lossless check: 8/16 sequences identical over 128 tokens
+lossless: 8/16 identical, 8 diverged: seqs 0,1,4,5,8,9,12,13
+Sun 15 Nov 2026 08:56:07 GMT

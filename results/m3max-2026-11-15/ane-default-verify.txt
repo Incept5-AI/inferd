@@ -1,0 +1,69 @@
+== 0. start time and memory 19:47:03
+start def: 10.2 s to listening
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+inferd: memory: GPU budget 77.8 GiB; model + state + scratch 20.8, drafter 2.7, PF8 0.0, KV 6.0 -> 29.5 allocated
+inferd [95003]: 64-bit    Footprint: 30 GB (16384 bytes per page)
+ 144 MB        0 B          0 B         18    Owned physical footprint (unmapped) (graphics)
+start off: 8.1 s to listening
+inferd: memory: GPU budget 77.8 GiB; model + state + scratch 20.5, drafter 2.7, PF8 0.0, KV 6.0 -> 29.2 allocated
+inferd [95285]: 64-bit    Footprint: 30 GB (16384 bytes per page)
+ 144 MB        0 B          0 B         18    Owned physical footprint (unmapped) (graphics)
+== 1. cold, 8 streams x 128 tokens, defaults 19:47:23
+up: pid 95481, log srv-def8.log
+{"label": "def8", "n": 8, "ptoks": 2048, "first_s": 71.37, "wall_s": 80.38, "ttft": [11.81, 20.63, 29.47, 38.32, 47.17, 56.06, 64.97, 71.37], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "length
+stopped
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+== 2. cold, 8 streams x 128 tokens, ANE_UNITS=0 19:48:54
+up: pid 97336, log srv-off8.log
+{"label": "off8", "n": 8, "ptoks": 2048, "first_s": 95.49, "wall_s": 104.63, "ttft": [17.54, 29.32, 41.17, 53.09, 64.97, 76.98, 89.03, 95.49], "tokens": [128, 128, 128, 128, 128, 128, 128, 128], "done": ["length", "length", "lengt
+stopped
+== 3. logits 19:50:49
+chunk 24, defaults: byte-identical to the 18:59 build
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1024 rows, W8A8 gate/up (rotated)
+def_256.bin smoke_new_256.bin differ: char 3, line 1
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+chunk 1536, defaults: byte-identical to ANE_UNITS=20 on the 17:54 build
+seq 0: cos 0.99851  max|diff| 1.188  KL 0.00033  top1 ok  top5 overlap 5/5
+seq 1: cos 0.99968  max|diff| 0.375  KL 0.00006  top1 ok  top5 overlap 5/5
+seq 2: cos 0.99963  max|diff| 0.477  KL 0.00320  top1 ok  top5 overlap 5/5
+seq 3: cos 0.99801  max|diff| 1.602  KL 0.00000  top1 ok  top5 overlap 4/5
+compare: 4/4 sequences pass
+chunk 1536, ANE_UNITS=0: byte-identical to the 18:59 build
+== 4. bench 19:53:54
+loaded in 2.1 s
+B=  1 L=  2048 R=1  step   58.49 ms (GPU   57.69)  =    17.1 rows/s total,   17.1/stream
+B=  4 L=  2048 R=1  step   88.60 ms (GPU   87.49)  =    45.1 rows/s total,   11.3/stream
+B=  8 L=  2048 R=1  step  100.28 ms (GPU   99.47)  =    79.8 rows/s total,   10.0/stream
+B= 16 L=  2048 R=1  step  152.08 ms (GPU  151.31)  =   105.2 rows/s total,    6.6/stream
+== 5. prefill 4k, defaults then ANE_UNITS=0 19:54:02
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+prefill L=  4096 chunk  1024:   15.87 s  =     258 tok/s (GPU 0.01 s)
+prefill L=  4096 chunk  2048:   15.68 s  =     261 tok/s (GPU 0.01 s)
+prefill L=  4096 chunk  1024:   23.72 s  =     173 tok/s (GPU 23.71 s)
+prefill L=  4096 chunk  2048:   24.05 s  =     170 tok/s (GPU 24.04 s)
+== 6. warm decode, defaults, 1 / 5 / 7 streams, 3 rounds x 256 19:55:26
+inferd: Neural Engine FFN split: 10240 of 17408 channels (20 units), functions 512..1280 rows, W8A8 gate/up (rotated)
+inferd: fill rows: 1630 spare verify rows in 1518 cycles, 1021 tokens committed from them
+  n=1: sat tok/s 49.9 49.1 48.9
+  n=5: sat tok/s 87.8 88.8 89.3
+  n=7: sat tok/s 97.1 95.4 96.2
+== 7. whole-stream check of the two cold runs (mlx_lm) 19:58:08
+  stream 0: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 1: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 117, above 0.5: []
+  stream 2: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 3: 128 tokens, 1 not the reference top-1, max gap 0.375 at token 8, above 0.5: []
+  stream 4: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 5: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 6: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 7: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+selfcheck cold-def8.out: 1024 tokens, 0 above the 0.5 gap, worst 0.375
+  stream 0: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 1: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 56, above 0.5: []
+  stream 2: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 3: 128 tokens, 2 not the reference top-1, max gap 0.250 at token 28, above 0.5: []
+  stream 4: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 55, above 0.5: []
+  stream 5: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+  stream 6: 128 tokens, 1 not the reference top-1, max gap 0.125 at token 25, above 0.5: []
+  stream 7: 128 tokens, 0 not the reference top-1, max gap 0.000 at token 0, above 0.5: []
+selfcheck cold-off8.out: 1024 tokens, 0 above the 0.5 gap, worst 0.250
+done 20:01:47

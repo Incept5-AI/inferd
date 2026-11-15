@@ -87,6 +87,12 @@ struct AneFfn {
   double ms_total = 0;
   long evals = 0;
 
+  // The split has no GPU fallback: a Neural Engine that cannot load, compile or run a function ends the process.
+  [[noreturn]] static void fail() {
+    fprintf(stderr, "ANE: the Neural Engine split cannot run here; ANE_UNITS=0 runs without it\n");
+    exit(1);
+  }
+
   // units: 512-channel units the ANE takes. rmax: the most rows a prefill chunk brings (a function every rstep rows).
   AneFfn(Gpu& g, int H_, int I_, int units, int rmax_) : H(H_), I(I_) {
     C = std::min(units * 512, I - 512);
@@ -240,11 +246,11 @@ struct AneFfn {
 
   void build() {
     if (!dlopen("/System/Library/PrivateFrameworks/AppleNeuralEngine.framework/AppleNeuralEngine", RTLD_NOW)) {
-      fprintf(stderr, "ANE: AppleNeuralEngine does not load: %s\n", dlerror()); exit(1);
+      fprintf(stderr, "ANE: AppleNeuralEngine does not load: %s\n", dlerror()); fail();
     }
     Class cModel = NSClassFromString(@"_ANEModel"), cClient = NSClassFromString(@"_ANEClient");
     Class cSurf = NSClassFromString(@"_ANEIOSurfaceObject"), cReq = NSClassFromString(@"_ANERequest");
-    if (!cModel || !cClient || !cSurf || !cReq) { fprintf(stderr, "ANE: private classes missing\n"); exit(1); }
+    if (!cModel || !cClient || !cSurf || !cReq) { fprintf(stderr, "ANE: private classes missing\n"); fail(); }
     client = [(Class<AneClientP>)cClient sharedConnection];
     std::string mil = "program(1.3)\n{\n";  // (the rotation blob depends on C, which the text holds)
     for (int r : fn_rows) mil += function(r);
@@ -283,13 +289,13 @@ struct AneFfn {
                                     qos:21 error:&err];
     };
     const bool cached = [client compiledModelExistsFor:model];
-    if (!cached && !compile()) { fprintf(stderr, "ANE: compile failed: %s\n", err.description.UTF8String); exit(1); }
+    if (!cached && !compile()) { fprintf(stderr, "ANE: compile failed: %s\n", err.description.UTF8String); fail(); }
     // A cached compile of a directory that was since replaced (a stale one, publish_model_dir) can fail to load once
     // ("Cannot load network", M6 2026-11-03): compile again and retry before giving up.
     if (![client loadModel:model options:@{} qos:21 error:&err] &&
         (!cached || !compile() || ![client loadModel:model options:@{} qos:21 error:&err])) {
       fprintf(stderr, "ANE: load failed: %s\n", err.description.UTF8String);
-      exit(1);
+      fail();
     }
     NSDictionary* desc = [model modelAttributes][@"ANEFModelDescription"];
     NSArray* symbols = desc[@"kANEFModelInputSymbolsArrayKey"];
@@ -332,7 +338,7 @@ struct AneFfn {
     NSError* err = nil;
     const auto t0 = std::chrono::steady_clock::now();
     if (![client evaluateWithModel:model options:@{} request:requests[set][i] qos:21 error:&err]) {
-      fprintf(stderr, "ANE: evaluation failed: %s\n", err.description.UTF8String); exit(1);
+      fprintf(stderr, "ANE: evaluation failed: %s\n", err.description.UTF8String); fail();
     }
     ms_total += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     evals++;

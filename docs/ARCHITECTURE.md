@@ -567,6 +567,14 @@ The block is the number of verify rows per sequence (staged token + drafts): 4, 
    from the fixed rule's block, exploring one step in 8 until each candidate has 3 timings, then re-testing one
    alternative every 16th step *(study log: "Block size by regime, and a self-tuning chooser" and "Tuner, single
    stream")*. `INFERD_DEBUG=1` prints its table every 64 steps of a regime.
+5. Without neural accelerators and with `SG_TILES` (the linears run 8-row tiles; `SG_POLICY`, default on): start at 8
+   for one or two decoders and at 4 above, the tuner chooses among 2/3/4/5/8, and a lone greedy stream gets 8-node
+   trees *(RESULTS (af))*.
+6. **Fill rows** (`SPEC_FILL`): the wide linears compute whole row tiles, so 5 decoders × 3 rows pay for 16 rows and
+   use 15. On a decode-only chain step the spare rows of the last tile (`Qwen35::fill_rows`) go out as extra verify
+   rows, one a sequence per round, best running acceptance first, up to `SPEC_FILL` rows a sequence; the drafter
+   drafts a block length per sequence (`Drafter::BlockSeq::len`). The tuner scales such a step's time by its expected
+   tokens, so its score stays tokens per ms. Default 8 with `SG_TILES`; off with neural accelerators until measured.
 
 ### Drafter knobs worth knowing
 
@@ -580,7 +588,8 @@ fell on agent text), `DRAFT_SKIP` (timing only). Every embedding lookup must han
 
 On the small Macs a prefill chunk is compute-bound on the GPU while the Neural Engine sits idle; the Mac mini M6's ANE
 runs an int8-weight fp16 FFN at ~21–23 TFLOPS against its GPU's ~15 *(study log: "Neural Engine FFN split for prefill
-(2026-11-01 night)")*. With `ANE_UNITS` = n > 0 (default 0, or 26 on an M4 / M4 Pro since 2026-11-05; the deployed setting is 24 on the M6), prefill steps of at
+(2026-11-01 night)")*. With `ANE_UNITS` = n > 0 (default 0, or 20 on a 96 GB 30-core M3 Max since 2026-11-15; an M4 /
+M4 Pro had 26 by default in 0.4.0–0.4.1; the deployed setting is 24 on the M6), prefill steps of at
 least `ANE_MIN_ROWS` (1,024) rows split each layer's FFN by intermediate channel: the GPU computes channels `[0, Cg)`,
 the ANE the last n × 512 channels.
 
@@ -620,9 +629,18 @@ sequenceDiagram
 - **GPU side.** gate/up go through `rows_of` views, `silu_mul2` combines them, and down reads a **K-slice view**
   (`kslice_of`): MLX's qmm patched to take the full matrix's row lengths in buffers 8 and 11.
 - **Residency.** The split's per-layer hand-offs leave the GPU idle between command buffers, and on the 32 GB M6 macOS
-  then unwired GPU memory and re-wired it each layer. With `ANE_UNITS` set, a `MTLResidencySet` over every buffer and
-  the ANE surfaces is on by default (`gpu.h`) *(study log: "Diagnosed 2026-11-01: the ANE split made server prefill slower
-  until the weights stayed wired")*.
+  then unwired GPU memory and re-wired it each layer. With `ANE_UNITS` set, and on every GPU without neural
+  accelerators (which covers the built-in default), a `MTLResidencySet` over every buffer and the ANE surfaces is on
+  by default (`gpu.h`) *(study log: "Diagnosed 2026-11-01: the ANE split made server prefill slower until the weights
+  stayed wired")*.
+- **A split step runs while it is encoded.** `ffn_split` commits and waits three command buffers per layer inside
+  `encode_step`, so the step's input rows must be final before the call. Every other step is only encoded there and
+  runs at commit, which is why the scheduler could write host-built token trees into the rows afterwards. When the
+  step takes the split (`Qwen35::ane_rows`) it installs them first; written afterwards, a lone decoder's tree rows
+  were verified as the previous step's tokens in any step shared with another sequence's prompt chunk (the replies cut
+  after 2–3 tokens in 0.4.1; fixed 2026-11-15) *(RESULTS (ag))*.
+- **No GPU fallback.** If the private framework or its classes are missing, or a function fails to compile, load or
+  evaluate, the process exits; the message names `ANE_UNITS=0`, which runs without the split.
 - The split applies only to dense models with 4-bit FFN weights whose hidden size is a multiple of 2,560.
 
 Design credit: the idea and overall structure follow Splash's `AneFfn` (github.com/incoai/splash, Apache-2.0); the
@@ -795,7 +813,7 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 | `SPILL_GIB` | 64 | SSD tier quota |
 | `SPILL_PERSIST` | 0 | keep the tier across restarts; flush on SIGTERM/SIGINT |
 | `SPILL_DEBUG` | unset | log admissions, restores, misses, preemptions |
-| `RESIDENCY` | 0 (1 when `ANE_UNITS` > 0) | one `MTLResidencySet` over every buffer |
+| `RESIDENCY` | 0 (1 when `ANE_UNITS` > 0 or the GPU has no neural accelerators) | one `MTLResidencySet` over every buffer |
 | `CB_SPLIT` | 16 in the server, 0 in tools | layers per committed command buffer |
 | `INFERD_DEBUG` | unset | per-step plan, per-cycle commit lines (accepted drafts), tuner table |
 | `ALLOC_LOG` | unset | log allocations ≥ 1 GiB |
@@ -862,6 +880,8 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 | `SPEC_AUTO` | 1 | BlockTuner chooses the block per regime |
 | `SPEC_BLOCKS` | unset | fixed block by load, e.g. `8:4,16:3` |
 | `SPEC_WIDE` | 4 | most decoders that keep the full block in the fixed rule |
+| `SPEC_FILL` | 8 with `SG_TILES`, else 0 | spare rows of the last GEMM row tile become extra verify rows, up to this many a sequence; `SPEC_FILL_PRIO=0` hands them out in running order |
+| `SG_POLICY` | 1 | the block policy for 8-row tiles without neural accelerators (start 8 / 4, tuner 2/3/4/5/8, 8-node trees); 0 = the rule before it |
 | `SPEC_SAMPLE` | 1 | speculate sampled requests the GPU sampler draws exactly (top_k 1-64, or off with top_p < 1) |
 | `SPEC_TOPK` | 64 | speculative sampling candidates per verify row (16 or 64) |
 | `DRAFT_BLOCK` | drafter `block_size`, ≤ 8 | largest block |
@@ -878,7 +898,7 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 
 | knob | default | effect |
 |---|---|---|
-| `ANE_UNITS` | 0 (26 on M4 / M4 Pro) | 512-channel FFN units on the ANE (M6: 24) |
+| `ANE_UNITS` | 0 (20 on a 96 GB 30-core M3 Max) | 512-channel FFN units on the ANE (M6: 24; M4 / M4 Pro: 26, the default in 0.4.0–0.4.1) |
 | `ANE_MIN_ROWS` | 1024 | smallest step that splits |
 | `ANE_A8` | 1 | rotated W8A8 for gate/up; 0 = W8A16 |
 | `ANE_A8D` | 0 | int8 intermediate for down (broken) |

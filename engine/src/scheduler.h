@@ -223,6 +223,8 @@ struct Scheduler {
     CopyIndex copy;            // COPY_DRAFT: n-gram index of tokens (src/copydraft.h)
     std::vector<int> cdraft;   // COPY_DRAFT: this step's copy chain (verified instead of the MTP drafts), or empty
     int cmatch = 0;            // COPY_DRAFT: that chain's match length
+    int fill = 0;              // SPEC_FILL: verify rows on top of the step's block (spare rows of the last row tile)
+    float acc = 0.5f;          // SPEC_FILL: running share of this sequence's verify rows that committed
     bool resumed = false;      // preempted mid-generation: re-prefilling prompt + output before decoding again
     bool snap_due = false;     // SNAP_GEN: the last step ended exactly on a decode snapshot boundary
     int last_snap = 0;         // SNAP_GEN: position of this sequence's last decode snapshot
@@ -314,6 +316,10 @@ struct Scheduler {
   // verifies 16 rows for about the price of 8 (the linears are weight-bandwidth-bound and W4A8 runs 16-row tiles), so
   // block 16 pays alone and for a few streams; fleets keep 4-8. The fixed rule (SPEC_AUTO=0) uses the widest such block.
   int spec_wide_rows = (int)env_knob("SPEC_WIDE_ROWS", 32, 1, 1 << 16);
+  // The block policy for 8-row tiles without neural accelerators (SG_TILES; dense targets, where it was measured):
+  // see the constructor and step(). SG_POLICY=0: the rule from before the tiles (start at 5, tuner 4/5/8, 16-node trees).
+  bool sg_policy_on = env_knob("SG_POLICY", 1, 0, 1);
+  bool sg_policy() const { return sg_policy_on && !m.g.nax && m.sg_tiles && !m.cfg.experts; }
   int max_block_for(int n_dec) const {
     int L = d ? d->block : 1;
     while (L > 8 && n_dec * L > spec_wide_rows) L = L > 12 ? 12 : 8;
@@ -421,6 +427,17 @@ struct Scheduler {
   TreeParams tree_params = TreeParams::from_env(tree_n);
   bool tree_gpu = getenv("TREE_GPU") && atoi(getenv("TREE_GPU"));  // build the trees on the GPU (no host round trip)
   uint64_t tree_cycles = 0, tree_committed = 0, tree_hist[kMaxBlock + 1] = {};
+  // SPEC_FILL=<rows>: the wide linears compute whole row tiles (Qwen35::fill_rows), so 5 decoders x 3 rows pay for 16
+  // rows and use 15. On a decode-only chain step the spare rows go out as extra verify rows, one a sequence per round,
+  // up to <rows> a sequence (at least the drafter's row instance for the step's block); 0 off. SPEC_FILL_PRIO=0 hands
+  // them out in running order instead of best acceptance first. M3 Max (8-row tiles), 2026-11-15, server tok/s
+  // without -> with: 3 streams 70.3 -> 79.0, 5: 82.2 -> 89.4, 7: 86.3 -> 96.8, 12: 102.8 -> 106.6, 14: 104.5 -> 107.7;
+  // within 2% at 4, 6, 8, 10 and 16. 64% of the spare rows commit a token.
+  // Off with neural accelerators until measured there: W4A8 runs 32-row tiles, so SPEC_FILL=5 gives 20 agents x 4 rows
+  // (80 of 96) 16 fifth rows.
+  int spec_fill = (int)env_knob("SPEC_FILL", !m.g.nax && m.sg_tiles ? 8 : 0, 0, kMaxBlock);
+  bool spec_fill_prio = env_knob("SPEC_FILL_PRIO", 1, 0, 1);
+  uint64_t stat_fill_cycles = 0, stat_fill_rows = 0, stat_fill_committed = 0;
 
   // Write the chain ending at node `id` (which carries a snapshot) to the SSD tier, if it is not there already. Returns
   // whether the chain is on the tier afterwards (Codex review 2026-11-03, R05): whatever acknowledges persistence (a
@@ -554,6 +571,17 @@ struct Scheduler {
       // matches plain). Token trees (16 rows) lost to chains (120 vs 145 tok/s): off unless TREE is set. The tuner
       // chooses among 2, 3, 4, 5 and 8.
       if (!getenv("TREE")) tree_n = 0;
+      const int mc[BlockTuner::kC] = {2, 3, 4, 5, 8};
+      std::copy(mc, mc + BlockTuner::kC, tuner.cand);
+    }
+    if (d && sg_policy()) {
+      // No neural accelerators, SG_TILES (27B + DFlash2, M3 Max, 2026-11-15): the linears run 8-row tiles and a step of
+      // 16 rows costs about twice one of 8, so a lone stream does best on 8 rows (spec_test tok/s: block 8 55.1, 8-node
+      // tree 58.9; block 16 49.0, 16-node tree 47.4) and fleets on short blocks: 8-node trees unless TREE is set, and
+      // the tuner chooses among 2, 3, 4, 5 and 8. Server tok/s, the old rule -> this one with SPEC_FILL: 1 stream 45.4
+      // -> 55.6 (a block-8 chain: 55.2), 2: 60.2 -> 63.7, 3: 73.5 -> 79.0, 5: 77.6 -> 89.4, 7: 86.0 -> 96.8, 8: 95.7 ->
+      // 100.2, 16: 102.5 -> 110.0; no count is slower. Without the fill rows 3 streams lose 4% (12 rows in a 16-row tile).
+      if (!getenv("TREE")) tree_n = tree_params.budget = 8;
       const int mc[BlockTuner::kC] = {2, 3, 4, 5, 8};
       std::copy(mc, mc + BlockTuner::kC, tuner.cand);
     }
@@ -1515,7 +1543,11 @@ struct Scheduler {
     if (d && L > 5 && n_dec > spec_wide) L = 5;
     // No neural accelerators (M3/M4): verify rows cost much more there (M3 Ultra, one stream: 5 rows 37 ms, 8 rows 57 ms;
     // spec_test block 5 vs 8: 91.8 vs 83.6 and 86.3 vs 70.5 tok/s), so start at 5; SPEC_AUTO still tries 4/5/8.
-    if (d && L > 5 && !m.g.nax) L = 5;
+    // With SG_TILES a row tile is 8 rows (M3 Max, 2026-11-15, spec_test tok/s at blocks 4/5/8: one stream
+    // 43.4/44.9/55.1, two 58.0/49.8/61.9, four 78.6/68.5/67.9, eight 97.4/97.1/77.4): start at 8 for one or two
+    // decoders and at 4 above; SPEC_AUTO tries 2/3/4/5/8.
+    if (d && sg_policy()) L = std::min(L, n_dec <= 2 ? 8 : 4);
+    else if (d && L > 5 && !m.g.nax) L = 5;
     if (!m.g.nax) tuner.far_every = 4;
     for (auto [n, l] : spec_blocks) if (n_dec > n) L = l;
     if (mtp && spec_blocks.empty() && mtp_wide > 0 && n_dec > mtp_wide) L = std::min(L, 3);
@@ -1553,8 +1585,9 @@ struct Scheduler {
     auto tree_for = [&](const Seq& s) {  // logprobs requests verify chains (row k scores committed token k)
       return use_tree && s.spec_ok && s.req.temperature <= 0 && !s.req.grammar && s.req.logprobs < 0;
     };
-    if (use_tree) L = d->block;  // the drafter drafts its whole block; the tree takes what it needs
-    for (auto& r : running) r.cdraft.clear();
+    // The drafter drafts its whole block and the tree takes what it needs: a tree of n nodes is at most n - 1 deep.
+    if (use_tree) L = std::min(d->block, tree_nodes);
+    for (auto& r : running) r.cdraft.clear(), r.fill = 0;
     if (mtp && copy_on && (!copy_solo || n_dec == 1)) {  // context-copy chains (src/copydraft.h)
       static const int ng = getenv("COPY_NG") ? atoi(getenv("COPY_NG")) : 3;
       for (auto& r : running) {
@@ -1575,10 +1608,10 @@ struct Scheduler {
       }
     }
     auto rows_for = [&](const Seq& s) {
-      int r = tree_for(s) ? tree_nodes : s.spec_ok ? (s.cdraft.empty() ? L : 1 + (int)s.cdraft.size()) : 1;
+      int r = tree_for(s) ? tree_nodes : s.spec_ok ? (s.cdraft.empty() ? L + s.fill : 1 + (int)s.cdraft.size()) : 1;
       // land on the next decode snapshot boundary (a tree commits up to kMaxBlock tokens: a chain of `need` rows then)
       if (d && s.spec_ok && s.cdraft.empty())
-        if (const int need = gen_need(s); need > 0 && need < (tree_for(s) ? kMaxBlock : r)) r = need;
+        if (const int need = gen_need(s); need > 0 && need < (tree_for(s) ? kMaxBlock : r)) r = tree_for(s) ? std::min(need, L) : need;
       return r;
     };
     if (mtp) {  // every verify row needs an output row (Qwen35::max_out): drop the longest copy chains until they fit
@@ -1590,6 +1623,34 @@ struct Scheduler {
         if (!lg) break;
         out_rows -= (int)lg->cdraft.size() + 1 - L;
         lg->cdraft.clear();
+      }
+    }
+    // SPEC_FILL: on a decode-only chain step the spare rows of the last GEMM row tile become extra verify rows.
+    if (spec_fill > 0 && d && !use_tree && n_dec > 0) {
+      int T0 = 0;
+      bool pure = true;
+      for (auto& r : running) {
+        pure &= r.decoding();
+        T0 += rows_for(r);
+      }
+      auto inst = [](int l) { return l <= 5 ? 5 : l <= 8 ? 8 : l <= 12 ? 12 : 16; };  // draft_attn's row instance
+      int lcap = std::max(inst(L), spec_fill);
+      if (n_dec * inst(lcap) > d->max_rows) lcap = inst(L);  // the drafter's scratch holds an instance per sequence
+      lcap = std::min(lcap, d->block);
+      int spare = pure ? std::min({m.fill_rows(T0), m.max_tokens, m.max_out, m.tape_rows}) - T0 : 0;
+      std::vector<Seq*> el;
+      if (spare > 0)
+        for (auto& r : running)
+          if (r.spec_ok && rows_for(r) == L) el.push_back(&r);
+      if (spec_fill_prio) std::stable_sort(el.begin(), el.end(), [](const Seq* a, const Seq* b) { return a->acc > b->acc; });
+      for (bool any = true; any && spare > 0;) {
+        any = false;
+        for (Seq* r : el) {
+          const int need = gen_need(*r);  // rows that can still commit: the output allowance, the block table, a snapshot
+          const int cap = std::min({lcap, r->req.max_tokens - r->generated, (m.max_blocks - 1) * KV_BLOCK - r->computed,
+                                    need > 0 ? need : lcap});
+          if (spare > 0 && L + r->fill < cap) r->fill++, spare--, any = true;
+        }
       }
     }
     if (!prio)
@@ -1712,8 +1773,9 @@ struct Scheduler {
         ctx.insert(ctx.end(), s.pend.begin(), s.pend.end());
         s.pend.clear();
         if (work[j].spec) dblk[j] = (int)blocks.size();
-        if (work[j].spec)
-          blocks.push_back({s.slot, s.computed, s.tokens[s.computed], m.seq_start.ptr<int>()[j], work[j].tree, work[j].n});
+        if (work[j].spec)  // the last field: rows to draft (SPEC_FILL sequences verify more than L)
+          blocks.push_back({s.slot, s.computed, s.tokens[s.computed], m.seq_start.ptr<int>()[j], work[j].tree, work[j].n,
+                            work[j].tree ? 0 : std::max(L, work[j].n)});
       }
       Enc e(g, cb);
       d->encode_context(e, ctx, 0);
@@ -1773,6 +1835,27 @@ struct Scheduler {
       fprintf(stderr, "step: %d output rows > %d\n", m.n_out, m.max_out);
       abort();
     }
+    // Host-built trees: wait for the drafter, build each tree and write it into the target's input rows.
+    auto install_trees = [&] {
+      [dcb waitUntilCompleted];
+      for (size_t j = 0; j < who.size(); j++) {
+        if (!work[j].tree) continue;
+        Seq& s = running[who[j]];
+        const int r = dblk[j];
+        DraftOut o{d->cand.ptr<int>(), d->unary.ptr<float>(), d->hp.ptr<uint16_t>(), d->pred_cb.ptr<uint16_t>(),
+                   d->succ_cb.ptr<uint16_t>(), r * L, L};
+        Tree t;
+        build_tree(o, s.tokens[s.computed], tree_params, t);
+        m.set_tree((int)j, s.computed, t);
+      }
+    };
+    // A step that takes the Neural Engine split runs while it is encoded, so its trees go in first. Installed after
+    // encode_step as below, the tree rows of a lone decoder that shared a split step with another sequence's prompt
+    // chunk were verified as the previous step's tokens, and tree_accept then committed wrong tokens (an end of turn
+    // after 2-3 tokens on the M4 Pro and M6, repeated tokens on an M3 Max; found 2026-11-15).
+    const bool host_trees = m.n_tree && !tree_gpu;
+    const bool trees_first = host_trees && m.ane_rows(T);
+    if (trees_first) install_trees();
     m.encode_step(cb, T, (int)work.size());
     if (mtp) {
       Enc e(g, cb);
@@ -1806,19 +1889,7 @@ struct Scheduler {
       [b endEncoding];
     }
     m.cb_split = saved_split;
-    if (m.n_tree && !tree_gpu) {
-      [dcb waitUntilCompleted];
-      for (size_t j = 0; j < who.size(); j++) {
-        if (!work[j].tree) continue;
-        Seq& s = running[who[j]];
-        const int r = dblk[j];
-        DraftOut o{d->cand.ptr<int>(), d->unary.ptr<float>(), d->hp.ptr<uint16_t>(), d->pred_cb.ptr<uint16_t>(),
-                   d->succ_cb.ptr<uint16_t>(), r * L, L};
-        Tree t;
-        build_tree(o, s.tokens[s.computed], tree_params, t);
-        m.set_tree((int)j, s.computed, t);
-      }
-    }
+    if (host_trees && !trees_first) install_trees();
     [cb commit];
     [cb waitUntilCompleted];
     if (debug) fprintf(stderr, "[%.3f s] ", std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
@@ -1911,6 +1982,12 @@ struct Scheduler {
           copy_pol.mtp_done(c);
         }
         if (counts[j] > 1 && !work[j].tree) tuner.accepted(counts[j], c);
+        if (counts[j] > 1 && !work[j].tree) s.acc += ((float)c / counts[j] - s.acc) / 16;
+        if (s.fill > 0 && counts[j] == L + s.fill) {
+          stat_fill_cycles++;
+          stat_fill_rows += s.fill;
+          stat_fill_committed += std::max(0, c - L);
+        }
         if (debug) {
           fprintf(stderr, "  id%llu commit %d:", (unsigned long long)s.req.id, c);
           for (int k = 0; k < c; k++) fprintf(stderr, " %d", m.emit.ptr<int>()[j * kMaxBlock + k]);
@@ -1967,13 +2044,21 @@ struct Scheduler {
       bool pure = true;
       for (size_t j = 0; j < who.size(); j++) pure &= work[j].spec;
       if (pure) {
-        const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_plan).count();
+        double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t_plan).count();
+        // SPEC_FILL rows add tokens that the block's score (decoders x E(L) / ms) does not count: scale the time so
+        // that the score is the step's expected tokens per ms.
+        double e = 0;
+        bool filled = false;
+        for (size_t j = 0; j < who.size(); j++) e += tuner.expect(counts[j]), filled |= counts[j] > L;
+        if (filled) ms *= who.size() * tuner.expect(L) / e;
         tuner.timed(tune_key, tune_i, ms);
         if (debug && tuner.cells[tune_key].steps % 64 == 0) {
           auto& c = tuner.cells[tune_key];
-          fprintf(stderr, "tuner: %d decoders, key %d: block 4/5/8/12/16 %.1f/%.1f/%.1f/%.1f/%.1f ms, "
-                  "E %.2f/%.2f/%.2f/%.2f/%.2f, chose %d\n", n_dec, tune_key, c.t[0], c.t[1], c.t[2], c.t[3], c.t[4],
-                  tuner.expect(4), tuner.expect(5), tuner.expect(8), tuner.expect(12), tuner.expect(16), [&] {
+          const int* tc = tuner.cand;
+          fprintf(stderr, "tuner: %d decoders, key %d: block %d/%d/%d/%d/%d %.1f/%.1f/%.1f/%.1f/%.1f ms, "
+                  "E %.2f/%.2f/%.2f/%.2f/%.2f, chose %d\n", n_dec, tune_key, tc[0], tc[1], tc[2], tc[3], tc[4],
+                  c.t[0], c.t[1], c.t[2], c.t[3], c.t[4], tuner.expect(tc[0]), tuner.expect(tc[1]), tuner.expect(tc[2]),
+                  tuner.expect(tc[3]), tuner.expect(tc[4]), [&] {
                     int b = 0;  // the best candidate (this step itself is always a re-test step: steps % 16 == 0)
                     for (int i = 1; i < BlockTuner::kC; i++)
                       if (c.n[i] && (!c.n[b] || tuner.expect(tuner.cand[i]) / c.t[i] > tuner.expect(tuner.cand[b]) / c.t[b])) b = i;

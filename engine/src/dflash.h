@@ -201,27 +201,34 @@ struct Drafter {
   // the staged token in the target's verify batch). Writes the draft tokens into tgt.tok after that row.
   // tree: the caller builds the verify rows (tree.h). vlen: verify rows the sequence takes (0 = the block): a decode that
   // lands on a snapshot boundary verifies fewer rows than the drafter drafts, and draft_select fills only those.
-  struct BlockSeq { int slot, pos, staged, vrow; bool tree = false; int vlen = 0; };
+  // len: rows drafted for the sequence (0 = L). Lengths may differ within a step (the scheduler's SPEC_FILL): every
+  // kernel takes a sequence's rows from b_start / b_len, so each sequence drafts as in a uniform block of its own
+  // length; the attention instance, its splits and the segment test are those of the longest block.
+  struct BlockSeq { int slot, pos, staged, vrow; bool tree = false; int vlen = 0; int len = 0; };
+  int rows_of_seq(const BlockSeq& s, int L) const { return s.len > 0 ? std::min(s.len, this->block) : L; }
   void encode_block(Enc& e, const std::vector<BlockSeq>& seqs, int L = 0) {
-    const int block = L > 0 ? L : this->block;
-    int S = (int)seqs.size(), T = S * block;
+    const int dflt = L > 0 ? L : this->block;
+    int S = (int)seqs.size(), T = 0, block = 0;  // block: the longest sequence's rows
     if (!S) return;
+    for (auto& s : seqs) block = std::max(block, rows_of_seq(s, dflt));
     if (S * (block <= 5 ? 5 : block <= 8 ? 8 : block <= 12 ? 12 : 16) > max_rows) {  // draft_attn's row instance
       fprintf(stderr, "drafter: %d blocks of %d rows > %d rows of scratch\n", S, block, max_rows);
       abort();
     }
     for (int b = 0; b < S; b++) {
-      b_start.ptr<int>()[b] = b * block;
-      b_len.ptr<int>()[b] = block;
+      const int n = rows_of_seq(seqs[b], dflt);
+      b_start.ptr<int>()[b] = T;
+      b_len.ptr<int>()[b] = n;
       // draft_select writes chain drafts into the first b_spec verify rows (0: a tree, built by the caller)
-      b_spec.ptr<int>()[b] = seqs[b].tree ? 0 : seqs[b].vlen > 0 ? std::min(seqs[b].vlen, block) : block;
+      b_spec.ptr<int>()[b] = seqs[b].tree ? 0 : seqs[b].vlen > 0 ? std::min(seqs[b].vlen, n) : n;
       b_slot.ptr<int>()[b] = seqs[b].slot;
       b_vstart.ptr<int>()[b] = seqs[b].vrow;
-      for (int j = 0; j < block; j++) {
-        b_tok.ptr<int>()[b * block + j] = j == 0 ? seqs[b].staged : mask_id;
-        b_pos.ptr<int>()[b * block + j] = seqs[b].pos + j;
-        b_tseq.ptr<int>()[b * block + j] = b;
+      for (int j = 0; j < n; j++) {
+        b_tok.ptr<int>()[T + j] = j == 0 ? seqs[b].staged : mask_id;
+        b_pos.ptr<int>()[T + j] = seqs[b].pos + j;
+        b_tseq.ptr<int>()[T + j] = b;
       }
+      T += n;
     }
     EmbedArgs ea{H};
     e.k(tgt.embed.bits == 16 ? "embed16" : tgt.embed.bits == 8 ? "embed8" : "embed4").buf(0, b_tok).buf(1, tgt.embed.wq).buf(2, tgt.embed.s).buf(3, tgt.embed.b).buf(4, x).args(5, ea);

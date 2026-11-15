@@ -177,6 +177,13 @@ Measured ceilings and a profile of where a step goes:
 | P15 | Drafter vocabulary cut (`DRAFT_VOCAB`) | score ids [0, 98304) plus the special-token tail via row views of the LM head; 0.06% of code and 0.18% of English tokens lie between | Max, challenge prompt: drafter block 6.6 → 5.2 ms, acceptance unchanged (2.48). **Ultra, agent text: acceptance 4.46 → 4.15 (16k), 5.14 → 4.62 (64k)**, 148–150 vs 143–145 tok/s; the saving there is ~0.5 ms of ~26. M5 Pro fleet A/B: noise | reverted to opt-in | "Lessons from the mlx.fast competition", "M6 16k fleet" |
 | P16 | **Speculative sampling** (0.1.1) | exact accept/resample for a point-mass proposal from each verify row's top-16 on the GPU | coding benchmark (48 tests, t = 0.6, 32 in flight): before, 9–14 min per run vs Splash ~7, 20 tok/s per request; M5 Pro 1 stream 16.9 → 42.9 tok/s, 4 streams 28 → 110 total; 400-sample distribution check matches plain sampling within noise | default (`SPEC_SAMPLE`) | "0.1.1: speculative sampling" |
 | P17 | Short-window decode (mlx.fast challenge prompt) | batch 1, ~1,065-token prompt, 128 decode steps | Max: 51.6 tok/s over the first 128 tokens (48.7–62.3), 85.9 over 512; prefill 955 tok/s. Challenge leaders that day: Apple 59.2 decode / 1,140 prefill; local TensorFold baseline 61.8 / 1,115. Not the challenge harness | measurement: short windows are our weak spot | "mlx.fast / cuda.fast challenge" |
+| P18 | **8-row GEMM tiles without neural accelerators** (`SG_TILES`) | `qmv_wide` keeps 1–5 rows and `mlx_qmm_sg` starts at 6 rows with row tiles in 8-row steps (0.4.2: 1–10 rows and 11+) | M3 Max: plain decode steps 21–36% faster at 6–10 rows, 3–7% at 12–32, prefill +3–5% at chunks of 512–2,048; server 3 streams 68.3 → 74.0 tok/s, 4: 71.2 → 79.8, 6: 81.8 → 92.4; logits byte-identical to 0.4.2 at chunks 1/24/256/1,536 | default up to 40 GPU cores (one machine measured) | RESULTS (af) |
+| P19 | **Block policy for 8-row tiles** (`SG_POLICY`) | start at block 8 for one or two decoders and 4 above, tuner 2/3/4/5/8, 8-node trees for a lone greedy stream (before: start at 5, tuner 4/5/8, 16-node trees) | M3 Max server: 1 stream 45.4 → 53.2 tok/s, 8: 95.7 → 100.5, 16: 102.5 → 109.4; 3 streams 73.5 → 70.3 until P20 repays it; one stream: 8-node tree 55.5, block-8 chain 55.2, 16-node tree 45.4 | default with `SG_TILES`, together with P20 | RESULTS (af) |
+| P20 | **Spare tile rows as verify rows** (`SPEC_FILL`) | the wide linears compute whole row tiles; on a decode-only chain step the unused rows of the last tile go out as extra verify rows, one a sequence per round, best running acceptance first | M3 Max server, policy alone → with fill rows: 3 streams 70.3 → 79.0 tok/s, 5: 82.2 → 89.4, 7: 86.3 → 96.8, 12: 102.8 → 106.6, 14: 104.5 → 107.7; within 2% at 4, 6, 8, 10 and 16; 64% of the spare rows commit a token; output byte-identical with it on or off | default 8 with `SG_TILES`; off with neural accelerators (W4A8 / QA8 tiles not measured) | RESULTS (af) |
+| P21 | Per-agent block length from predicted acceptance | offline, on `INFERD_DEBUG` commit traces: predict a cycle's acceptance from the sequence's history | 28% of cycles accept the full block; 41% after a full block against 23% after a miss; causal predictors gain 1–2.4% tokens per verify row against an oracle's 26–47% | not built; the running average only orders P20's rows | RESULTS (af) |
+| P22 | Trees for two decoders (`TREE_SEQS=2`) without neural accelerators | two 8- or 16-node trees in place of two chains | M3 Max, two streams: 8-node trees 61.9 tok/s, block-8 chains 61.9, 16-node trees 43.6 | no gain there; not measured with neural accelerators | RESULTS (af) |
+| P23 | Copy drafts on the DFlash2 path | offline, on recorded traces: a 3-gram copy proposal (chain 15) beside the drafter's block | a proposal exists in 14–20% of cycles; an oracle taking the better of the two gains 0.6–5.9% tokens per cycle; a usable rule (match ≥ 8, chain ≥ L−1) −3.3 to +0.2% tokens per cycle and 4–11% fewer tokens per verify row | not built (generic 2k prompts; edit-heavy agent turns are not in the set) | RESULTS (af) |
+| P24 | GDN replay folded into the next step | the replay's pass over the GDN state merged into the next cycle's `gdn_step` (one of three passes a cycle); measured first with `PROF_KERNELS=1` and `SKIP=replay` (timing only) | M3 Max, 1 / 8 / 16 streams: the replay is 1.8 / 3.5 / 3.7% of the kernel time and 1.6 / 3.7 / 3.9% of a whole cycle (104 / 276 / 511 ms); the fold would recover about half. `STATE_BF16=1` (not lossless): −0.6 / −2.2 / −2.2% | not built here (1–2%); read `SKIP=replay` on the Studio, where the GEMMs are a smaller share | RESULTS (af) |
 
 ## 7. Neural Engine
 
@@ -192,6 +199,7 @@ Measured ceilings and a profile of where a step goes:
 | N8 | `ANE_A8D` | int8 intermediate for down (rotation as a grouped conv with a BLOBFILE constant, per-token quantize) | inf in layer 0, all-zero output from layer 1; the rotation and quantize pieces check out in isolation (`ane_rot_test`); suspect the int8 × int8 down matmul | broken, off | same |
 | N9 | M5 Pro split | same design | +3% in `decode_test` (its ANE ~2.6× slower per unit than its GPU) | not pursued; M6 only | same |
 | N10 | Fleets with the split | `agents.py`, 2 rounds | M6 8k, 8/16/32/64 agents: GPU 9.67/9.51/9.58/9.66; **ANE24 10.99/10.94/11.16/11.27**; Splash 8.73/7.54/8.85/6.82 (32 of 128 turns refused at 64). M6 16k, 8/16/32: GPU 8.22/8.16/8.25; ANE24 9.32/8.78/9.04; Splash 8.23/7.01/6.82. Gain +13–17% at 8k, +8–13% at 16k. Splash's own ANE share: 0.74 on the M6, 0.41 on the M5 Pro | — | "Overnight agent-fleet results", "M6 16k fleet" |
+| N11 | M3 Max split (30-core GPU, no GPU neural accelerators) | same design; `ANE_UNITS` 16–32 in `decode_test prefill` (4k), then cold streams through the server | GPU alone 175 / 176 tok/s (1,024- / 2,048-row chunks); 16 units 234 / 247, 19 252 / 268, **20 257 / 270** (+47% / +53%), 21 250 / 263, 24 235 / 248, 32 197 / 199. At 20 the GPU's 14 units and the Neural Engine's 20 finish together (30.1 / 30.4 ms a layer at 1,024 rows). 8 streams on cold 2k prompts: all first tokens 95.5 → 71.4 s, every generated token within 0.375 logits of mlx_lm's top-1; logits pass at chunks of 256 and 1,536 | **default on the 96 GB 30-core M3 Max** (20 units, 2026-11-15), after the tree-ordering fix (section 12); off elsewhere, the 36 GB configuration included (not measured; the split takes ~0.8 GiB of its KV pool) | RESULTS (ag) |
 
 ## 8. Multi-model
 
@@ -282,6 +290,9 @@ agent-fleet results")*. At the stock wired limit Splash does 7.3–8.1 turns/min
 | lane4 drops drafter acceptance (2.82 → 2.33) | cause not found | "Lessons from the mlx.fast competition" |
 | `spec_test` shows ~1.01 tokens/cycle on short chat prompts with every build | tool limitation, unexplained | same |
 | One agent on a long context (256k × 1 28% behind Splash; 16k × 1 15% behind) | remaining gap | "Milestone inferd10" |
+| GDN replay folded into the next cycle's `gdn_step` (one of three passes over the state per cycle; needs double-buffered tapes, a pending commit per sequence, and a flush through `gdn_replay` before snapshots, spill, preemption, tree steps and for a sequence that sits out a step) | measured, not built: the replay is 1.8–3.7% of a cycle without neural accelerators, so ~1–1.5%; read the ceiling on the Studio with `SKIP=replay` | RESULTS (af) |
+| QA8 below 256 rows per shape (`QA8_MIN`, `decode_test gemmcmp`), fill rows on W4A8 / QA8 tiles (`SPEC_FILL=5`), int8 queries in `attn_shared` | need neural accelerators: not measurable on the M3 Max | RESULTS (af) |
+| Neural Engine split at decode-sized steps (64-row functions for 16 streams × 4 rows) | not built. Estimate from the probe (20 units in 4.8 ms at 64 rows): balance near 12 units, a layer's FFN about 4.5 → 3.0 ms, before three command buffers, two host waits and the weight re-quantization per layer, which a 64-row step does not amortize | RESULTS (ag) |
 
 ## 11. What is ours
 
@@ -426,3 +437,31 @@ Gemma-4.
 32k fleet was Splash's raised-wired-limit arm; at the stock limit (the budget inferd runs under) it does 7.3–8.1 at 32k.
 Both peak at ~26 GiB wired, but Splash averages 25.0 against inferd's 22.0: its elastic KV takes the whole budget,
 inferd's was a hand-sized 3 GiB beside an 8-bit drafter.
+
+**`spec_test` ran sequences past their KV pages (2026-11-15)** *(RESULTS (af))*. Symptom: with mixed block lengths one
+sequence of eight emitted a wrong token (top-2 gap 0.875 in mlx_lm, far from a tie), reproducibly, also with a single
+attention split and with `SG_TILES=0`. Evidence: per-cycle traces showed a faster sequence 190 positions past its
+pages from cycle 57 and its neighbour going wrong at cycle 71; uniform-block runs overflowed by 16–173 positions too.
+Cause: the tool sized each sequence's KV pages for T + n_gen + 16 tokens but runs until the slowest sequence has
+n_gen, so a faster one indexed the next sequence's row of the block table and overwrote the start of its prompt.
+Present in 0.4.2; the server is not affected (the scheduler grows a sequence's blocks per step and checks
+`max_blocks`). Fix: pages for T + (n_gen + 1) × the widest block + `kMaxTree` tokens, and the tool exits if a
+sequence's rows pass its pages. After it, mixed-length and uniform runs differ from plain decode only at three known
+near-ties (gap 0.125).
+
+**Replies cut after 2-3 tokens with the Neural Engine split (found 2026-11-15)** *(RESULTS (ag))*. Symptom: with the
+split on, several agents and a drafter, turns ended after 2-3 tokens (M4 Pro on 0.4.1's default: 13 of 16 agent turns
+at 8 agents, 4 of 32 at 16; M6 with `ANE_UNITS=24`: up to 42 of 48), never with one agent or without a drafter, and
+prefill logits passed the gate. 0.4.2 turned the default off without a cause. Reproduction on a 30-core M3 Max
+(`ANE_UNITS=20`, 8 streams on cold 2,048-token prompts): 2 of 1,024 generated tokens far from mlx_lm's top-1 (24.1 and
+18.5 logits below it; repeated tokens rather than an end of turn), 65 with `TREE_SEQS=8`, 0 on the GPU alone. Cause: a
+step that takes the split runs while it is encoded (`ffn_split` commits and waits three command buffers per layer
+inside `encode_step`), and the scheduler wrote a lone decoder's host-built token tree into the step's input rows after
+`encode_step`, which is in time for every step that runs at commit. In a step shared with another sequence's prompt
+chunk of 1,024 rows or more the layers had already run on the rows' old contents, so the tree was verified as the
+previous step's tokens and `tree_accept` committed from logits that belonged to other tokens. Fix: the trees are
+installed before `encode_step` when the step takes the split (`Qwen35::ane_rows`). After it both runs have 0 wrong
+tokens (worst gap 0.375) and steps without the split are byte-identical. What hid it: a single agent never shares a
+split step, logits checks have no trees, and a comparison of two servers' token streams stops at the first near-tie.
+The check that found it scores every generated token against the reference model, teacher-forced on the stream's own
+output. Not re-run on the M4 Pro or the M6.

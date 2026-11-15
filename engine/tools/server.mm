@@ -721,6 +721,10 @@ int main(int argc, char** argv) {
       if (sch.stat_copy_cycles)
         printf("inferd: copy drafts: %llu cycles, %.2f tokens per copy cycle\n", (unsigned long long)sch.stat_copy_cycles,
                (double)sch.stat_copy_committed / sch.stat_copy_cycles);
+      if (sch.stat_fill_cycles)
+        printf("inferd: fill rows: %llu spare verify rows in %llu cycles, %llu tokens committed from them\n",
+               (unsigned long long)sch.stat_fill_rows, (unsigned long long)sch.stat_fill_cycles,
+               (unsigned long long)sch.stat_fill_committed);
       if (sch.spill)
         printf("inferd: SSD tier: %llu spilled (%.1f GiB, %.1f s), %llu restored (%.1f GiB, %.1f s), %zu on disk\n",
                (unsigned long long)sch.spill->n_spilled, sch.spill->bytes_w / 1073741824.0, sch.spill->spill_s,
