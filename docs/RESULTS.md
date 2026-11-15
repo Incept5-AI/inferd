@@ -1681,6 +1681,134 @@ routing. Fill rows on W4A8 / QA8 tiles (neural accelerators) are unmeasured and 
 
 Raw rows: [results/m3max-2026-11-15](../results/m3max-2026-11-15/) (its `README.md` names each file).
 
+## (ag) M3 Max prefill: the Neural Engine split, the cause of the cut replies, and a 20-unit default (15 November)
+
+**Setup.** MacBook Pro M3 Max (30-core GPU, 96 GB, no GPU neural accelerators), macOS 27; Qwen3.8-27B 4-bit + DFlash2;
+branch `perf/decode-throughput` on top of 0.4.2, not released. Server runs: the engine alone on a private socket
+(16 running, 1,024-token steps, 6 GiB KV, 24 snapshots), N streams start together on 2,048-token prompts that are not
+in the cache, greedy. Raw rows: [results/m3max-2026-11-15](../results/m3max-2026-11-15/).
+
+**1. The Neural Engine beside this GPU.** `tools/ane_probe`, one FFN slice (hidden 5,120, int8 weights), best ms per
+evaluation:
+
+| Rows | 20 units, W8A16 | 20 units, int8 activations | 1 unit, W8A16 | 1 unit, int8 activations |
+|---|---|---|---|---|
+| 64 | 4.79 (4.2 TFLOPS) | 4.86 (4.1) | 0.64 (1.6) | 0.59 (1.7) |
+| 256 | 9.52 (8.5) | 8.62 (9.3) | – | – |
+| 1,024 | 35.08 (9.2) | 28.40 (11.3) | 2.19 (7.4) | 1.92 (8.4) |
+| 2,048 | 66.83 (9.6) | 53.34 (12.1) | – | – |
+
+**2. Prefill by units on the Neural Engine.** `decode_test prefill`, 4,096 tokens, tok/s, two passes (the second in
+reverse order; 18, 19, 21 and 22 are from a second sweep):
+
+| `ANE_UNITS` | 0 | 16 | 18 | 19 | **20** | 21 | 22 | 24 | 28 | 32 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1,024-row chunks | 175 / 174 | 234 / 236 | 246 / 248 | 252 / 254 | **257 / 260** | 250 / 253 | 245 / 247 | 235 / 237 | 216 / 217 | 197 / 198 |
+| 2,048-row chunks | 176 / 177 | 247 / 248 | 261 / 262 | 268 / 270 | **270 / 270** | 263 / 265 | 258 / 258 | 248 / 248 | 224 / 224 | 199 / 199 |
+
+- **20 units is the balance:** +47–49% at 1,024-row chunks and +53% at 2,048. Per layer at 1,024 rows the GPU's share
+  of the FFN takes 30.1 ms and the Neural Engine's 30.4 ms, and the GPU then waits 0.4 ms (`ANE_PROF`). At 16 units
+  the GPU's share is 36.4 ms against 24.4.
+- Logits with the split: part 4.
+
+**3. The cut replies of 0.4.1: cause and fix.** With the split, several agents and a drafter, replies ended after 2–3
+tokens (M4 Pro, 0.4.1 defaults: 13 of 16 agent turns at 8 agents; M6 `ANE_UNITS=24`: up to 42 of 48), and 0.4.2 turned
+the split off by default.
+- **Cause.** A step that takes the split runs while it is encoded: `ffn_split` commits and waits three command buffers
+  per layer inside `encode_step`. The scheduler wrote a lone decoder's host-built token tree into the input rows after
+  `encode_step`. In a step it shares with another sequence's prompt chunk (1,024 rows or more) the layers had already
+  run, so the tree rows were verified as the previous step's tokens and `tree_accept` committed wrong ones. A single
+  agent never shares such a step and a run without a drafter has no trees, which is why both were unaffected.
+- **Fix.** The scheduler installs the trees before `encode_step` when the step takes the split (`Qwen35::ane_rows`).
+- **Check.** 8 cold streams × 128 tokens. Every generated token is compared with mlx_lm's top-1 at its position,
+  teacher-forced on the stream's own prompt and output; the gap is the top-1 logit less the logit of the token the
+  server emitted, and a gap above 0.5 counts as wrong (smaller ones are near-ties that different arithmetic resolves
+  differently). `TREE_SEQS=8` gives every decoder a tree, so that most streams share split steps:
+
+| 8 cold streams | Wrong tokens of 1,024 | Worst gap (logits) | All first tokens (s) | Wall (s) |
+|---|---|---|---|---|
+| GPU alone | 0 | 0.250 | 95.65 | 104.82 |
+| 20 units, before the fix | 2 (both in the first stream) | 24.109 | 71.46 | 80.54 |
+| 20 units, with the fix | 0 | 0.375 | 72.31 | 81.66 |
+| `TREE_SEQS=8`, GPU alone | 0 | 0.125 | 96.59 | 106.35 |
+| `TREE_SEQS=8`, 20 units, before the fix | 65 (in 7 of the 8 streams) | 24.109 | 70.75 | 84.36 |
+| `TREE_SEQS=8`, 20 units, with the fix | 0 | 0.375 | 70.58 | 80.33 |
+
+- Steps that do not take the split are unchanged by the fix: with the split off, logits are byte-identical to the
+  build before at chunks 24, 256 and 1,536, and `decode_test bench` reads the same on both (1 / 4 / 8 / 16 rows:
+  58 / 78 / 98.5 / 152 ms).
+- 4 cold streams × 64 tokens: all first tokens 47.69 → 35.55 s, wall 50.82 → 38.93 s.
+
+**4. The default.** `Qwen35::ane_units_default` now returns 20 on a 30-core M3 Max with a Metal budget above 64 GiB
+(the 96 GB configuration, the one measured) for the 27B's FFN shape (34 units), and 0 elsewhere; `ANE_UNITS` overrides
+it and 0 turns the split off. The build with that default, with nothing in the environment against `ANE_UNITS=0`:
+
+| | Nothing set (20 units) | `ANE_UNITS=0` |
+|---|---|---|
+| Start to listening | 10.2 s | 8.1 s |
+| Metal memory: model + state + scratch (allocated, with a 6 GiB KV pool) | 20.8 GiB (29.5) | 20.5 GiB (29.2) |
+| 4k prefill, 1,024-row chunks, two passes | 258 / 261 tok/s | 173 / 170 tok/s |
+| 8 cold streams × 128 tokens: all first tokens / wall | 71.37 / 80.38 s | 95.49 / 104.63 s |
+| – tokens more than 0.5 logits under mlx_lm's top-1, of 1,024 (worst gap) | 0 (0.375) | 0 (0.250) |
+| Warm decode at 1 / 2 / 4 streams, first pass | 55.5 / 66.6 / 82.7 tok/s | 55.7 / 66.4 / 81.5 tok/s |
+| – second pass | 49.8 / 61.6 / 80.0 tok/s | 51.5 / 63.3 / 78.2 tok/s |
+
+- **Decode is level.** Warm turns on 512-token cached prompts as in (af), medians of 3 rounds × 256 tokens, the two
+  configurations in turn (`ANE_UNITS=0` first in each pass). The second pass read 3–10% lower for both, which is the
+  machine's state and not the split (below).
+- **Logits.** `decode_test check` runs its four 2,048-token sequences in one step, so under the default chunks of 256
+  (1,024-row steps) and 1,536 take the split; chunk 24 does not and is byte-identical to the build before. Against
+  mlx_lm (`ref_logits.py compare-bin`), cos per sequence with the split (GPU alone in brackets):
+
+| Chunk | Sequence 0 | 1 | 2 | 3 | Largest KL |
+|---|---|---|---|---|---|
+| 256 | 0.99814 (0.99859) | 0.99976 (0.99981) | 0.99951 (0.99972) | 0.99717 (0.99781) | 0.0034 (0.0019) |
+| 1,536 | 0.99851 (0.99915) | 0.99968 (0.99979) | 0.99963 (0.99979) | 0.99801 (0.99881) | 0.0032 (0.0016) |
+
+- Top-1 is right on every sequence and the tool passes all four at both chunks; its limits at this length are cos ≥
+  0.995 and KL ≤ 0.03 (0.99 / 0.05 on sequence 0). The split is deterministic (a second run is byte-identical), and
+  with `ANE_UNITS=0` the logits are byte-identical to the build before at chunks 256 and 1,536.
+- **`decode_test bench`** never takes the split. 1 / 4 / 8 / 16 rows, this build and the one before it in turn: 57.2 /
+  77.8 / 98.6 / 151.7 ms against 57.6 / 85.3 / 98.6 / 151.7, then 57.5 / 77.8 / 98.7 / 151.7 against 57.3 / 81.5 /
+  98.5 / 151.7.
+- **The machine's state moves these numbers more than the split does.** Straight after the seven minutes of server
+  load of the decode comparison the same bench read 60–64 / 91–94 / 105–109 / 154–156 ms three times, and a minute
+  later the values above. The 4-row step is the least stable: 77.8–78.2 ms in most runs of either build, 81.5–94.2 in
+  the others. Other applications were open throughout (a browser and a music player each held about one CPU core when
+  sampled) and temperature was not instrumented, which is why every comparison here alternates the two sides.
+- **The committed source** adds the `ANE_UNITS=0` hint to the Neural Engine's failure messages and the memory
+  condition of the default to the build measured above. Checked again on it: logits byte-identical at chunks 24, 256
+  and 1,536; 8 cold streams 71.29 s to all first tokens, wall 80.33 s, 0 of 1,024 tokens above the gap (worst 0.375);
+  bench 58.3 / 87.0 / 100.5 / 152.3 ms.
+- **Speculative output against plain decode** on that build (`SPEC_STRICT=1 spec_test`, 4 sequences × 128 tokens). On
+  24-token prompts 2 of 4 sequences are identical; the other two differ at the positions and with the tokens that
+  0.4.2 shows on this machine (sequence 1 at an exact tie in mlx_lm; sequence 0, the repetitive prompt that the
+  release gate reports and does not judge, at a gap of 1.5 logits). On 2,048-token prompts, which prefill through the
+  split, 3 of 4 are identical and the fourth differs at a near-tie (gap 0.125). `tie_check.py` finds 0 judged
+  differences above the 0.5 gap in both.
+- **Memory.** Loaded, the split holds 0.3 GiB of Metal buffers and the server keeps 0.5 GiB more free
+  (`ANE_MARGIN_GIB`), so an automatic KV pool is 44.5 GiB against 45.3 (44,828 blocks against 45,649: 26k tokens of
+  8-bit KV, under 2% of the pool here).
+
+**Caveats.**
+- One machine, with 96 GB, on macOS 27. The 36 GB configuration of the same chip is left off: the split was not run
+  on it, and memory is where it differs. The 0.8 GiB that the split takes from an automatic KV pool is under 2% here;
+  a 36 GB machine's automatic pool is around 6 GiB (the figure a 36 GB M4 Max logged, MACHINES.md), so there it would
+  be about an eighth. `ANE_UNITS=20` is the setting to try on it.
+- The cold rows are one run each. Power and temperature were not measured, and other applications were open.
+- The split has no GPU fallback: if the Neural Engine cannot compile, load or run a function the process exits. Its
+  message now says that `ANE_UNITS=0` runs without the split.
+- With the default, logits after prefill steps of 1,024 rows and more differ slightly from older builds (the table
+  above), so a byte-for-byte comparison with an older build needs `ANE_UNITS=0`. That includes `decode_test check` at
+  chunks of 256 and more, and so the logits step of the release gate on this machine now runs through the split.
+- The M4 / M4 Pro default (26 units in 0.4.0–0.4.1) is not restored: the ordering explains the replies cut there, but
+  the fix was not run on those machines. An agent fleet with `ANE_UNITS=26` at 8 and 16 agents would settle it.
+- The split speeds prefill only. A decode-sized split (64-row functions for 16 streams × 4 rows) was not built.
+  Estimate, not a measurement: the probe runs 20 units in 4.8 ms at 64 rows, the balance would be near 12 units and a
+  layer's FFN would go from about 4.5 to about 3.0 ms; against that stand three command buffers and two host waits
+  per layer and the per-layer re-quantization of the Neural Engine's weights, which a 1,024-row step amortizes and a
+  64-row step does not.
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

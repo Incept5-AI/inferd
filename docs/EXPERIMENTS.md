@@ -199,6 +199,7 @@ Measured ceilings and a profile of where a step goes:
 | N8 | `ANE_A8D` | int8 intermediate for down (rotation as a grouped conv with a BLOBFILE constant, per-token quantize) | inf in layer 0, all-zero output from layer 1; the rotation and quantize pieces check out in isolation (`ane_rot_test`); suspect the int8 × int8 down matmul | broken, off | same |
 | N9 | M5 Pro split | same design | +3% in `decode_test` (its ANE ~2.6× slower per unit than its GPU) | not pursued; M6 only | same |
 | N10 | Fleets with the split | `agents.py`, 2 rounds | M6 8k, 8/16/32/64 agents: GPU 9.67/9.51/9.58/9.66; **ANE24 10.99/10.94/11.16/11.27**; Splash 8.73/7.54/8.85/6.82 (32 of 128 turns refused at 64). M6 16k, 8/16/32: GPU 8.22/8.16/8.25; ANE24 9.32/8.78/9.04; Splash 8.23/7.01/6.82. Gain +13–17% at 8k, +8–13% at 16k. Splash's own ANE share: 0.74 on the M6, 0.41 on the M5 Pro | — | "Overnight agent-fleet results", "M6 16k fleet" |
+| N11 | M3 Max split (30-core GPU, no GPU neural accelerators) | same design; `ANE_UNITS` 16–32 in `decode_test prefill` (4k), then cold streams through the server | GPU alone 175 / 176 tok/s (1,024- / 2,048-row chunks); 16 units 234 / 247, 19 252 / 268, **20 257 / 270** (+47% / +53%), 21 250 / 263, 24 235 / 248, 32 197 / 199. At 20 the GPU's 14 units and the Neural Engine's 20 finish together (30.1 / 30.4 ms a layer at 1,024 rows). 8 streams on cold 2k prompts: all first tokens 95.5 → 71.4 s, every generated token within 0.375 logits of mlx_lm's top-1; logits pass at chunks of 256 and 1,536 | **default on the 96 GB 30-core M3 Max** (20 units, 2026-11-15), after the tree-ordering fix (section 12); off elsewhere, the 36 GB configuration included (not measured; the split takes ~0.8 GiB of its KV pool) | RESULTS (ag) |
 
 ## 8. Multi-model
 
@@ -291,6 +292,7 @@ agent-fleet results")*. At the stock wired limit Splash does 7.3–8.1 turns/min
 | One agent on a long context (256k × 1 28% behind Splash; 16k × 1 15% behind) | remaining gap | "Milestone inferd10" |
 | GDN replay folded into the next cycle's `gdn_step` (one of three passes over the state per cycle; needs double-buffered tapes, a pending commit per sequence, and a flush through `gdn_replay` before snapshots, spill, preemption, tree steps and for a sequence that sits out a step) | measured, not built: the replay is 1.8–3.7% of a cycle without neural accelerators, so ~1–1.5%; read the ceiling on the Studio with `SKIP=replay` | RESULTS (af) |
 | QA8 below 256 rows per shape (`QA8_MIN`, `decode_test gemmcmp`), fill rows on W4A8 / QA8 tiles (`SPEC_FILL=5`), int8 queries in `attn_shared` | need neural accelerators: not measurable on the M3 Max | RESULTS (af) |
+| Neural Engine split at decode-sized steps (64-row functions for 16 streams × 4 rows) | not built. Estimate from the probe (20 units in 4.8 ms at 64 rows): balance near 12 units, a layer's FFN about 4.5 → 3.0 ms, before three command buffers, two host waits and the weight re-quantization per layer, which a 64-row step does not amortize | RESULTS (ag) |
 
 ## 11. What is ours
 
@@ -446,3 +448,20 @@ Present in 0.4.2; the server is not affected (the scheduler grows a sequence's b
 `max_blocks`). Fix: pages for T + (n_gen + 1) × the widest block + `kMaxTree` tokens, and the tool exits if a
 sequence's rows pass its pages. After it, mixed-length and uniform runs differ from plain decode only at three known
 near-ties (gap 0.125).
+
+**Replies cut after 2-3 tokens with the Neural Engine split (found 2026-11-15)** *(RESULTS (ag))*. Symptom: with the
+split on, several agents and a drafter, turns ended after 2-3 tokens (M4 Pro on 0.4.1's default: 13 of 16 agent turns
+at 8 agents, 4 of 32 at 16; M6 with `ANE_UNITS=24`: up to 42 of 48), never with one agent or without a drafter, and
+prefill logits passed the gate. 0.4.2 turned the default off without a cause. Reproduction on a 30-core M3 Max
+(`ANE_UNITS=20`, 8 streams on cold 2,048-token prompts): 2 of 1,024 generated tokens far from mlx_lm's top-1 (24.1 and
+18.5 logits below it; repeated tokens rather than an end of turn), 65 with `TREE_SEQS=8`, 0 on the GPU alone. Cause: a
+step that takes the split runs while it is encoded (`ffn_split` commits and waits three command buffers per layer
+inside `encode_step`), and the scheduler wrote a lone decoder's host-built token tree into the step's input rows after
+`encode_step`, which is in time for every step that runs at commit. In a step shared with another sequence's prompt
+chunk of 1,024 rows or more the layers had already run on the rows' old contents, so the tree was verified as the
+previous step's tokens and `tree_accept` committed from logits that belonged to other tokens. Fix: the trees are
+installed before `encode_step` when the step takes the split (`Qwen35::ane_rows`). After it both runs have 0 wrong
+tokens (worst gap 0.375) and steps without the split are byte-identical. What hid it: a single agent never shares a
+split step, logits checks have no trees, and a comparison of two servers' token streams stops at the first near-tie.
+The check that found it scores every generated token against the reference model, teacher-forced on the stream's own
+output. Not re-run on the M4 Pro or the M6.

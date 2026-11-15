@@ -1,0 +1,82 @@
+18:49:24 ANE_UNITS=18
+inferd: Neural Engine FFN split: 9216 of 17408 channels (18 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+ane: T=1024 R=1024 per layer: before 32.39 ms, GPU share 33.20, then ANE wait 0.01; ANE eval 27.36 ms
+ane: T=1024 R=1024 per layer: before 30.56 ms, GPU share 33.21, then ANE wait 0.01; ANE eval 27.28 ms
+ane: T=1024 R=1024 per layer: before 31.46 ms, GPU share 33.26, then ANE wait 0.01; ANE eval 27.27 ms
+ane: T=1024 R=1024 per layer: before 32.36 ms, GPU share 33.23, then ANE wait 0.01; ANE eval 27.27 ms
+prefill L=  4096 chunk  1024:   16.65 s  =     246 tok/s (GPU 0.01 s)
+ane: T=2048 R=2048 per layer: before 59.16 ms, GPU share 61.69, then ANE wait 0.01; ANE eval 51.04 ms
+ane: T=2048 R=2048 per layer: before 62.79 ms, GPU share 61.65, then ANE wait 0.01; ANE eval 51.12 ms
+prefill L=  4096 chunk  2048:   15.71 s  =     261 tok/s (GPU 0.01 s)
+18:50:15 ANE_UNITS=19
+inferd: Neural Engine FFN split: 9728 of 17408 channels (19 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+ane: T=1024 R=1024 per layer: before 32.35 ms, GPU share 31.65, then ANE wait 0.07; ANE eval 28.68 ms
+ane: T=1024 R=1024 per layer: before 30.65 ms, GPU share 31.66, then ANE wait 0.02; ANE eval 28.58 ms
+ane: T=1024 R=1024 per layer: before 31.46 ms, GPU share 31.64, then ANE wait 0.02; ANE eval 28.58 ms
+ane: T=1024 R=1024 per layer: before 32.38 ms, GPU share 31.63, then ANE wait 0.03; ANE eval 28.64 ms
+prefill L=  4096 chunk  1024:   16.26 s  =     252 tok/s (GPU 0.01 s)
+ane: T=2048 R=2048 per layer: before 59.05 ms, GPU share 58.11, then ANE wait 0.01; ANE eval 53.52 ms
+ane: T=2048 R=2048 per layer: before 62.97 ms, GPU share 58.47, then ANE wait 0.01; ANE eval 53.59 ms
+prefill L=  4096 chunk  2048:   15.29 s  =     268 tok/s (GPU 0.01 s)
+18:51:06 ANE_UNITS=21
+inferd: Neural Engine FFN split: 10752 of 17408 channels (21 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+ane: T=1024 R=1024 per layer: before 32.74 ms, GPU share 28.47, then ANE wait 3.47; ANE eval 31.88 ms
+ane: T=1024 R=1024 per layer: before 30.87 ms, GPU share 28.50, then ANE wait 3.29; ANE eval 31.72 ms
+ane: T=1024 R=1024 per layer: before 31.77 ms, GPU share 28.48, then ANE wait 3.25; ANE eval 31.66 ms
+ane: T=1024 R=1024 per layer: before 32.68 ms, GPU share 28.49, then ANE wait 3.35; ANE eval 31.78 ms
+prefill L=  4096 chunk  1024:   16.37 s  =     250 tok/s (GPU 0.01 s)
+ane: T=2048 R=2048 per layer: before 59.74 ms, GPU share 52.09, then ANE wait 7.86; ANE eval 59.88 ms
+ane: T=2048 R=2048 per layer: before 63.20 ms, GPU share 51.93, then ANE wait 8.01; ANE eval 59.87 ms
+prefill L=  4096 chunk  2048:   15.55 s  =     263 tok/s (GPU 0.01 s)
+18:51:59 ANE_UNITS=22
+inferd: Neural Engine FFN split: 11264 of 17408 channels (22 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+ane: T=1024 R=1024 per layer: before 32.56 ms, GPU share 26.87, then ANE wait 6.36; ANE eval 33.17 ms
+ane: T=1024 R=1024 per layer: before 30.89 ms, GPU share 26.87, then ANE wait 6.20; ANE eval 33.02 ms
+ane: T=1024 R=1024 per layer: before 31.80 ms, GPU share 26.87, then ANE wait 6.22; ANE eval 33.03 ms
+ane: T=1024 R=1024 per layer: before 32.72 ms, GPU share 26.86, then ANE wait 6.27; ANE eval 33.06 ms
+prefill L=  4096 chunk  1024:   16.70 s  =     245 tok/s (GPU 0.01 s)
+ane: T=2048 R=2048 per layer: before 59.20 ms, GPU share 48.22, then ANE wait 14.30; ANE eval 62.45 ms
+ane: T=2048 R=2048 per layer: before 63.30 ms, GPU share 48.85, then ANE wait 13.68; ANE eval 62.46 ms
+prefill L=  4096 chunk  2048:   15.86 s  =     258 tok/s (GPU 0.01 s)
+done 18:52
+18:52:54 ANE_UNITS=22
+inferd: Neural Engine FFN split: 11264 of 17408 channels (22 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+ane: T=1024 R=1024 per layer: before 30.08 ms, GPU share 26.88, then ANE wait 6.54; ANE eval 33.36 ms
+ane: T=1024 R=1024 per layer: before 30.95 ms, GPU share 26.87, then ANE wait 6.43; ANE eval 33.25 ms
+ane: T=1024 R=1024 per layer: before 31.84 ms, GPU share 26.91, then ANE wait 6.39; ANE eval 33.21 ms
+ane: T=1024 R=1024 per layer: before 32.77 ms, GPU share 26.90, then ANE wait 6.40; ANE eval 33.24 ms
+prefill L=  4096 chunk  1024:   16.60 s  =     247 tok/s (GPU 0.01 s)
+ane: T=2048 R=2048 per layer: before 59.15 ms, GPU share 48.26, then ANE wait 14.56; ANE eval 62.69 ms
+ane: T=2048 R=2048 per layer: before 62.71 ms, GPU share 48.27, then ANE wait 14.44; ANE eval 62.64 ms
+prefill L=  4096 chunk  2048:   15.85 s  =     258 tok/s (GPU 0.01 s)
+18:53:29 ANE_UNITS=21
+inferd: Neural Engine FFN split: 10752 of 17408 channels (21 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+ane: T=1024 R=1024 per layer: before 30.00 ms, GPU share 28.52, then ANE wait 3.25; ANE eval 31.70 ms
+ane: T=1024 R=1024 per layer: before 30.92 ms, GPU share 28.54, then ANE wait 3.09; ANE eval 31.56 ms
+ane: T=1024 R=1024 per layer: before 31.78 ms, GPU share 28.50, then ANE wait 3.15; ANE eval 31.58 ms
+ane: T=1024 R=1024 per layer: before 32.69 ms, GPU share 28.51, then ANE wait 3.11; ANE eval 31.56 ms
+prefill L=  4096 chunk  1024:   16.16 s  =     253 tok/s (GPU 0.01 s)
+ane: T=2048 R=2048 per layer: before 59.24 ms, GPU share 51.54, then ANE wait 8.22; ANE eval 59.70 ms
+ane: T=2048 R=2048 per layer: before 62.78 ms, GPU share 51.50, then ANE wait 8.33; ANE eval 59.77 ms
+prefill L=  4096 chunk  2048:   15.48 s  =     265 tok/s (GPU 0.01 s)
+18:54:03 ANE_UNITS=19
+inferd: Neural Engine FFN split: 9728 of 17408 channels (19 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+ane: T=1024 R=1024 per layer: before 29.69 ms, GPU share 31.70, then ANE wait 0.08; ANE eval 28.72 ms
+ane: T=1024 R=1024 per layer: before 30.60 ms, GPU share 31.71, then ANE wait 0.02; ANE eval 28.63 ms
+ane: T=1024 R=1024 per layer: before 31.51 ms, GPU share 31.70, then ANE wait 0.02; ANE eval 28.58 ms
+ane: T=1024 R=1024 per layer: before 32.38 ms, GPU share 31.70, then ANE wait 0.02; ANE eval 28.51 ms
+prefill L=  4096 chunk  1024:   16.10 s  =     254 tok/s (GPU 0.01 s)
+ane: T=2048 R=2048 per layer: before 58.86 ms, GPU share 57.95, then ANE wait 0.01; ANE eval 53.59 ms
+ane: T=2048 R=2048 per layer: before 62.46 ms, GPU share 57.97, then ANE wait 0.01; ANE eval 53.85 ms
+prefill L=  4096 chunk  2048:   15.20 s  =     270 tok/s (GPU 0.01 s)
+18:54:36 ANE_UNITS=18
+inferd: Neural Engine FFN split: 9216 of 17408 channels (18 units), functions 512..2048 rows, W8A8 gate/up (rotated)
+ane: T=1024 R=1024 per layer: before 29.85 ms, GPU share 33.23, then ANE wait 0.01; ANE eval 27.29 ms
+ane: T=1024 R=1024 per layer: before 30.59 ms, GPU share 33.22, then ANE wait 0.01; ANE eval 27.16 ms
+ane: T=1024 R=1024 per layer: before 31.48 ms, GPU share 33.22, then ANE wait 0.01; ANE eval 27.17 ms
+ane: T=1024 R=1024 per layer: before 32.39 ms, GPU share 33.23, then ANE wait 0.01; ANE eval 27.13 ms
+prefill L=  4096 chunk  1024:   16.49 s  =     248 tok/s (GPU 0.01 s)
+ane: T=2048 R=2048 per layer: before 58.88 ms, GPU share 61.33, then ANE wait 0.01; ANE eval 51.10 ms
+ane: T=2048 R=2048 per layer: before 62.46 ms, GPU share 61.31, then ANE wait 0.01; ANE eval 51.25 ms
+prefill L=  4096 chunk  2048:   15.63 s  =     262 tok/s (GPU 0.01 s)
+done 18:55

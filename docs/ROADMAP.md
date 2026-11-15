@@ -175,6 +175,11 @@ measured faster single-stream), fewer dispatches (a decode step is ~1,250 dispat
   instead of host waits.
 - **Payoff:** M6 prefill +29% at the microbenchmark level (more if A8D works); possibly makes the split worth it on M5
   Pro/Max. **Difficulty:** M.
+- **15 Nov 2026:** the replies cut after 2–3 tokens with the split, several agents and a drafter (why 0.4.2 turned
+  the default off) had one cause: the scheduler wrote a lone decoder's token tree into the input rows of a step that
+  had already run. Fixed and checked on an M3 Max, where the split is now the default on the 96 GB 30-core
+  configuration (20 units, 4k prefill +47–53%; RESULTS (ag)). **Next:** an agent fleet on the M4 Pro and the M6 with
+  the fix (`ANE_UNITS=26` / 24 at 8 and 16 agents), then restore the M4 / M4 Pro default.
 
 ### P1-4. Decode at 8–64 agents: wide GEMMs
 - **Evidence:** "Diagnosed 2026-10-31: the W4A8 epilogue is not what holds wide GEMMs back" and "Wide GEMMs: tile

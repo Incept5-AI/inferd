@@ -1,0 +1,21 @@
+== new pass 1
+B=  1 L=  2048 R=1  step   58.45 ms (GPU   57.71)  =    17.1 rows/s total,   17.1/stream
+B=  4 L=  2048 R=1  step   78.24 ms (GPU   77.49)  =    51.1 rows/s total,   12.8/stream
+B=  8 L=  2048 R=1  step   98.49 ms (GPU   97.70)  =    81.2 rows/s total,   10.2/stream
+B= 16 L=  2048 R=1  step  151.74 ms (GPU  150.85)  =   105.4 rows/s total,    6.6/stream
+== old pass 1
+B=  1 L=  2048 R=1  step   57.72 ms (GPU   56.96)  =    17.3 rows/s total,   17.3/stream
+B=  4 L=  2048 R=1  step   78.08 ms (GPU   77.27)  =    51.2 rows/s total,   12.8/stream
+B=  8 L=  2048 R=1  step   98.64 ms (GPU   97.82)  =    81.1 rows/s total,   10.1/stream
+B= 16 L=  2048 R=1  step  152.19 ms (GPU  151.23)  =   105.1 rows/s total,    6.6/stream
+== new pass 2
+B=  1 L=  2048 R=1  step   56.59 ms (GPU   55.81)  =    17.7 rows/s total,   17.7/stream
+B=  4 L=  2048 R=1  step   77.94 ms (GPU   77.14)  =    51.3 rows/s total,   12.8/stream
+B=  8 L=  2048 R=1  step   98.76 ms (GPU   97.94)  =    81.0 rows/s total,   10.1/stream
+B= 16 L=  2048 R=1  step  152.07 ms (GPU  151.06)  =   105.2 rows/s total,    6.6/stream
+== old pass 2
+B=  1 L=  2048 R=1  step   57.37 ms (GPU   56.64)  =    17.4 rows/s total,   17.4/stream
+B=  4 L=  2048 R=1  step   77.95 ms (GPU   77.19)  =    51.3 rows/s total,   12.8/stream
+B=  8 L=  2048 R=1  step   98.71 ms (GPU   97.86)  =    81.0 rows/s total,   10.1/stream
+B= 16 L=  2048 R=1  step  151.80 ms (GPU  150.99)  =   105.4 rows/s total,    6.6/stream
+done 19:23

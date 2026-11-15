@@ -2368,19 +2368,29 @@ struct Qwen35 {
   // (2026-11-02 night; cause not found: the GPU idled between the early command buffers while the host encoded).
   bool no_split_step = false;
   AneFfn* ane = nullptr;  // the Neural Engine FFN split (ANE_UNITS > 0): prefill steps of >= 512 rows
-  // ANE_UNITS when set (0 = off); otherwise off. M4 Pro (2026-11-05), 8k prefill, GPU alone 122 / 114 tok/s
-  // (chunks 1,024 / 2,048): 14 units 159 / 160, 22 201 / 208, 26 212 / 218, 30 197 / 202, 34 187 / 194. There the
-  // GPU's quantized GEMM is at ~6.2 TFLOPS and the Neural Engine runs the FFN at ~10.3 (tools/ane_probe). Not
-  // measured on M1-M3 or the M4 Max (a 40-core GPU leaves the Neural Engine a smaller share): try ANE_UNITS there.
+  // ANE_UNITS when set (0 = off); otherwise 20 of the 27B's 34 FFN units on a 30-core M3 Max with a Metal budget
+  // above 64 GiB (its 96 GB configuration, the one measured) and off elsewhere. Loaded, the split takes about 0.8 GiB
+  // from an automatic KV pool (0.3 of buffers plus the server's ANE_MARGIN_GIB); the 36 GB configuration's pool is a
+  // few GiB and the trade is not measured there: ANE_UNITS=20 to try it.
+  // M3 Max 30-core (2026-11-15), 4k prefill, GPU alone 175 / 176 tok/s (chunks 1,024 / 2,048; the first of two
+  // passes): 16 units 234 / 247, 19 252 / 268, 20 257 / 270, 21 250 / 263, 24 235 / 248, 32 197 / 199. At 20 the GPU's
+  // share of a layer's FFN and the Neural Engine's finish together (30.1 / 30.4 ms at 1,024 rows), and logits pass
+  // at chunks of 256 and 1,536. M4 Pro (2026-11-05), 8k prefill, GPU alone 122 / 114 tok/s: 14 units 159 / 160, 22
+  // 201 / 208, 26 212 / 218, 30 197 / 202, 34 187 / 194. There the GPU's quantized GEMM is at ~6.2 TFLOPS and the
+  // Neural Engine runs the FFN at ~10.3 (tools/ane_probe). Not measured on M1, M2, the other M3 chips or the M4 Max
+  // (a 40-core GPU leaves the Neural Engine a smaller share): try ANE_UNITS there.
   // 0.4.1 had 26 units on by default on M4 / M4 Pro and 0.4.2 turned the split off everywhere: with several agents
   // and a drafter, replies were cut to 2-3 tokens (M4 Pro, 13 of 16 agent turns at 8 agents; M6 ANE_UNITS=24, up to
-  // 42 of 48). Cause (2026-11-15, reproduced on an M3 Max as repeated tokens): a split step runs while it is encoded
+  // 42 of 48). Cause (2026-11-15, reproduced on the M3 Max as repeated tokens): a split step runs while it is encoded
   // (ane_rows below) and the scheduler wrote a lone decoder's host-built token tree after encode_step, so the tree
-  // rows were verified as the previous step's tokens. The scheduler now installs the trees first. The default stays
-  // off until an agent fleet has passed on an M4 Pro with the fix.
+  // rows were verified as the previous step's tokens. The scheduler now installs the trees first. The M4 / M4 Pro
+  // default stays off until an agent fleet has passed there with the fix.
   int ane_units_default() const {
     if (const char* v = getenv("ANE_UNITS")) return atoi(v);
-    return 0;
+    const std::string name = g.dev.name.UTF8String;
+    const bool m3max30 = name.find("Apple M3 Max") != std::string::npos && g.cores == 30;
+    const bool roomy = g.dev.recommendedMaxWorkingSetSize > (64ull << 30);
+    return !g.nax && m3max30 && roomy && cfg.inter == 34 * 512 ? 20 : 0;
   }
   // The Neural Engine function a step of T rows takes (its row count; 0 = no split). Such a step runs while it is
   // encoded (ffn_split commits and waits per layer), so whatever the host writes for it must be in place before

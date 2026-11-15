@@ -1,0 +1,28 @@
+== chunk 24
+byte-identical to the 17:54 build
+seq 0: cos 0.99920  max|diff| 1.008  KL 0.00010  top1 ok  top5 overlap 4/5
+seq 1: cos 0.99981  max|diff| 0.268  KL 0.00144  top1 ok  top5 overlap 5/5
+seq 2: cos 0.99984  max|diff| 0.352  KL 0.00119  top1 ok  top5 overlap 5/5
+seq 3: cos 0.99721  max|diff| 2.102  KL 0.00000  top1 ok  top5 overlap 5/5
+compare: 4/4 sequences pass
+== chunk 256
+byte-identical to the 17:54 build
+seq 0: cos 0.99859  max|diff| 1.281  KL 0.00032  top1 ok  top5 overlap 4/5
+seq 1: cos 0.99981  max|diff| 0.273  KL 0.00014  top1 ok  top5 overlap 5/5
+seq 2: cos 0.99972  max|diff| 0.395  KL 0.00194  top1 ok  top5 overlap 5/5
+seq 3: cos 0.99781  max|diff| 1.688  KL 0.00000  top1 ok  top5 overlap 5/5
+compare: 4/4 sequences pass
+== chunk 1536
+byte-identical to the 17:54 build
+seq 0: cos 0.99915  max|diff| 1.039  KL 0.00027  top1 ok  top5 overlap 4/5
+seq 1: cos 0.99979  max|diff| 0.273  KL 0.00162  top1 ok  top5 overlap 5/5
+seq 2: cos 0.99979  max|diff| 0.348  KL 0.00138  top1 ok  top5 overlap 5/5
+seq 3: cos 0.99881  max|diff| 1.359  KL 0.00000  top1 ok  top5 overlap 5/5
+compare: 4/4 sequences pass
+== bench
+loaded in 2.1 s
+B=  1 L=  2048 R=1  step   57.98 ms (GPU   57.05)  =    17.2 rows/s total,   17.2/stream
+B=  4 L=  2048 R=1  step   85.47 ms (GPU   84.68)  =    46.8 rows/s total,   11.7/stream
+B=  8 L=  2048 R=1  step  100.46 ms (GPU   99.63)  =    79.6 rows/s total,   10.0/stream
+B= 16 L=  2048 R=1  step  151.94 ms (GPU  151.10)  =   105.3 rows/s total,    6.6/stream
+done 19:22

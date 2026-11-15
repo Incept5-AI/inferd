@@ -27,7 +27,7 @@ table before reusing them.
 | API | `json_schema` with `strict: true` (constrained decoding for a documented subset, then validation) | Shipped | examples/structured-output/README.md |
 | Hardware | M5/M6 neural-accelerator paths | Shipped | Studio M5 Ultra, M5 Pro, M6 qualified |
 | Hardware | M3/M4 paths (no neural accelerators) | Shipped, lightly tested | M4 Pro measured; M3 Ultra by a contributor |
-| Hardware | Neural Engine prefill split (`ANE_UNITS`) | Opt-in, experimental | private Apple API |
+| Hardware | Neural Engine prefill split (`ANE_UNITS`) | Opt-in, experimental; on by default on the 96 GB 30-core M3 Max | private Apple API; RESULTS.md (ag) |
 | Deployment | Loopback HTTP; engine socket in an owner-only directory; `run.sh start/stop/status` | Shipped | trusted local user only: SECURITY.md |
 | Deployment | Bearer API key (`INFERD_API_KEY`; required off loopback), request/queue/body limits with 429/503/413 | Shipped | engine/README.md, "Security and limits" |
 | Deployment | Checkpoint validation (shapes, dtypes, capacities) and per-request native validation | Shipped | malformed checkpoints fail before any copy |
