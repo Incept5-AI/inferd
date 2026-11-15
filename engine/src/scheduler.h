@@ -1835,6 +1835,27 @@ struct Scheduler {
       fprintf(stderr, "step: %d output rows > %d\n", m.n_out, m.max_out);
       abort();
     }
+    // Host-built trees: wait for the drafter, build each tree and write it into the target's input rows.
+    auto install_trees = [&] {
+      [dcb waitUntilCompleted];
+      for (size_t j = 0; j < who.size(); j++) {
+        if (!work[j].tree) continue;
+        Seq& s = running[who[j]];
+        const int r = dblk[j];
+        DraftOut o{d->cand.ptr<int>(), d->unary.ptr<float>(), d->hp.ptr<uint16_t>(), d->pred_cb.ptr<uint16_t>(),
+                   d->succ_cb.ptr<uint16_t>(), r * L, L};
+        Tree t;
+        build_tree(o, s.tokens[s.computed], tree_params, t);
+        m.set_tree((int)j, s.computed, t);
+      }
+    };
+    // A step that takes the Neural Engine split runs while it is encoded, so its trees go in first. Installed after
+    // encode_step as below, the tree rows of a lone decoder that shared a split step with another sequence's prompt
+    // chunk were verified as the previous step's tokens, and tree_accept then committed wrong tokens (an end of turn
+    // after 2-3 tokens on the M4 Pro and M6, repeated tokens on an M3 Max; found 2026-11-15).
+    const bool host_trees = m.n_tree && !tree_gpu;
+    const bool trees_first = host_trees && m.ane_rows(T);
+    if (trees_first) install_trees();
     m.encode_step(cb, T, (int)work.size());
     if (mtp) {
       Enc e(g, cb);
@@ -1868,19 +1889,7 @@ struct Scheduler {
       [b endEncoding];
     }
     m.cb_split = saved_split;
-    if (m.n_tree && !tree_gpu) {
-      [dcb waitUntilCompleted];
-      for (size_t j = 0; j < who.size(); j++) {
-        if (!work[j].tree) continue;
-        Seq& s = running[who[j]];
-        const int r = dblk[j];
-        DraftOut o{d->cand.ptr<int>(), d->unary.ptr<float>(), d->hp.ptr<uint16_t>(), d->pred_cb.ptr<uint16_t>(),
-                   d->succ_cb.ptr<uint16_t>(), r * L, L};
-        Tree t;
-        build_tree(o, s.tokens[s.computed], tree_params, t);
-        m.set_tree((int)j, s.computed, t);
-      }
-    }
+    if (host_trees && !trees_first) install_trees();
     [cb commit];
     [cb waitUntilCompleted];
     if (debug) fprintf(stderr, "[%.3f s] ", std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());

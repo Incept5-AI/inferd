@@ -2368,19 +2368,24 @@ struct Qwen35 {
   // (2026-11-02 night; cause not found: the GPU idled between the early command buffers while the host encoded).
   bool no_split_step = false;
   AneFfn* ane = nullptr;  // the Neural Engine FFN split (ANE_UNITS > 0): prefill steps of >= 512 rows
-  // ANE_UNITS when set (0 = off); otherwise 26 of the 27B's 34 FFN units on an M4 or M4 Pro (no GPU neural
-  // accelerators, <= 20 GPU cores) and off elsewhere. M4 Pro (2026-11-05), 8k prefill, GPU alone 122 / 114 tok/s
+  // ANE_UNITS when set (0 = off); otherwise off. M4 Pro (2026-11-05), 8k prefill, GPU alone 122 / 114 tok/s
   // (chunks 1,024 / 2,048): 14 units 159 / 160, 22 201 / 208, 26 212 / 218, 30 197 / 202, 34 187 / 194. There the
   // GPU's quantized GEMM is at ~6.2 TFLOPS and the Neural Engine runs the FFN at ~10.3 (tools/ane_probe). Not
   // measured on M1-M3 or the M4 Max (a 40-core GPU leaves the Neural Engine a smaller share): try ANE_UNITS there.
-  // 0.4.2: off everywhere unless ANE_UNITS is set. With several agents at once and a drafter, a speculative verify
-  // block that shares a split step can commit an end-of-turn token in place of the draft (replies cut to 2-3 tokens:
-  // M4 Pro 0.4.1 defaults, 13 of 16 agent turns at 8 agents; M6 ANE_UNITS=24, up to 42 of 48). Single streams and
-  // no-drafter runs are unaffected, and prefill logits pass. Back on once the cause is fixed (NOTES 2026-11-14).
+  // 0.4.1 had 26 units on by default on M4 / M4 Pro and 0.4.2 turned the split off everywhere: with several agents
+  // and a drafter, replies were cut to 2-3 tokens (M4 Pro, 13 of 16 agent turns at 8 agents; M6 ANE_UNITS=24, up to
+  // 42 of 48). Cause (2026-11-15, reproduced on an M3 Max as repeated tokens): a split step runs while it is encoded
+  // (ane_rows below) and the scheduler wrote a lone decoder's host-built token tree after encode_step, so the tree
+  // rows were verified as the previous step's tokens. The scheduler now installs the trees first. The default stays
+  // off until an agent fleet has passed on an M4 Pro with the fix.
   int ane_units_default() const {
     if (const char* v = getenv("ANE_UNITS")) return atoi(v);
     return 0;
   }
+  // The Neural Engine function a step of T rows takes (its row count; 0 = no split). Such a step runs while it is
+  // encoded (ffn_split commits and waits per layer), so whatever the host writes for it must be in place before
+  // encode_step.
+  int ane_rows(int T) const { return ane && on("ane") ? ane->rows_for(T) : 0; }
   void commit_early(id<MTLCommandBuffer> __strong& cb) {
     [cb commit];
     early.push_back(cb);
@@ -2835,7 +2840,7 @@ struct Qwen35 {
     } else {
       gemm(e, act, ly.out_proj, x, T, 1, true);
     }
-    if (const int aR = ane && li >= 0 && on("ane") ? ane->rows_for(T) : 0) {  // FFN split with the Neural Engine
+    if (const int aR = li >= 0 ? ane_rows(T) : 0) {  // FFN split with the Neural Engine
       ffn_split(e, cb, li, T, aR);
       return;
     }
