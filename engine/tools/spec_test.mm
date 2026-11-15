@@ -2,6 +2,10 @@
 //   Greedy-decodes n_gen tokens after each prompt in tokens.txt ("B T" + rows), first plainly and then with
 //   DFlash2 speculation, for B sequences batched together. Checks the two outputs are identical (speculation
 //   must be lossless) and reports tokens/s and tokens committed per cycle.
+// SPEC_LENS=6,5,5: chain rows per sequence (cycled over the B sequences, each 2..DRAFT_BLOCK), drafted and verified at
+// its own length (Drafter::BlockSeq::len, what the scheduler's SPEC_FILL hands out). SPEC_TRACE=<file>: the tokens each
+// sequence committed per cycle, one line per sequence ("<seq> <rows>: c c ..."). The generated tokens are the target's
+// whatever the drafts are, so the test of a ragged block is this trace against a uniform run's at the same length.
 // Outputs (both runs' token rows, plain first, for tools/tie_check.py) go to SPEC_OUT, else a fresh
 // $TMPDIR/spec_out-XXXXXX.txt (printed as "outputs: <path>"); a fixed /tmp path collided between runs and users.
 // The last line is machine-readable: "lossless: <identical>/<B> identical, <n> diverged[: seqs a,b]". Exit status 0,
@@ -106,12 +110,23 @@ int main(int argc, char** argv) {
     std::vector<std::vector<int>> prompts(B0, std::vector<int>(T));
     for (auto& r : prompts) for (auto& v : r) f >> v;
     int n_gen = atoi(argv[4]), B = argc > 5 ? atoi(argv[5]) : B0;
-    int maxb = (T + n_gen + 16) / KV_BLOCK + 2;
+    // The run ends when the slowest sequence has n_gen tokens; until then a faster one commits up to a block per cycle.
+    // Pages for only n_gen + 16 let it run into the next sequence's row of the block table and overwrite the start of
+    // that sequence's prompt (2026-11-15: a 5-row sequence reached 446 tokens beside a 2-row one at 192).
+    int maxb = (T + (n_gen + 1) * Drafter::env_block() + kMaxTree) / KV_BLOCK + 2;
     Qwen35 m(g, tck, std::max(T, B * kMaxBlock), B, B, B * maxb, maxb);  // prefill one prompt per step, like the server
     double t0 = now();
     Drafter d(g, m, dck);
     m.enable_spec(d.target_layers, d.block);
     printf("drafter loaded in %.1f s\n", now() - t0);
+    std::vector<int> lens;
+    if (const char* s = getenv("SPEC_LENS"))
+      while (*s) { lens.push_back(std::clamp(atoi(s), 2, d.block)); while (*s && *s != ',') s++; if (*s) s++; }
+    if (!lens.empty() && ((getenv("TREE") && atoi(getenv("TREE")) > 1) || tree_sim_on)) {
+      fprintf(stderr, "spec_test: SPEC_LENS is for chains (not with TREE or TREE_SIM)\n");
+      return 1;
+    }
+    auto len_of = [&](int b) { return lens.empty() ? d.block : lens[b % lens.size()]; };
     std::vector<std::vector<int>> blocks(B);
     for (int b = 0; b < B; b++)
       for (int j = 0; j < maxb; j++) blocks[b].push_back(b * maxb + j);
@@ -171,6 +186,7 @@ int main(int argc, char** argv) {
       std::vector<SimCycle> sim;
       int cycles = 0;
       std::vector<int> chist(kMaxBlock + 1, 0);  // cycles committing c tokens (c = accepted drafts + 1)
+      std::vector<std::vector<int>> ctrace(B);  // SPEC_TRACE: tokens committed per cycle, by sequence
       uint64_t disp0 = Enc::dispatches;
       if (Enc::hist) Enc::hist->clear();
       if (Enc::prof) Enc::prof->clear();
@@ -185,12 +201,16 @@ int main(int argc, char** argv) {
         std::vector<Drafter::BlockSeq> bs;
         int row = 0;
         for (int b = 0; b < B; b++) {
-          int L = tree_on ? tree_n : spec_on ? d.block : 1;
+          int L = tree_on ? tree_n : spec_on ? len_of(b) : 1;
           vt[b].assign(L, 0);
           vt[b][0] = staged[b];
+          if (computed[b] + L > (int)blocks[b].size() * KV_BLOCK) {  // rows past its pages land in the next sequence's
+            fprintf(stderr, "spec_test: sequence %d at %d + %d rows is past its %zu KV blocks\n", b, computed[b], L, blocks[b].size());
+            exit(1);
+          }
           vw.push_back({b, &blocks[b], computed[b], vt[b].data(), L, spec_on});
           vw.back().tree = tree_on;
-          bs.push_back({b, computed[b], staged[b], row, tree_on});
+          bs.push_back({b, computed[b], staged[b], row, tree_on, 0, lens.empty() ? 0 : L});
           vrow[b] = row;
           row += L;
         }
@@ -264,6 +284,7 @@ int main(int argc, char** argv) {
           int c = m.commit.ptr<int>()[b];
           if (spec_on) {
             chist[std::min(c, kMaxBlock)]++;
+            ctrace[b].push_back(c);
             for (int i = 0; i < c; i++) toks[b].push_back(m.emit.ptr<int>()[b * kMaxBlock + i]);
           } else {
             toks[b].push_back(m.pred.ptr<int>()[b]);
@@ -301,6 +322,19 @@ int main(int argc, char** argv) {
         printf("  commit histogram (tokens: cycles):");
         for (int c = 1; c <= kMaxBlock; c++) if (chist[c]) printf(" %d:%d", c, chist[c]);
         printf("\n");
+        if (!lens.empty()) {
+          printf("  rows / tokens per cycle by sequence:");
+          for (int b = 0; b < B; b++) printf(" %d/%.2f", len_of(b), (double)(toks[b].size() - T - 1) / cycles);
+          printf("\n");
+        }
+        if (const char* tr = getenv("SPEC_TRACE"); tr && *tr) {
+          std::ofstream o(tr);
+          for (int b = 0; b < B; b++) {
+            o << b << " " << (tree_on ? tree_n : len_of(b)) << ":";
+            for (int c : ctrace[b]) o << " " << c;
+            o << "\n";
+          }
+        }
       }
       if (moe_n) printf("  MoE: %.1f unique experts per layer per step (of %d rows x top-%d)\n", moe_u / moe_n,
                         spec_on ? d.block * B : B, m.cfg.topk);

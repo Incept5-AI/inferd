@@ -1595,6 +1595,92 @@ budget there is no good way out:
 Logits are byte-identical to the previous build at chunks 1, 24, 256 and 1,536, and speculative output equals plain
 decode (one exact tie). The new defaults are single trials, except where noted.
 
+## (af) No neural accelerators: 8-row tiles, a block policy for them, and spare tile rows as verify rows (15 November)
+
+**Setup.** MacBook Pro M3 Max (30-core GPU, 96 GB, no GPU neural accelerators), macOS 27; Qwen3.8-27B 4-bit + DFlash2.
+- **Engine:** branch `perf/decode-throughput` on top of 0.4.2, not released. Each comparison is one build with the new
+  paths switched by environment (`SG_TILES`, `SG_POLICY`, `SPEC_FILL`), except the 0.4.2 row of the first table.
+- **Load:** the engine alone on a private socket; N streams start together on 512-token prompts that are already in
+  the prefix cache (480 of 512 tokens cached, so a turn is nearly all decode) and generate 256 tokens each, greedy.
+  tok/s = the tokens emitted while all N streams were decoding, over that window. The `spec_test` runs in part 3 use
+  2,048-token prompts and 192 tokens.
+
+**1. 8-row tiles (`SG_TILES`).** `qmv_wide` keeps 1–5 rows and `mlx_qmm_sg` starts at 6 rows with row tiles in 8-row
+steps (0.4.2: 1–10 rows and 11+). Plain decode steps are 21–36% faster at 6–10 rows and 3–7% at 12–32; prefill is
+3–5% faster at chunks of 512–2,048. Logits are byte-identical to 0.4.2 at chunks 1, 24, 256 and 1,536. Server, median
+of 3 rounds (the two builds ran one after the other, not alternated):
+
+| Streams | 1 | 2 | 3 | 4 | 5 | 6 | 8 | 10 | 12 | 16 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0.4.2 | 42.9 | 57.6 | 68.3 | 71.2 | 74.5 | 81.8 | 94.8 | 102.5 | 103.6 | 103.7 |
+| 8-row tiles | 45.4 | 59.5 | 74.0 | 79.8 | 77.1 | 92.4 | 96.8 | 100.8 | 103.6 | 104.2 |
+
+**2. Block policy (`SG_POLICY`) and fill rows (`SPEC_FILL`).** A row tile costs the same full or not (8 streams: 28
+verify rows cost what 32 do) and a 16-row step costs about twice an 8-row one. So the policy starts at block 8 for one
+or two streams and at 4 above, lets the tuner choose among 2/3/4/5/8, and gives a lone greedy stream 8-node trees.
+Fill rows then spend what the blocks leave over: on a decode-only chain step the spare rows of the last tile go out as
+extra verify rows, one a sequence per round, best running acceptance first. Median of two alternating passes (old,
+policy, fill, fill, policy, old) of two rounds each, all on the 8-row-tile build:
+
+| Streams | Old rule | Policy | Policy + fill | Policy + fill vs old |
+|---|---|---|---|---|
+| 1 | 45.4 | 53.2 | 55.6 | +22% |
+| 2 | 60.2 | 61.5 | 63.7 | +6% |
+| 3 | 73.5 | 70.3 | 79.0 | +8% |
+| 4 | 80.7 | 80.0 | 81.5 | +1% |
+| 5 | 77.6 | 82.2 | 89.4 | +15% |
+| 6 | 93.5 | 93.3 | 94.2 | +1% |
+| 7 | 86.0 | 86.3 | 96.8 | +13% |
+| 8 | 95.7 | 100.5 | 100.2 | +5% |
+| 10 | 99.5 | 101.3 | 101.5 | +2% |
+| 12 | 102.8 | 102.8 | 106.6 | +4% |
+| 14 | 103.1 | 104.5 | 107.7 | +4% |
+| 16 | 102.5 | 109.4 | 110.0 | +7% |
+
+- **Fill rows pay off the tile boundaries:** 3, 5 and 7 streams gain 9–12% over the policy alone and 12 and 14 gain
+  3–4%; 4, 6, 8, 10 and 16 are within 2%. 8,129 spare rows in 7,477 cycles committed 5,209 tokens (64%).
+- **The policy alone loses 4% at 3 streams** (12 rows in a 16-row tile); the fill rows repay it, so the two are
+  defaults together.
+- **One stream** (two alternating passes of 5 rounds): 8-node tree 55.5 (55.5–55.6), block-8 chain 55.2 (53.7–57.6, the
+  same sequence in both passes as the tuner explores), 16-node tree 45.4.
+- **Lossless:** output with fill rows equals output without them byte for byte at 3, 5 and 7 streams, and every
+  difference from plain decode is a near-tie (top-2 gap ≤ 0.25 logits in mlx_lm; the limit is 0.5).
+
+**3. Where a speculative cycle goes.** `PROF_KERNELS=1` in `spec_test` (each dispatch alone in its own command buffer,
+which overstates the small kernels), kernel ms per cycle:
+
+| Streams × block (rows) | All kernels | 4-bit GEMM | GDN replay | GDN step | Verify attention | Drafter attention |
+|---|---|---|---|---|---|---|
+| 1 × 8 (8) | 107.0 | 95.8 (90%) | 1.9 (1.8%) | 2.0 | 2.2 | 0.5 |
+| 8 × 4 (32) | 277.0 | 244.4 (88%) | 9.8 (3.5%) | 5.5 | 6.9 | 2.0 |
+| 16 × 4 (64) | 513.6 | 454.2 (88%) | 19.2 (3.7%) | 10.4 | 11.9 | 4.0 |
+
+Whole cycles agree. `spec_test`, GPU ms per cycle, two runs of each in turn (`SKIP=replay` is timing only: the state
+never advances and the output is wrong; `STATE_BF16=1` keeps the GDN state in bf16 and is not lossless, the runs take
+other token paths):
+
+| Streams × block | Default | `SKIP=replay` | `STATE_BF16=1` |
+|---|---|---|---|
+| 1 × 8 | 104.0, 103.9 | 102.2, 102.3 (−1.6%) | 103.3, 103.4 (−0.6%) |
+| 8 × 4 | 287.1, 276.4 | 268.1, 266.1 (−3.7%) | 270.8, 270.2 (−2.2%) |
+| 16 × 4 | 511.2, 511.7 | 491.4, 491.6 (−3.9%) | 500.4, 500.3 (−2.2%) |
+
+(8 streams: against the second default run, which matches the profile's 277.0; the first read 4% high.)
+
+Reading: without neural accelerators the 4-bit GEMM is the cycle, so what pays is using every row of every tile.
+Folding the replay into the next cycle's `gdn_step` removes one of three passes over the state, about half of the
+replay: 1–2% here, so it was not built on this evidence. With neural accelerators the GEMMs are several times
+faster and the state traffic is a larger share; `SKIP=replay` (timing only) reads that ceiling in one run.
+
+Caveats: one machine, short contexts (512-token prompts through the server, 2,048 in `spec_test`), 256 tokens. Two
+rounds per server start measure a tuner that is still exploring (two streams read ~67, ~60.5, ~66 tok/s in rounds 0, 1,
+2, reproducibly). One start of the policy configuration read 50.8 tok/s at one stream against 55.0–55.6 on four other
+starts of the same path, unexplained. `SG_TILES` is on by default up to 40 GPU cores on the strength of this one
+30-core machine; the M4 Pro, M4 Max and 40-core M3 Max are unmeasured, and the 80-core M3 Ultra keeps the 0.4.2
+routing. Fill rows on W4A8 / QA8 tiles (neural accelerators) are unmeasured and off by default.
+
+Raw rows: [results/m3max-2026-11-15](../results/m3max-2026-11-15/) (its `README.md` names each file).
+
 ## Engine-level measurements
 
 Not product comparisons, but the measurements the design decisions rest on (Mac Studio M5 Ultra unless stated).

@@ -539,9 +539,10 @@ struct Qwen35 {
       // CHUNK_TILE_MAX rows) give wrong logits at prefill sizes there (a 601-token prompt in one chunk: cos 0.29,
       // top-1 wrong; garbage text in the server), so neither is used: every multi-row chunk runs on attn_shared
       // (mode 6; attn_gqa when that is unavailable), and the quantized GEMMs take bf16 activations through MLX's
-      // kernels: 1..WIDE_MAX (10) rows qmv_wide (wide_route, checked first in gemm()), SG_MIN (11) rows and more the
-      // simdgroup qmm (kernels/mlx_qmm_sg.metal, what mlx_lm runs on these GPUs). matmul2d's int8 path is emulated
-      // on Apple9, so W4A8 is unused by default (w4a8_max = SG_MIN below); SG_MIN=0 routes 11+ rows back to W4A8.
+      // kernels: 1..WIDE_MAX (5) rows qmv_wide (wide_route, checked first in gemm()), SG_MIN (6) rows and more the
+      // simdgroup qmm (kernels/mlx_qmm_sg.metal, what mlx_lm runs on these GPUs); 10 and 11 with SG_TILES=0. matmul2d's
+      // int8 path is emulated on Apple9, so W4A8 is unused by default (w4a8_max = SG_MIN below); SG_MIN=0 routes the
+      // rows above WIDE_MAX back to W4A8.
       if (!getenv("W4A8_MAX")) w4a8_max = sg_min > 0 ? sg_min : 1 << 30;
       if (!getenv("FLASH_ROWS")) flash_rows = 1 << 30;
       if (!getenv("CHUNK_TILE_MAX")) chunk_tile_max = 1 << 30;
@@ -1054,7 +1055,12 @@ struct Qwen35 {
   int w4a8_max = getenv("W4A8_MAX") ? atoi(getenv("W4A8_MAX")) : 256;  // M >= this: MLX qmm (flip-aware; faster from ~256 rows)
   int sg_bm = getenv("SG_BM") ? atoi(getenv("SG_BM")) : 32, sg_bk = getenv("SG_BK") ? atoi(getenv("SG_BK")) : 32,
       sg_bn = getenv("SG_BN") ? atoi(getenv("SG_BN")) : 32, sg_w = getenv("SG_W") ? atoi(getenv("SG_W")) : 0;  // mlx_qmm_sg tile shape (variants in mlx_qmm_sg.metal)
-  int sg_min = getenv("SG_MIN") ? atoi(getenv("SG_MIN")) : 11;  // no neural accelerators: M >= this goes to mlx_qmm_sg
+  // SG_TILES (no neural accelerators; on since 2026-11-15, 0 = the 0.4.2 routing): row tiles in 8-row steps from 6
+  // rows (sg_tile below), so qmv_wide keeps 1..5 rows and mlx_qmm_sg starts at 6. Measured on an M3 Max only (30
+  // cores), so the default is on up to 40 GPU cores: the 0.4.2 thresholds were set on an 80-core M3 Ultra, where one
+  // 8-row tile of a narrow output is too few threadgroups to judge from here (SG_TILES=1 tries it there).
+  int sg_tiles = getenv("SG_TILES") ? atoi(getenv("SG_TILES")) : g.cores <= 40;
+  int sg_min = getenv("SG_MIN") ? atoi(getenv("SG_MIN")) : sg_tiles ? 6 : 11;  // no neural accelerators: M >= this goes to mlx_qmm_sg
   // (bf16 activations, tile by sg_tile): faster than W4A8 from 12 rows on M3 Ultra and ~13x lower KL on the logits
   void flip_weights() {
     std::vector<QLinear*> ws = {&lm_head};
@@ -1365,14 +1371,56 @@ struct Qwen35 {
   // 16x64x16 61.5/54.0 [63.9/59.4]; 20/32 rows 2x2 32x64x16 ~89.5 [102.5/97.3]; 24 rows 1x4 24x32 81.0 [102.8];
   // 40/48 rows 1x4 109.2/124.5, other 33..47 2x2 16x64x32 ~134 [~163 as 32x32x32]; 49..64 2x2 32x64x32 158 [161];
   // above 64, MLX's default 32x32x32.
-  static void sg_tile(int M, bool& sgw, int& bm, int& bk, int& bn) {
+  // fine (SG_TILES, 2026-11-15; M3 Max, the same measure, the table above -> this one): there the 1x4 copy costs ~15 ms
+  // + 28 ms per row tile + 5.4 ms per tile row, a partial tile as much as a full one at BM 8/16/32 and 4-6% more at BM
+  // 24/40/48/56 (their 4-per-thread loader), which still beats every coarser tile. So M rounds up to 8 rows through 56:
+  // 6/7/8 rows 109/136/136 (qmv_wide, two tiles) -> 86; 9/10 rows 162/164 -> 125; 12/16 rows 135/132 -> 125; 17/20 rows
+  // 219/220 -> 175/177; 28/32 rows 228/226 -> 217/219; 33/36 rows 343 -> 268/271; 44 rows 346 -> 318; 49/52/56 rows
+  // 402/403/404 -> 367/369/347. 57..64 rows stay 2x2 32x64x32 (406; a 64-row 1x4 tile 442, two 32-row ones 411). Above
+  // 64 rows a row tile costs kSgRow ms (5.84 / 5.57 / 5.54 / 5.66 per row) and the cheapest padded total wins: 72/80
+  // rows 605/607 -> 495/485 (two 40-row tiles), 96 rows 605 -> 574, 104/112 rows 787/788 -> 681/664 (two 56-row tiles),
+  // 120 rows 791 -> 712, 168 rows 1165 -> 975; 128 and 256 rows stay 32x32x32 (786/1540; 920/1596 in 40-row tiles);
+  // 512/1024/2048 rows 3027/6016/12016 -> 2934/5825/11453.
+  static constexpr int kSgRow[4][2] = {{32, 187}, {40, 223}, {48, 266}, {56, 317}};  // (tile rows, ms per row tile)
+  static void sg_tile(int M, bool fine, bool& sgw, int& bm, int& bk, int& bn) {
     sgw = false, bk = 64;
-    if (M == 24 || M == 40 || M == 48) sgw = true, bm = M, bn = 32;
+    if (fine && M <= 56) sgw = true, bm = (M + 7) / 8 * 8, bn = 32;
+    else if (fine && M > 64) {
+      int best = 0, cost = 1 << 30;
+      for (int i = 0; i < 4; i++)
+        if (const int c = (M + kSgRow[i][0] - 1) / kSgRow[i][0] * kSgRow[i][1]; c < cost) best = i, cost = c;
+      if (best) sgw = true, bm = kSgRow[best][0], bn = 32;
+      else bm = 32, bk = 32, bn = 32;
+    }
+    else if (M == 24 || M == 40 || M == 48) sgw = true, bm = M, bn = 32;
     else if (M <= 16) bm = 16, bn = 16;
     else if (M <= 32) bm = 32, bn = 16;
     else if (M <= 48) bm = 16, bn = 32;
     else if (M <= 64) bm = 32, bn = 32;
     else bm = 32, bk = 32, bn = 32;
+  }
+  // Rows the wide linears compute for a step of T rows: they run whole row tiles, so rows up to this count add nothing
+  // to the GEMMs (the scheduler's SPEC_FILL spends them as verify rows). T where rows are not padded. The tile stays
+  // the same for every count in between (sg_tile's costs only grow with M; W4A8 and QA8 tiles are fixed per regime).
+  int fill_rows(int T) const {
+    if (!g.nax) {
+      if (!sg_tiles || getenv("SG_BM") || T < sg_min || T <= wide_max) return T;
+      bool sgw;
+      int bm, bk, bn;
+      sg_tile(T, true, sgw, bm, bk, bn);
+      return (T + bm - 1) / bm * bm;
+    }
+    if (use_w4a8 && T > qmv_max && T < w4a8_max) {  // w4a8: 16-row tiles through 16 rows, 32 above
+      static const int TMe = getenv("W4A8_TM") ? atoi(getenv("W4A8_TM")) : 0;
+      const int TM = TMe ? TMe : T <= 16 ? 16 : 32;
+      return std::min((T + TM - 1) / TM * TM, w4a8_max - 1);
+    }
+    if (qa8_on > 0 && T >= qa8_min) {  // qa8: 32 * WM rows per tile, the same choice as there
+      const int ti = qa8_tile >= 0 && qa8_tile < (int)(sizeof kQa8Tiles / sizeof kQa8Tiles[0]) ? qa8_tile : g.cores >= 30 ? 2 : 1;
+      const int BM = 32 * kQa8Tiles[ti][0];
+      return std::min((T + BM - 1) / BM * BM, max_tokens);
+    }
+    return T;
   }
 
   // MLX's NAX quantized matmul (patched: buffer 11 = the weight row length of a K-slice view); mode 1 adds into C.
@@ -1381,7 +1429,7 @@ struct Qwen35 {
     if (!g.nax) {  // no neural accelerators: MLX's simdgroup qmm (tile per sg_tile, 128 threads)
       int bm = sg_bm, bk = sg_bk, bn = sg_bn;
       bool sgw = sg_w;
-      if (!getenv("SG_BM")) sg_tile(M, sgw, bm, bk, bn);
+      if (!getenv("SG_BM")) sg_tile(M, sg_tiles, sgw, bm, bk, bn);
       if (W.ldk && !sgw) sgw = true, bm = bm == 16 ? 16 : 32, bn = 32;  // K-slice views: only the 1x4 copy takes ldw
       if (sgw)
         snprintf(name, sizeof name, "mlx_qmm_sgw_b%d_al%s_%dx%d", W.bits, W.N % bn == 0 ? "true" : "false", bm, bn);
@@ -1529,7 +1577,9 @@ struct Qwen35 {
   // No neural accelerators (M3/M4): MLX's qmv_wide for small blocks (verify rows), whose int8 matmul2d is emulated.
   // WIDE_MIN..WIDE_MAX rows (WIDE_MAX=0: off), WIDE_NV vectors per threadgroup (MLX caps it at 5), WIDE_KL lanes per row.
   int wide_min = getenv("WIDE_MIN") ? atoi(getenv("WIDE_MIN")) : 1;  // M3 Ultra decode: qmv4 30.0 ms, qmv_wide 27.2
-  int wide_max = getenv("WIDE_MAX") ? atoi(getenv("WIDE_MAX")) : 10;  // M3 Ultra: 8 rows 57 vs 69 ms (W4A8), 12 rows 78 vs 69
+  // WIDE_MAX: 10 with SG_TILES=0 (M3 Ultra: 8 rows 57 vs 69 ms (W4A8), 12 rows 78 vs 69); 5 with the 8-row tile (M3 Max,
+  // ms per 27B step, 3/4/5 rows 59.5/69.7/83.1 against 85-86 for the tile; two wide tiles: 6/7/8 rows 109/136/136).
+  int wide_max = getenv("WIDE_MAX") ? atoi(getenv("WIDE_MAX")) : sg_tiles ? 5 : 10;
   int wide_nv = getenv("WIDE_NV") ? atoi(getenv("WIDE_NV")) : 5;
   int wide_kl = getenv("WIDE_KL") ? atoi(getenv("WIDE_KL")) : 0;  // 0: 16 lanes up to 3 rows, else 8
   bool wide_route(const QLinear& W, int M) const {
@@ -2924,7 +2974,7 @@ struct Qwen35 {
         e.threads(S3(pc.C, S), S3(256));
       }
       for (auto& ly : L) {
-        if (!ly.linear || tree_only) continue;
+        if (!ly.linear || tree_only || !on("replay")) continue;  // SKIP=replay: timing only (the state never advances)
         e.k("gdn_conv_replay").buf(0, tape_x[ly.idx]).buf(1, conv_state[ly.idx]).buf(2, slot).buf(3, seq_start)
             .buf(4, commit).buf(5, spec).args(6, ra);
         e.threads(S3(cfg.conv_dim(), S), S3(256));

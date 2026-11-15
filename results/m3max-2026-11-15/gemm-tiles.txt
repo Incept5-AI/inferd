@@ -1,0 +1,328 @@
+M=   1 gdn.in_proj   N= 16480 K=  5120   0.175 ms    302 GB/s    1.0 TFLOPS  x48 =   8.39 ms
+M=   1 gdn.out_proj  N=  5120 K=  6144   0.068 ms    289 GB/s    0.9 TFLOPS  x48 =   3.26 ms
+M=   1 attn.in_proj  N= 14336 K=  5120   0.152 ms    302 GB/s    1.0 TFLOPS  x16 =   2.43 ms
+M=   1 attn.o_proj   N=  5120 K=  6144   0.068 ms    289 GB/s    0.9 TFLOPS  x16 =   1.09 ms
+M=   1 mlp.gate_up   N= 34816 K=  5120   0.357 ms    312 GB/s    1.0 TFLOPS  x64 =  22.84 ms
+M=   1 mlp.down      N=  5120 K= 17408   0.189 ms    295 GB/s    0.9 TFLOPS  x64 =  12.09 ms
+M=   1 lm_head       N=248320 K=  5120   2.498 ms    318 GB/s    1.0 TFLOPS  x1  =   2.50 ms
+M=   1 all linear layers: 52.6 ms per step (16.0 GB, 304 GB/s; bandwidth floor 14.0 ms)
+M=   2 gdn.in_proj   N= 16480 K=  5120   0.178 ms    296 GB/s    1.9 TFLOPS  x48 =   8.56 ms
+M=   2 gdn.out_proj  N=  5120 K=  6144   0.071 ms    276 GB/s    1.8 TFLOPS  x48 =   3.42 ms
+M=   2 attn.in_proj  N= 14336 K=  5120   0.155 ms    296 GB/s    1.9 TFLOPS  x16 =   2.48 ms
+M=   2 attn.o_proj   N=  5120 K=  6144   0.071 ms    275 GB/s    1.8 TFLOPS  x16 =   1.14 ms
+M=   2 mlp.gate_up   N= 34816 K=  5120   0.366 ms    305 GB/s    2.0 TFLOPS  x64 =  23.40 ms
+M=   2 mlp.down      N=  5120 K= 17408   0.197 ms    283 GB/s    1.8 TFLOPS  x64 =  12.61 ms
+M=   2 lm_head       N=248320 K=  5120   2.591 ms    307 GB/s    2.0 TFLOPS  x1  =   2.59 ms
+M=   2 all linear layers: 54.2 ms per step (16.0 GB, 295 GB/s; bandwidth floor 14.0 ms)
+M=   3 gdn.in_proj   N= 16480 K=  5120   0.185 ms    285 GB/s    2.7 TFLOPS  x48 =   8.89 ms
+M=   3 gdn.out_proj  N=  5120 K=  6144   0.078 ms    252 GB/s    2.4 TFLOPS  x48 =   3.75 ms
+M=   3 attn.in_proj  N= 14336 K=  5120   0.163 ms    281 GB/s    2.7 TFLOPS  x16 =   2.61 ms
+M=   3 attn.o_proj   N=  5120 K=  6144   0.078 ms    251 GB/s    2.4 TFLOPS  x16 =   1.25 ms
+M=   3 mlp.gate_up   N= 34816 K=  5120   0.374 ms    298 GB/s    2.9 TFLOPS  x64 =  23.96 ms
+M=   3 mlp.down      N=  5120 K= 17408   0.209 ms    266 GB/s    2.6 TFLOPS  x64 =  13.40 ms
+M=   3 lm_head       N=248320 K=  5120   2.612 ms    304 GB/s    2.9 TFLOPS  x1  =   2.61 ms
+M=   3 all linear layers: 56.5 ms per step (16.0 GB, 284 GB/s; bandwidth floor 14.0 ms)
+M=   4 gdn.in_proj   N= 16480 K=  5120   0.234 ms    226 GB/s    2.9 TFLOPS  x48 =  11.21 ms
+M=   4 gdn.out_proj  N=  5120 K=  6144   0.094 ms    209 GB/s    2.7 TFLOPS  x48 =   4.52 ms
+M=   4 attn.in_proj  N= 14336 K=  5120   0.201 ms    229 GB/s    2.9 TFLOPS  x16 =   3.21 ms
+M=   4 attn.o_proj   N=  5120 K=  6144   0.093 ms    212 GB/s    2.7 TFLOPS  x16 =   1.49 ms
+M=   4 mlp.gate_up   N= 34816 K=  5120   0.469 ms    238 GB/s    3.0 TFLOPS  x64 =  30.01 ms
+M=   4 mlp.down      N=  5120 K= 17408   0.255 ms    219 GB/s    2.8 TFLOPS  x64 =  16.31 ms
+M=   4 lm_head       N=248320 K=  5120   3.233 ms    246 GB/s    3.1 TFLOPS  x1  =   3.23 ms
+M=   4 all linear layers: 70.0 ms per step (16.0 GB, 229 GB/s; bandwidth floor 14.0 ms)
+M=   5 gdn.in_proj   N= 16480 K=  5120   0.274 ms    192 GB/s    3.1 TFLOPS  x48 =  13.15 ms
+M=   5 gdn.out_proj  N=  5120 K=  6144   0.112 ms    175 GB/s    2.8 TFLOPS  x48 =   5.39 ms
+M=   5 attn.in_proj  N= 14336 K=  5120   0.238 ms    193 GB/s    3.1 TFLOPS  x16 =   3.81 ms
+M=   5 attn.o_proj   N=  5120 K=  6144   0.110 ms    178 GB/s    2.8 TFLOPS  x16 =   1.77 ms
+M=   5 mlp.gate_up   N= 34816 K=  5120   0.559 ms    199 GB/s    3.2 TFLOPS  x64 =  35.74 ms
+M=   5 mlp.down      N=  5120 K= 17408   0.309 ms    180 GB/s    2.9 TFLOPS  x64 =  19.78 ms
+M=   5 lm_head       N=248320 K=  5120   3.899 ms    204 GB/s    3.3 TFLOPS  x1  =   3.90 ms
+M=   5 all linear layers: 83.5 ms per step (16.0 GB, 192 GB/s; bandwidth floor 14.0 ms)
+M=   6 gdn.in_proj   N= 16480 K=  5120   0.282 ms    187 GB/s    3.6 TFLOPS  x48 =  13.53 ms
+M=   6 gdn.out_proj  N=  5120 K=  6144   0.126 ms    156 GB/s    3.0 TFLOPS  x48 =   6.07 ms
+M=   6 attn.in_proj  N= 14336 K=  5120   0.244 ms    188 GB/s    3.6 TFLOPS  x16 =   3.91 ms
+M=   6 attn.o_proj   N=  5120 K=  6144   0.126 ms    156 GB/s    3.0 TFLOPS  x16 =   2.01 ms
+M=   6 mlp.gate_up   N= 34816 K=  5120   0.536 ms    208 GB/s    4.0 TFLOPS  x64 =  34.27 ms
+M=   6 mlp.down      N=  5120 K= 17408   0.352 ms    158 GB/s    3.0 TFLOPS  x64 =  22.53 ms
+M=   6 lm_head       N=248320 K=  5120   3.463 ms    229 GB/s    4.4 TFLOPS  x1  =   3.46 ms
+M=   6 all linear layers: 85.8 ms per step (16.0 GB, 187 GB/s; bandwidth floor 14.0 ms)
+M=   7 gdn.in_proj   N= 16480 K=  5120   0.286 ms    184 GB/s    4.1 TFLOPS  x48 =  13.75 ms
+M=   7 gdn.out_proj  N=  5120 K=  6144   0.128 ms    154 GB/s    3.4 TFLOPS  x48 =   6.14 ms
+M=   7 attn.in_proj  N= 14336 K=  5120   0.246 ms    186 GB/s    4.2 TFLOPS  x16 =   3.94 ms
+M=   7 attn.o_proj   N=  5120 K=  6144   0.128 ms    154 GB/s    3.4 TFLOPS  x16 =   2.05 ms
+M=   7 mlp.gate_up   N= 34816 K=  5120   0.545 ms    205 GB/s    4.6 TFLOPS  x64 =  34.86 ms
+M=   7 mlp.down      N=  5120 K= 17408   0.357 ms    156 GB/s    3.5 TFLOPS  x64 =  22.82 ms
+M=   7 lm_head       N=248320 K=  5120   3.511 ms    226 GB/s    5.1 TFLOPS  x1  =   3.51 ms
+M=   7 all linear layers: 87.1 ms per step (16.0 GB, 184 GB/s; bandwidth floor 14.0 ms)
+M=   8 gdn.in_proj   N= 16480 K=  5120   0.282 ms    187 GB/s    4.8 TFLOPS  x48 =  13.56 ms
+M=   8 gdn.out_proj  N=  5120 K=  6144   0.127 ms    155 GB/s    4.0 TFLOPS  x48 =   6.07 ms
+M=   8 attn.in_proj  N= 14336 K=  5120   0.244 ms    188 GB/s    4.8 TFLOPS  x16 =   3.91 ms
+M=   8 attn.o_proj   N=  5120 K=  6144   0.127 ms    155 GB/s    4.0 TFLOPS  x16 =   2.04 ms
+M=   8 mlp.gate_up   N= 34816 K=  5120   0.534 ms    208 GB/s    5.3 TFLOPS  x64 =  34.21 ms
+M=   8 mlp.down      N=  5120 K= 17408   0.353 ms    158 GB/s    4.0 TFLOPS  x64 =  22.57 ms
+M=   8 lm_head       N=248320 K=  5120   3.424 ms    232 GB/s    5.9 TFLOPS  x1  =   3.42 ms
+M=   8 all linear layers: 85.8 ms per step (16.0 GB, 187 GB/s; bandwidth floor 14.0 ms)
+M=   9 gdn.in_proj   N= 16480 K=  5120   0.413 ms    128 GB/s    3.7 TFLOPS  x48 =  19.81 ms
+M=   9 gdn.out_proj  N=  5120 K=  6144   0.178 ms    110 GB/s    3.2 TFLOPS  x48 =   8.54 ms
+M=   9 attn.in_proj  N= 14336 K=  5120   0.353 ms    130 GB/s    3.7 TFLOPS  x16 =   5.65 ms
+M=   9 attn.o_proj   N=  5120 K=  6144   0.178 ms    110 GB/s    3.2 TFLOPS  x16 =   2.86 ms
+M=   9 mlp.gate_up   N= 34816 K=  5120   0.792 ms    141 GB/s    4.1 TFLOPS  x64 =  50.67 ms
+M=   9 mlp.down      N=  5120 K= 17408   0.495 ms    112 GB/s    3.2 TFLOPS  x64 =  31.71 ms
+M=   9 lm_head       N=248320 K=  5120   5.246 ms    151 GB/s    4.4 TFLOPS  x1  =   5.25 ms
+M=   9 all linear layers: 124.5 ms per step (16.0 GB, 129 GB/s; bandwidth floor 14.0 ms)
+M=  10 gdn.in_proj   N= 16480 K=  5120   0.413 ms    128 GB/s    4.1 TFLOPS  x48 =  19.81 ms
+M=  10 gdn.out_proj  N=  5120 K=  6144   0.178 ms    110 GB/s    3.5 TFLOPS  x48 =   8.56 ms
+M=  10 attn.in_proj  N= 14336 K=  5120   0.360 ms    128 GB/s    4.1 TFLOPS  x16 =   5.75 ms
+M=  10 attn.o_proj   N=  5120 K=  6144   0.180 ms    109 GB/s    3.5 TFLOPS  x16 =   2.88 ms
+M=  10 mlp.gate_up   N= 34816 K=  5120   0.793 ms    140 GB/s    4.5 TFLOPS  x64 =  50.76 ms
+M=  10 mlp.down      N=  5120 K= 17408   0.498 ms    112 GB/s    3.6 TFLOPS  x64 =  31.85 ms
+M=  10 lm_head       N=248320 K=  5120   5.225 ms    152 GB/s    4.9 TFLOPS  x1  =   5.22 ms
+M=  10 all linear layers: 124.8 ms per step (16.0 GB, 128 GB/s; bandwidth floor 14.0 ms)
+M=  12 gdn.in_proj   N= 16480 K=  5120   0.413 ms    128 GB/s    4.9 TFLOPS  x48 =  19.84 ms
+M=  12 gdn.out_proj  N=  5120 K=  6144   0.179 ms    110 GB/s    4.2 TFLOPS  x48 =   8.59 ms
+M=  12 attn.in_proj  N= 14336 K=  5120   0.355 ms    129 GB/s    5.0 TFLOPS  x16 =   5.68 ms
+M=  12 attn.o_proj   N=  5120 K=  6144   0.179 ms    110 GB/s    4.2 TFLOPS  x16 =   2.86 ms
+M=  12 mlp.gate_up   N= 34816 K=  5120   0.794 ms    140 GB/s    5.4 TFLOPS  x64 =  50.80 ms
+M=  12 mlp.down      N=  5120 K= 17408   0.505 ms    110 GB/s    4.2 TFLOPS  x64 =  32.33 ms
+M=  12 lm_head       N=248320 K=  5120   5.269 ms    151 GB/s    5.8 TFLOPS  x1  =   5.27 ms
+M=  12 all linear layers: 125.4 ms per step (16.0 GB, 128 GB/s; bandwidth floor 14.0 ms)
+M=  16 gdn.in_proj   N= 16480 K=  5120   0.412 ms    128 GB/s    6.6 TFLOPS  x48 =  19.77 ms
+M=  16 gdn.out_proj  N=  5120 K=  6144   0.181 ms    109 GB/s    5.6 TFLOPS  x48 =   8.67 ms
+M=  16 attn.in_proj  N= 14336 K=  5120   0.353 ms    130 GB/s    6.6 TFLOPS  x16 =   5.65 ms
+M=  16 attn.o_proj   N=  5120 K=  6144   0.179 ms    110 GB/s    5.6 TFLOPS  x16 =   2.87 ms
+M=  16 mlp.gate_up   N= 34816 K=  5120   0.790 ms    141 GB/s    7.2 TFLOPS  x64 =  50.59 ms
+M=  16 mlp.down      N=  5120 K= 17408   0.499 ms    112 GB/s    5.7 TFLOPS  x64 =  31.94 ms
+M=  16 lm_head       N=248320 K=  5120   5.196 ms    153 GB/s    7.8 TFLOPS  x1  =   5.20 ms
+M=  16 all linear layers: 124.7 ms per step (16.0 GB, 128 GB/s; bandwidth floor 14.0 ms)
+M=  17 gdn.in_proj   N= 16480 K=  5120   0.572 ms     92 GB/s    5.0 TFLOPS  x48 =  27.45 ms
+M=  17 gdn.out_proj  N=  5120 K=  6144   0.247 ms     80 GB/s    4.3 TFLOPS  x48 =  11.85 ms
+M=  17 attn.in_proj  N= 14336 K=  5120   0.516 ms     89 GB/s    4.8 TFLOPS  x16 =   8.26 ms
+M=  17 attn.o_proj   N=  5120 K=  6144   0.247 ms     80 GB/s    4.3 TFLOPS  x16 =   3.95 ms
+M=  17 mlp.gate_up   N= 34816 K=  5120   1.096 ms    102 GB/s    5.5 TFLOPS  x64 =  70.17 ms
+M=  17 mlp.down      N=  5120 K= 17408   0.723 ms     77 GB/s    4.2 TFLOPS  x64 =  46.26 ms
+M=  17 lm_head       N=248320 K=  5120   7.266 ms    109 GB/s    5.9 TFLOPS  x1  =   7.27 ms
+M=  17 all linear layers: 175.2 ms per step (16.0 GB, 91 GB/s; bandwidth floor 14.0 ms)
+M=  20 gdn.in_proj   N= 16480 K=  5120   0.577 ms     91 GB/s    5.9 TFLOPS  x48 =  27.69 ms
+M=  20 gdn.out_proj  N=  5120 K=  6144   0.252 ms     78 GB/s    5.0 TFLOPS  x48 =  12.12 ms
+M=  20 attn.in_proj  N= 14336 K=  5120   0.520 ms     88 GB/s    5.6 TFLOPS  x16 =   8.32 ms
+M=  20 attn.o_proj   N=  5120 K=  6144   0.253 ms     78 GB/s    5.0 TFLOPS  x16 =   4.05 ms
+M=  20 mlp.gate_up   N= 34816 K=  5120   1.104 ms    101 GB/s    6.5 TFLOPS  x64 =  70.63 ms
+M=  20 mlp.down      N=  5120 K= 17408   0.742 ms     75 GB/s    4.8 TFLOPS  x64 =  47.50 ms
+M=  20 lm_head       N=248320 K=  5120   7.278 ms    109 GB/s    7.0 TFLOPS  x1  =   7.28 ms
+M=  20 all linear layers: 177.6 ms per step (16.0 GB, 90 GB/s; bandwidth floor 14.0 ms)
+M=  24 gdn.in_proj   N= 16480 K=  5120   0.557 ms     95 GB/s    7.3 TFLOPS  x48 =  26.76 ms
+M=  24 gdn.out_proj  N=  5120 K=  6144   0.237 ms     83 GB/s    6.4 TFLOPS  x48 =  11.36 ms
+M=  24 attn.in_proj  N= 14336 K=  5120   0.477 ms     96 GB/s    7.4 TFLOPS  x16 =   7.63 ms
+M=  24 attn.o_proj   N=  5120 K=  6144   0.237 ms     83 GB/s    6.4 TFLOPS  x16 =   3.79 ms
+M=  24 mlp.gate_up   N= 34816 K=  5120   1.080 ms    103 GB/s    7.9 TFLOPS  x64 =  69.12 ms
+M=  24 mlp.down      N=  5120 K= 17408   0.660 ms     84 GB/s    6.5 TFLOPS  x64 =  42.22 ms
+M=  24 lm_head       N=248320 K=  5120   7.173 ms    111 GB/s    8.5 TFLOPS  x1  =   7.17 ms
+M=  24 all linear layers: 168.1 ms per step (16.0 GB, 95 GB/s; bandwidth floor 14.0 ms)
+M=  25 gdn.in_proj   N= 16480 K=  5120   0.723 ms     73 GB/s    5.8 TFLOPS  x48 =  34.71 ms
+M=  25 gdn.out_proj  N=  5120 K=  6144   0.299 ms     66 GB/s    5.3 TFLOPS  x48 =  14.38 ms
+M=  25 attn.in_proj  N= 14336 K=  5120   0.618 ms     74 GB/s    5.9 TFLOPS  x16 =   9.89 ms
+M=  25 attn.o_proj   N=  5120 K=  6144   0.301 ms     65 GB/s    5.2 TFLOPS  x16 =   4.81 ms
+M=  25 mlp.gate_up   N= 34816 K=  5120   1.395 ms     80 GB/s    6.4 TFLOPS  x64 =  89.28 ms
+M=  25 mlp.down      N=  5120 K= 17408   0.840 ms     66 GB/s    5.3 TFLOPS  x64 =  53.78 ms
+M=  25 lm_head       N=248320 K=  5120   9.402 ms     85 GB/s    6.8 TFLOPS  x1  =   9.40 ms
+M=  25 all linear layers: 216.2 ms per step (16.0 GB, 74 GB/s; bandwidth floor 14.0 ms)
+M=  28 gdn.in_proj   N= 16480 K=  5120   0.725 ms     73 GB/s    6.5 TFLOPS  x48 =  34.81 ms
+M=  28 gdn.out_proj  N=  5120 K=  6144   0.300 ms     65 GB/s    5.9 TFLOPS  x48 =  14.41 ms
+M=  28 attn.in_proj  N= 14336 K=  5120   0.622 ms     74 GB/s    6.6 TFLOPS  x16 =   9.95 ms
+M=  28 attn.o_proj   N=  5120 K=  6144   0.302 ms     65 GB/s    5.8 TFLOPS  x16 =   4.83 ms
+M=  28 mlp.gate_up   N= 34816 K=  5120   1.398 ms     80 GB/s    7.1 TFLOPS  x64 =  89.47 ms
+M=  28 mlp.down      N=  5120 K= 17408   0.843 ms     66 GB/s    5.9 TFLOPS  x64 =  53.93 ms
+M=  28 lm_head       N=248320 K=  5120   9.426 ms     84 GB/s    7.6 TFLOPS  x1  =   9.43 ms
+M=  28 all linear layers: 216.8 ms per step (16.0 GB, 74 GB/s; bandwidth floor 14.0 ms)
+M=  32 gdn.in_proj   N= 16480 K=  5120   0.728 ms     72 GB/s    7.4 TFLOPS  x48 =  34.94 ms
+M=  32 gdn.out_proj  N=  5120 K=  6144   0.300 ms     66 GB/s    6.7 TFLOPS  x48 =  14.40 ms
+M=  32 attn.in_proj  N= 14336 K=  5120   0.622 ms     74 GB/s    7.6 TFLOPS  x16 =   9.95 ms
+M=  32 attn.o_proj   N=  5120 K=  6144   0.300 ms     66 GB/s    6.7 TFLOPS  x16 =   4.80 ms
+M=  32 mlp.gate_up   N= 34816 K=  5120   1.409 ms     79 GB/s    8.1 TFLOPS  x64 =  90.15 ms
+M=  32 mlp.down      N=  5120 K= 17408   0.843 ms     66 GB/s    6.8 TFLOPS  x64 =  53.98 ms
+M=  32 lm_head       N=248320 K=  5120   9.485 ms     84 GB/s    8.6 TFLOPS  x1  =   9.48 ms
+M=  32 all linear layers: 217.7 ms per step (16.0 GB, 74 GB/s; bandwidth floor 14.0 ms)
+M=  33 gdn.in_proj   N= 16480 K=  5120   0.887 ms     59 GB/s    6.3 TFLOPS  x48 =  42.56 ms
+M=  33 gdn.out_proj  N=  5120 K=  6144   0.378 ms     52 GB/s    5.5 TFLOPS  x48 =  18.15 ms
+M=  33 attn.in_proj  N= 14336 K=  5120   0.760 ms     60 GB/s    6.4 TFLOPS  x16 =  12.16 ms
+M=  33 attn.o_proj   N=  5120 K=  6144   0.378 ms     52 GB/s    5.5 TFLOPS  x16 =   6.05 ms
+M=  33 mlp.gate_up   N= 34816 K=  5120   1.686 ms     66 GB/s    7.0 TFLOPS  x64 = 107.90 ms
+M=  33 mlp.down      N=  5120 K= 17408   1.095 ms     51 GB/s    5.4 TFLOPS  x64 =  70.06 ms
+M=  33 lm_head       N=248320 K=  5120  11.351 ms     70 GB/s    7.4 TFLOPS  x1  =  11.35 ms
+M=  33 all linear layers: 268.2 ms per step (16.0 GB, 60 GB/s; bandwidth floor 14.0 ms)
+M=  36 gdn.in_proj   N= 16480 K=  5120   0.892 ms     59 GB/s    6.8 TFLOPS  x48 =  42.83 ms
+M=  36 gdn.out_proj  N=  5120 K=  6144   0.381 ms     52 GB/s    5.9 TFLOPS  x48 =  18.29 ms
+M=  36 attn.in_proj  N= 14336 K=  5120   0.765 ms     60 GB/s    6.9 TFLOPS  x16 =  12.24 ms
+M=  36 attn.o_proj   N=  5120 K=  6144   0.382 ms     52 GB/s    5.9 TFLOPS  x16 =   6.11 ms
+M=  36 mlp.gate_up   N= 34816 K=  5120   1.688 ms     66 GB/s    7.6 TFLOPS  x64 = 108.05 ms
+M=  36 mlp.down      N=  5120 K= 17408   1.108 ms     50 GB/s    5.8 TFLOPS  x64 =  70.93 ms
+M=  36 lm_head       N=248320 K=  5120  11.352 ms     70 GB/s    8.1 TFLOPS  x1  =  11.35 ms
+M=  36 all linear layers: 269.8 ms per step (16.0 GB, 59 GB/s; bandwidth floor 14.0 ms)
+M=  40 gdn.in_proj   N= 16480 K=  5120   0.855 ms     62 GB/s    7.9 TFLOPS  x48 =  41.04 ms
+M=  40 gdn.out_proj  N=  5120 K=  6144   0.355 ms     55 GB/s    7.1 TFLOPS  x48 =  17.06 ms
+M=  40 attn.in_proj  N= 14336 K=  5120   0.729 ms     63 GB/s    8.1 TFLOPS  x16 =  11.66 ms
+M=  40 attn.o_proj   N=  5120 K=  6144   0.355 ms     55 GB/s    7.1 TFLOPS  x16 =   5.68 ms
+M=  40 mlp.gate_up   N= 34816 K=  5120   1.641 ms     68 GB/s    8.7 TFLOPS  x64 = 105.05 ms
+M=  40 mlp.down      N=  5120 K= 17408   0.997 ms     56 GB/s    7.1 TFLOPS  x64 =  63.83 ms
+M=  40 lm_head       N=248320 K=  5120  11.165 ms     71 GB/s    9.1 TFLOPS  x1  =  11.17 ms
+M=  40 all linear layers: 255.5 ms per step (16.0 GB, 63 GB/s; bandwidth floor 14.0 ms)
+M=  41 gdn.in_proj   N= 16480 K=  5120   1.047 ms     50 GB/s    6.6 TFLOPS  x48 =  50.28 ms
+M=  41 gdn.out_proj  N=  5120 K=  6144   0.443 ms     44 GB/s    5.8 TFLOPS  x48 =  21.28 ms
+M=  41 attn.in_proj  N= 14336 K=  5120   0.899 ms     51 GB/s    6.7 TFLOPS  x16 =  14.38 ms
+M=  41 attn.o_proj   N=  5120 K=  6144   0.443 ms     44 GB/s    5.8 TFLOPS  x16 =   7.08 ms
+M=  41 mlp.gate_up   N= 34816 K=  5120   1.993 ms     56 GB/s    7.3 TFLOPS  x64 = 127.55 ms
+M=  41 mlp.down      N=  5120 K= 17408   1.276 ms     44 GB/s    5.7 TFLOPS  x64 =  81.63 ms
+M=  41 lm_head       N=248320 K=  5120  13.478 ms     59 GB/s    7.7 TFLOPS  x1  =  13.48 ms
+M=  41 all linear layers: 315.7 ms per step (16.0 GB, 51 GB/s; bandwidth floor 14.0 ms)
+M=  44 gdn.in_proj   N= 16480 K=  5120   1.051 ms     50 GB/s    7.1 TFLOPS  x48 =  50.44 ms
+M=  44 gdn.out_proj  N=  5120 K=  6144   0.446 ms     44 GB/s    6.2 TFLOPS  x48 =  21.43 ms
+M=  44 attn.in_proj  N= 14336 K=  5120   0.903 ms     51 GB/s    7.2 TFLOPS  x16 =  14.45 ms
+M=  44 attn.o_proj   N=  5120 K=  6144   0.446 ms     44 GB/s    6.2 TFLOPS  x16 =   7.14 ms
+M=  44 mlp.gate_up   N= 34816 K=  5120   1.998 ms     56 GB/s    7.9 TFLOPS  x64 = 127.84 ms
+M=  44 mlp.down      N=  5120 K= 17408   1.292 ms     43 GB/s    6.1 TFLOPS  x64 =  82.70 ms
+M=  44 lm_head       N=248320 K=  5120  13.463 ms     59 GB/s    8.3 TFLOPS  x1  =  13.46 ms
+M=  44 all linear layers: 317.5 ms per step (16.0 GB, 50 GB/s; bandwidth floor 14.0 ms)
+M=  48 gdn.in_proj   N= 16480 K=  5120   1.010 ms     52 GB/s    8.0 TFLOPS  x48 =  48.50 ms
+M=  48 gdn.out_proj  N=  5120 K=  6144   0.416 ms     47 GB/s    7.3 TFLOPS  x48 =  19.95 ms
+M=  48 attn.in_proj  N= 14336 K=  5120   0.861 ms     53 GB/s    8.2 TFLOPS  x16 =  13.78 ms
+M=  48 attn.o_proj   N=  5120 K=  6144   0.416 ms     47 GB/s    7.3 TFLOPS  x16 =   6.66 ms
+M=  48 mlp.gate_up   N= 34816 K=  5120   1.945 ms     57 GB/s    8.8 TFLOPS  x64 = 124.45 ms
+M=  48 mlp.down      N=  5120 K= 17408   1.165 ms     48 GB/s    7.3 TFLOPS  x64 =  74.53 ms
+M=  48 lm_head       N=248320 K=  5120  13.283 ms     60 GB/s    9.2 TFLOPS  x1  =  13.28 ms
+M=  48 all linear layers: 301.1 ms per step (16.0 GB, 53 GB/s; bandwidth floor 14.0 ms)
+M=  49 gdn.in_proj   N= 16480 K=  5120   1.302 ms     40 GB/s    6.3 TFLOPS  x48 =  62.52 ms
+M=  49 gdn.out_proj  N=  5120 K=  6144   0.545 ms     36 GB/s    5.7 TFLOPS  x48 =  26.14 ms
+M=  49 attn.in_proj  N= 14336 K=  5120   1.135 ms     40 GB/s    6.3 TFLOPS  x16 =  18.16 ms
+M=  49 attn.o_proj   N=  5120 K=  6144   0.545 ms     36 GB/s    5.7 TFLOPS  x16 =   8.71 ms
+M=  49 mlp.gate_up   N= 34816 K=  5120   2.648 ms     42 GB/s    6.6 TFLOPS  x64 = 169.50 ms
+M=  49 mlp.down      N=  5120 K= 17408   1.538 ms     36 GB/s    5.7 TFLOPS  x64 =  98.43 ms
+M=  49 lm_head       N=248320 K=  5120  18.460 ms     43 GB/s    6.7 TFLOPS  x1  =  18.46 ms
+M=  49 all linear layers: 401.9 ms per step (16.0 GB, 40 GB/s; bandwidth floor 14.0 ms)
+M=  52 gdn.in_proj   N= 16480 K=  5120   1.305 ms     40 GB/s    6.7 TFLOPS  x48 =  62.64 ms
+M=  52 gdn.out_proj  N=  5120 K=  6144   0.545 ms     36 GB/s    6.0 TFLOPS  x48 =  26.18 ms
+M=  52 attn.in_proj  N= 14336 K=  5120   1.136 ms     40 GB/s    6.7 TFLOPS  x16 =  18.18 ms
+M=  52 attn.o_proj   N=  5120 K=  6144   0.545 ms     36 GB/s    6.0 TFLOPS  x16 =   8.73 ms
+M=  52 mlp.gate_up   N= 34816 K=  5120   2.660 ms     42 GB/s    7.0 TFLOPS  x64 = 170.21 ms
+M=  52 mlp.down      N=  5120 K= 17408   1.541 ms     36 GB/s    6.0 TFLOPS  x64 =  98.63 ms
+M=  52 lm_head       N=248320 K=  5120  18.484 ms     43 GB/s    7.2 TFLOPS  x1  =  18.48 ms
+M=  52 all linear layers: 403.1 ms per step (16.0 GB, 40 GB/s; bandwidth floor 14.0 ms)
+M=  56 gdn.in_proj   N= 16480 K=  5120   1.307 ms     40 GB/s    7.2 TFLOPS  x48 =  62.76 ms
+M=  56 gdn.out_proj  N=  5120 K=  6144   0.546 ms     36 GB/s    6.5 TFLOPS  x48 =  26.21 ms
+M=  56 attn.in_proj  N= 14336 K=  5120   1.137 ms     40 GB/s    7.2 TFLOPS  x16 =  18.19 ms
+M=  56 attn.o_proj   N=  5120 K=  6144   0.546 ms     36 GB/s    6.5 TFLOPS  x16 =   8.74 ms
+M=  56 mlp.gate_up   N= 34816 K=  5120   2.662 ms     42 GB/s    7.5 TFLOPS  x64 = 170.39 ms
+M=  56 mlp.down      N=  5120 K= 17408   1.544 ms     36 GB/s    6.5 TFLOPS  x64 =  98.84 ms
+M=  56 lm_head       N=248320 K=  5120  18.494 ms     43 GB/s    7.7 TFLOPS  x1  =  18.49 ms
+M=  56 all linear layers: 403.6 ms per step (16.0 GB, 40 GB/s; bandwidth floor 14.0 ms)
+M=  57 gdn.in_proj   N= 16480 K=  5120   1.313 ms     40 GB/s    7.3 TFLOPS  x48 =  63.01 ms
+M=  57 gdn.out_proj  N=  5120 K=  6144   0.547 ms     36 GB/s    6.6 TFLOPS  x48 =  26.26 ms
+M=  57 attn.in_proj  N= 14336 K=  5120   1.140 ms     40 GB/s    7.3 TFLOPS  x16 =  18.24 ms
+M=  57 attn.o_proj   N=  5120 K=  6144   0.547 ms     36 GB/s    6.6 TFLOPS  x16 =   8.75 ms
+M=  57 mlp.gate_up   N= 34816 K=  5120   2.668 ms     42 GB/s    7.6 TFLOPS  x64 = 170.74 ms
+M=  57 mlp.down      N=  5120 K= 17408   1.549 ms     36 GB/s    6.6 TFLOPS  x64 =  99.14 ms
+M=  57 lm_head       N=248320 K=  5120  18.558 ms     43 GB/s    7.8 TFLOPS  x1  =  18.56 ms
+M=  57 all linear layers: 404.7 ms per step (16.0 GB, 40 GB/s; bandwidth floor 14.0 ms)
+M=  60 gdn.in_proj   N= 16480 K=  5120   1.315 ms     40 GB/s    7.7 TFLOPS  x48 =  63.13 ms
+M=  60 gdn.out_proj  N=  5120 K=  6144   0.548 ms     36 GB/s    6.9 TFLOPS  x48 =  26.30 ms
+M=  60 attn.in_proj  N= 14336 K=  5120   1.141 ms     40 GB/s    7.7 TFLOPS  x16 =  18.26 ms
+M=  60 attn.o_proj   N=  5120 K=  6144   0.548 ms     36 GB/s    6.9 TFLOPS  x16 =   8.77 ms
+M=  60 mlp.gate_up   N= 34816 K=  5120   2.674 ms     42 GB/s    8.0 TFLOPS  x64 = 171.14 ms
+M=  60 mlp.down      N=  5120 K= 17408   1.551 ms     36 GB/s    6.9 TFLOPS  x64 =  99.29 ms
+M=  60 lm_head       N=248320 K=  5120  18.585 ms     43 GB/s    8.2 TFLOPS  x1  =  18.58 ms
+M=  60 all linear layers: 405.5 ms per step (16.0 GB, 39 GB/s; bandwidth floor 14.0 ms)
+M=  64 gdn.in_proj   N= 16480 K=  5120   1.317 ms     40 GB/s    8.2 TFLOPS  x48 =  63.21 ms
+M=  64 gdn.out_proj  N=  5120 K=  6144   0.547 ms     36 GB/s    7.4 TFLOPS  x48 =  26.23 ms
+M=  64 attn.in_proj  N= 14336 K=  5120   1.143 ms     40 GB/s    8.2 TFLOPS  x16 =  18.29 ms
+M=  64 attn.o_proj   N=  5120 K=  6144   0.546 ms     36 GB/s    7.4 TFLOPS  x16 =   8.74 ms
+M=  64 mlp.gate_up   N= 34816 K=  5120   2.686 ms     41 GB/s    8.5 TFLOPS  x64 = 171.88 ms
+M=  64 mlp.down      N=  5120 K= 17408   1.548 ms     36 GB/s    7.4 TFLOPS  x64 =  99.07 ms
+M=  64 lm_head       N=248320 K=  5120  18.706 ms     42 GB/s    8.7 TFLOPS  x1  =  18.71 ms
+M=  64 all linear layers: 406.1 ms per step (16.0 GB, 39 GB/s; bandwidth floor 14.0 ms)
+M=  65 gdn.in_proj   N= 16480 K=  5120   1.576 ms     33 GB/s    7.0 TFLOPS  x48 =  75.63 ms
+M=  65 gdn.out_proj  N=  5120 K=  6144   0.678 ms     29 GB/s    6.0 TFLOPS  x48 =  32.53 ms
+M=  65 attn.in_proj  N= 14336 K=  5120   1.378 ms     33 GB/s    6.9 TFLOPS  x16 =  22.05 ms
+M=  65 attn.o_proj   N=  5120 K=  6144   0.678 ms     29 GB/s    6.0 TFLOPS  x16 =  10.85 ms
+M=  65 mlp.gate_up   N= 34816 K=  5120   3.219 ms     35 GB/s    7.2 TFLOPS  x64 = 206.04 ms
+M=  65 mlp.down      N=  5120 K= 17408   1.913 ms     29 GB/s    6.1 TFLOPS  x64 = 122.44 ms
+M=  65 lm_head       N=248320 K=  5120  22.285 ms     36 GB/s    7.4 TFLOPS  x1  =  22.29 ms
+M=  65 all linear layers: 491.8 ms per step (16.0 GB, 33 GB/s; bandwidth floor 14.0 ms)
+M=  72 gdn.in_proj   N= 16480 K=  5120   1.582 ms     33 GB/s    7.7 TFLOPS  x48 =  75.93 ms
+M=  72 gdn.out_proj  N=  5120 K=  6144   0.682 ms     29 GB/s    6.6 TFLOPS  x48 =  32.74 ms
+M=  72 attn.in_proj  N= 14336 K=  5120   1.386 ms     33 GB/s    7.6 TFLOPS  x16 =  22.18 ms
+M=  72 attn.o_proj   N=  5120 K=  6144   0.682 ms     29 GB/s    6.6 TFLOPS  x16 =  10.91 ms
+M=  72 mlp.gate_up   N= 34816 K=  5120   3.231 ms     34 GB/s    7.9 TFLOPS  x64 = 206.79 ms
+M=  72 mlp.down      N=  5120 K= 17408   1.932 ms     29 GB/s    6.6 TFLOPS  x64 = 123.66 ms
+M=  72 lm_head       N=248320 K=  5120  22.354 ms     36 GB/s    8.2 TFLOPS  x1  =  22.35 ms
+M=  72 all linear layers: 494.6 ms per step (16.0 GB, 32 GB/s; bandwidth floor 14.0 ms)
+M=  80 gdn.in_proj   N= 16480 K=  5120   1.565 ms     34 GB/s    8.6 TFLOPS  x48 =  75.12 ms
+M=  80 gdn.out_proj  N=  5120 K=  6144   0.661 ms     30 GB/s    7.6 TFLOPS  x48 =  31.72 ms
+M=  80 attn.in_proj  N= 14336 K=  5120   1.360 ms     34 GB/s    8.6 TFLOPS  x16 =  21.77 ms
+M=  80 attn.o_proj   N=  5120 K=  6144   0.660 ms     30 GB/s    7.6 TFLOPS  x16 =  10.57 ms
+M=  80 mlp.gate_up   N= 34816 K=  5120   3.190 ms     35 GB/s    8.9 TFLOPS  x64 = 204.13 ms
+M=  80 mlp.down      N=  5120 K= 17408   1.864 ms     30 GB/s    7.7 TFLOPS  x64 = 119.29 ms
+M=  80 lm_head       N=248320 K=  5120  22.141 ms     36 GB/s    9.2 TFLOPS  x1  =  22.14 ms
+M=  80 all linear layers: 484.7 ms per step (16.0 GB, 33 GB/s; bandwidth floor 14.0 ms)
+M=  81 gdn.in_proj   N= 16480 K=  5120   1.877 ms     28 GB/s    7.3 TFLOPS  x48 =  90.10 ms
+M=  81 gdn.out_proj  N=  5120 K=  6144   0.803 ms     24 GB/s    6.3 TFLOPS  x48 =  38.56 ms
+M=  81 attn.in_proj  N= 14336 K=  5120   1.638 ms     28 GB/s    7.3 TFLOPS  x16 =  26.21 ms
+M=  81 attn.o_proj   N=  5120 K=  6144   0.804 ms     24 GB/s    6.3 TFLOPS  x16 =  12.87 ms
+M=  81 mlp.gate_up   N= 34816 K=  5120   3.814 ms     29 GB/s    7.6 TFLOPS  x64 = 244.10 ms
+M=  81 mlp.down      N=  5120 K= 17408   2.271 ms     25 GB/s    6.4 TFLOPS  x64 = 145.32 ms
+M=  81 lm_head       N=248320 K=  5120  26.497 ms     30 GB/s    7.8 TFLOPS  x1  =  26.50 ms
+M=  81 all linear layers: 583.6 ms per step (16.0 GB, 27 GB/s; bandwidth floor 14.0 ms)
+M=  88 gdn.in_proj   N= 16480 K=  5120   1.879 ms     28 GB/s    7.9 TFLOPS  x48 =  90.20 ms
+M=  88 gdn.out_proj  N=  5120 K=  6144   0.807 ms     24 GB/s    6.9 TFLOPS  x48 =  38.76 ms
+M=  88 attn.in_proj  N= 14336 K=  5120   1.644 ms     28 GB/s    7.9 TFLOPS  x16 =  26.30 ms
+M=  88 attn.o_proj   N=  5120 K=  6144   0.809 ms     24 GB/s    6.8 TFLOPS  x16 =  12.94 ms
+M=  88 mlp.gate_up   N= 34816 K=  5120   3.832 ms     29 GB/s    8.2 TFLOPS  x64 = 245.24 ms
+M=  88 mlp.down      N=  5120 K= 17408   2.291 ms     24 GB/s    6.8 TFLOPS  x64 = 146.60 ms
+M=  88 lm_head       N=248320 K=  5120  26.564 ms     30 GB/s    8.4 TFLOPS  x1  =  26.56 ms
+M=  88 all linear layers: 586.6 ms per step (16.0 GB, 27 GB/s; bandwidth floor 14.0 ms)
+M=  96 gdn.in_proj   N= 16480 K=  5120   1.858 ms     28 GB/s    8.7 TFLOPS  x48 =  89.19 ms
+M=  96 gdn.out_proj  N=  5120 K=  6144   0.779 ms     25 GB/s    7.8 TFLOPS  x48 =  37.39 ms
+M=  96 attn.in_proj  N= 14336 K=  5120   1.613 ms     28 GB/s    8.7 TFLOPS  x16 =  25.81 ms
+M=  96 attn.o_proj   N=  5120 K=  6144   0.779 ms     25 GB/s    7.7 TFLOPS  x16 =  12.47 ms
+M=  96 mlp.gate_up   N= 34816 K=  5120   3.790 ms     29 GB/s    9.0 TFLOPS  x64 = 242.57 ms
+M=  96 mlp.down      N=  5120 K= 17408   2.198 ms     25 GB/s    7.8 TFLOPS  x64 = 140.69 ms
+M=  96 lm_head       N=248320 K=  5120  26.362 ms     30 GB/s    9.3 TFLOPS  x1  =  26.36 ms
+M=  96 all linear layers: 574.5 ms per step (16.0 GB, 28 GB/s; bandwidth floor 14.0 ms)
+M=  97 gdn.in_proj   N= 16480 K=  5120   2.302 ms     23 GB/s    7.1 TFLOPS  x48 = 110.52 ms
+M=  97 gdn.out_proj  N=  5120 K=  6144   0.970 ms     20 GB/s    6.3 TFLOPS  x48 =  46.56 ms
+M=  97 attn.in_proj  N= 14336 K=  5120   2.005 ms     23 GB/s    7.1 TFLOPS  x16 =  32.08 ms
+M=  97 attn.o_proj   N=  5120 K=  6144   0.972 ms     20 GB/s    6.3 TFLOPS  x16 =  15.55 ms
+M=  97 mlp.gate_up   N= 34816 K=  5120   4.745 ms     23 GB/s    7.3 TFLOPS  x64 = 303.67 ms
+M=  97 mlp.down      N=  5120 K= 17408   2.743 ms     20 GB/s    6.3 TFLOPS  x64 = 175.57 ms
+M=  97 lm_head       N=248320 K=  5120  33.223 ms     24 GB/s    7.4 TFLOPS  x1  =  33.22 ms
+M=  97 all linear layers: 717.2 ms per step (16.0 GB, 22 GB/s; bandwidth floor 14.0 ms)
+M= 104 gdn.in_proj   N= 16480 K=  5120   2.307 ms     23 GB/s    7.6 TFLOPS  x48 = 110.76 ms
+M= 104 gdn.out_proj  N=  5120 K=  6144   0.974 ms     20 GB/s    6.7 TFLOPS  x48 =  46.77 ms
+M= 104 attn.in_proj  N= 14336 K=  5120   2.011 ms     23 GB/s    7.6 TFLOPS  x16 =  32.18 ms
+M= 104 attn.o_proj   N=  5120 K=  6144   0.975 ms     20 GB/s    6.7 TFLOPS  x16 =  15.60 ms
+M= 104 mlp.gate_up   N= 34816 K=  5120   4.754 ms     23 GB/s    7.8 TFLOPS  x64 = 304.25 ms
+M= 104 mlp.down      N=  5120 K= 17408   2.757 ms     20 GB/s    6.7 TFLOPS  x64 = 176.46 ms
+M= 104 lm_head       N=248320 K=  5120  33.267 ms     24 GB/s    7.9 TFLOPS  x1  =  33.27 ms
+M= 104 all linear layers: 719.3 ms per step (16.0 GB, 22 GB/s; bandwidth floor 14.0 ms)
+M= 112 gdn.in_proj   N= 16480 K=  5120   2.320 ms     23 GB/s    8.1 TFLOPS  x48 = 111.36 ms
+M= 112 gdn.out_proj  N=  5120 K=  6144   0.984 ms     20 GB/s    7.2 TFLOPS  x48 =  47.22 ms
+M= 112 attn.in_proj  N= 14336 K=  5120   2.020 ms     23 GB/s    8.1 TFLOPS  x16 =  32.32 ms
+M= 112 attn.o_proj   N=  5120 K=  6144   0.984 ms     20 GB/s    7.2 TFLOPS  x16 =  15.74 ms
+M= 112 mlp.gate_up   N= 34816 K=  5120   4.776 ms     23 GB/s    8.4 TFLOPS  x64 = 305.66 ms
+M= 112 mlp.down      N=  5120 K= 17408   2.785 ms     20 GB/s    7.2 TFLOPS  x64 = 178.21 ms
+M= 112 lm_head       N=248320 K=  5120  33.359 ms     24 GB/s    8.5 TFLOPS  x1  =  33.36 ms
+M= 112 all linear layers: 723.9 ms per step (16.0 GB, 22 GB/s; bandwidth floor 14.0 ms)
+M= 120 gdn.in_proj   N= 16480 K=  5120   2.295 ms     23 GB/s    8.8 TFLOPS  x48 = 110.16 ms
+M= 120 gdn.out_proj  N=  5120 K=  6144   0.957 ms     21 GB/s    7.9 TFLOPS  x48 =  45.96 ms
+M= 120 attn.in_proj  N= 14336 K=  5120   1.993 ms     23 GB/s    8.8 TFLOPS  x16 =  31.89 ms
+M= 120 attn.o_proj   N=  5120 K=  6144   0.961 ms     20 GB/s    7.9 TFLOPS  x16 =  15.37 ms
+M= 120 mlp.gate_up   N= 34816 K=  5120   4.727 ms     24 GB/s    9.1 TFLOPS  x64 = 302.52 ms
+M= 120 mlp.down      N=  5120 K= 17408   2.710 ms     21 GB/s    7.9 TFLOPS  x64 = 173.43 ms
+M= 120 lm_head       N=248320 K=  5120  33.173 ms     24 GB/s    9.2 TFLOPS  x1  =  33.17 ms
+M= 120 all linear layers: 712.5 ms per step (16.0 GB, 22 GB/s; bandwidth floor 14.0 ms)
+M= 128 gdn.in_proj   N= 16480 K=  5120   2.558 ms     21 GB/s    8.4 TFLOPS  x48 = 122.81 ms
+M= 128 gdn.out_proj  N=  5120 K=  6144   1.025 ms     19 GB/s    7.9 TFLOPS  x48 =  49.19 ms
+M= 128 attn.in_proj  N= 14336 K=  5120   2.243 ms     20 GB/s    8.4 TFLOPS  x16 =  35.88 ms
+M= 128 attn.o_proj   N=  5120 K=  6144   1.025 ms     19 GB/s    7.9 TFLOPS  x16 =  16.39 ms
+M= 128 mlp.gate_up   N= 34816 K=  5120   5.304 ms     21 GB/s    8.6 TFLOPS  x64 = 339.43 ms
+M= 128 mlp.down      N=  5120 K= 17408   2.897 ms     19 GB/s    7.9 TFLOPS  x64 = 185.43 ms
+M= 128 lm_head       N=248320 K=  5120  37.252 ms     21 GB/s    8.7 TFLOPS  x1  =  37.25 ms
+M= 128 all linear layers: 786.4 ms per step (16.0 GB, 20 GB/s; bandwidth floor 14.0 ms)

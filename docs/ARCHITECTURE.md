@@ -567,6 +567,14 @@ The block is the number of verify rows per sequence (staged token + drafts): 4, 
    from the fixed rule's block, exploring one step in 8 until each candidate has 3 timings, then re-testing one
    alternative every 16th step *(study log: "Block size by regime, and a self-tuning chooser" and "Tuner, single
    stream")*. `INFERD_DEBUG=1` prints its table every 64 steps of a regime.
+5. Without neural accelerators and with `SG_TILES` (the linears run 8-row tiles; `SG_POLICY`, default on): start at 8
+   for one or two decoders and at 4 above, the tuner chooses among 2/3/4/5/8, and a lone greedy stream gets 8-node
+   trees *(RESULTS (af))*.
+6. **Fill rows** (`SPEC_FILL`): the wide linears compute whole row tiles, so 5 decoders × 3 rows pay for 16 rows and
+   use 15. On a decode-only chain step the spare rows of the last tile (`Qwen35::fill_rows`) go out as extra verify
+   rows, one a sequence per round, best running acceptance first, up to `SPEC_FILL` rows a sequence; the drafter
+   drafts a block length per sequence (`Drafter::BlockSeq::len`). The tuner scales such a step's time by its expected
+   tokens, so its score stays tokens per ms. Default 8 with `SG_TILES`; off with neural accelerators until measured.
 
 ### Drafter knobs worth knowing
 
@@ -862,6 +870,8 @@ Defaults are taken from the code. "Timing only" knobs produce wrong output and e
 | `SPEC_AUTO` | 1 | BlockTuner chooses the block per regime |
 | `SPEC_BLOCKS` | unset | fixed block by load, e.g. `8:4,16:3` |
 | `SPEC_WIDE` | 4 | most decoders that keep the full block in the fixed rule |
+| `SPEC_FILL` | 8 with `SG_TILES`, else 0 | spare rows of the last GEMM row tile become extra verify rows, up to this many a sequence; `SPEC_FILL_PRIO=0` hands them out in running order |
+| `SG_POLICY` | 1 | the block policy for 8-row tiles without neural accelerators (start 8 / 4, tuner 2/3/4/5/8, 8-node trees); 0 = the rule before it |
 | `SPEC_SAMPLE` | 1 | speculate sampled requests the GPU sampler draws exactly (top_k 1-64, or off with top_p < 1) |
 | `SPEC_TOPK` | 64 | speculative sampling candidates per verify row (16 or 64) |
 | `DRAFT_BLOCK` | drafter `block_size`, ≤ 8 | largest block |

@@ -1,0 +1,29 @@
+10:58:00	B=1	blk=2	194 tokens in 6.74 s = 28.8 tok/s total over 1 seqs, 1.96 tokens per cycle, 67.0 ms GPU per cycle	| 1:5 2:94	| 1/1 identical, 0 diverged
+10:58:23	B=1	blk=3	193 tokens in 4.80 s = 40.2 tok/s total over 1 seqs, 2.88 tokens per cycle, 70.7 ms GPU per cycle	| 1:2 2:5 3:60	| 1/1 identical, 0 diverged
+10:58:46	B=1	blk=4	193 tokens in 4.45 s = 43.4 tok/s total over 1 seqs, 3.71 tokens per cycle, 84.6 ms GPU per cycle	| 1:1 2:5 3:3 4:43	| 1/1 identical, 0 diverged
+10:59:08	B=1	blk=5	196 tokens in 4.36 s = 44.9 tok/s total over 1 seqs, 4.56 tokens per cycle, 100.4 ms GPU per cycle	| 1:1 2:3 3:2 4:3 5:34	| 1/1 identical, 0 diverged
+10:59:30	B=1	blk=6	193 tokens in 4.09 s = 47.2 tok/s total over 1 seqs, 5.08 tokens per cycle, 103.9 ms GPU per cycle	| 1:1 2:3 3:4 4:2 5:3 6:25	| 1/1 identical, 0 diverged
+10:59:52	B=1	blk=8	197 tokens in 3.57 s = 55.1 tok/s total over 1 seqs, 5.79 tokens per cycle, 104.0 ms GPU per cycle	| 1:1 2:6 3:3 4:3 6:3 8:18	| 1/1 identical, 0 diverged
+11:00:13	B=1	blk=12	197 tokens in 4.24 s = 46.5 tok/s total over 1 seqs, 7.30 tokens per cycle, 153.2 ms GPU per cycle	| 1:2 2:6 4:1 6:2 7:1 8:3 9:2 11:3 12:7	| 1/1 identical, 0 diverged
+11:00:35	B=1	blk=16	197 tokens in 4.02 s = 49.0 tok/s total over 1 seqs, 7.58 tokens per cycle, 153.5 ms GPU per cycle	| 1:1 2:6 4:1 6:2 7:1 8:3 9:2 10:1 11:4 12:2 13:2 14:1	| 1/1 identical, 0 diverged
+11:00:58	B=1	blk=t16	197 tokens in 4.15 s = 47.4 tok/s total over 1 seqs, 7.58 tokens per cycle, 158.8 ms GPU per cycle	| 2:3 3:1 4:2 5:1 6:3 7:3 8:2 9:2 10:3 11:3 12:1 13:2	| 1/1 identical, 0 diverged
+11:01:19	B=1	blk=t8	200 tokens in 3.39 s = 58.9 tok/s total over 1 seqs, 6.25 tokens per cycle, 105.0 ms GPU per cycle	| 2:3 3:1 4:5 5:2 6:3 7:2 8:16	| 0/1 identical, 1 diverged: seqs 0
+11:01:59	B=2	blk=2	400 tokens in 10.48 s = 38.2 tok/s total over 2 seqs, 1.90 tokens per cycle, 98.8 ms GPU per cycle	| 1:22 2:188	| 2/2 identical, 0 diverged
+11:02:38	B=2	blk=3	429 tokens in 8.47 s = 50.6 tok/s total over 2 seqs, 2.68 tokens per cycle, 104.9 ms GPU per cycle	| 1:14 2:25 3:121	| 0/2 identical, 2 diverged: seqs 0,1
+11:03:15	B=2	blk=4	427 tokens in 7.37 s = 58.0 tok/s total over 2 seqs, 3.28 tokens per cycle, 112.3 ms GPU per cycle	| 1:13 2:19 3:18 4:80	| 0/2 identical, 2 diverged: seqs 0,1
+11:03:54	B=2	blk=5	476 tokens in 9.56 s = 49.8 tok/s total over 2 seqs, 3.78 tokens per cycle, 150.7 ms GPU per cycle	| 1:12 2:19 3:20 4:11 5:64	| 0/2 identical, 2 diverged: seqs 0,1
+11:04:33	B=2	blk=6	461 tokens in 8.39 s = 55.0 tok/s total over 2 seqs, 4.27 tokens per cycle, 154.3 ms GPU per cycle	| 1:11 2:15 3:12 4:14 5:10 6:46	| 2/2 identical, 0 diverged
+11:05:11	B=2	blk=8	486 tokens in 7.85 s = 61.9 tok/s total over 2 seqs, 4.76 tokens per cycle, 152.8 ms GPU per cycle	| 1:10 2:20 3:14 4:12 5:2 6:7 7:4 8:33	| 2/2 identical, 0 diverged
+11:05:51	B=2	blk=t16	454 tokens in 10.42 s = 43.6 tok/s total over 2 seqs, 6.14 tokens per cycle, 278.5 ms GPU per cycle	| 1:2 2:10 3:6 4:10 5:6 6:8 7:8 8:7 9:5 10:5 11:3 12:1 13:2 16:1	| 2/2 identical, 0 diverged
+11:06:29	B=2	blk=t8	491 tokens in 7.93 s = 61.9 tok/s total over 2 seqs, 4.91 tokens per cycle, 157.5 ms GPU per cycle	| 1:5 2:13 3:15 4:16 5:12 6:7 7:9 8:23	| 1/2 identical, 1 diverged: seqs 1
+11:07:34	B=4	blk=2	798 tokens in 12.54 s = 63.6 tok/s total over 4 seqs, 1.88 tokens per cycle, 117.3 ms GPU per cycle	| 1:54 2:370	| 2/4 identical, 2 diverged: seqs 1,3
+11:08:40	B=4	blk=3	815 tokens in 12.09 s = 67.4 tok/s total over 4 seqs, 2.65 tokens per cycle, 156.1 ms GPU per cycle	| 1:37 2:39 3:232	| 2/4 identical, 2 diverged: seqs 1,3
+11:09:45	B=4	blk=4	890 tokens in 11.32 s = 78.6 tok/s total over 4 seqs, 3.27 tokens per cycle, 165.4 ms GPU per cycle	| 1:25 2:44 3:39 4:164	| 2/4 identical, 2 diverged: seqs 1,3
+11:10:52	B=4	blk=5	926 tokens in 13.52 s = 68.5 tok/s total over 4 seqs, 3.67 tokens per cycle, 213.6 ms GPU per cycle	| 1:27 2:47 3:30 4:29 5:119	| 2/4 identical, 2 diverged: seqs 1,3
+11:11:59	B=4	blk=6	916 tokens in 12.31 s = 74.4 tok/s total over 4 seqs, 3.95 tokens per cycle, 211.2 ms GPU per cycle	| 1:28 2:44 3:27 4:33 5:17 6:83	| 2/4 identical, 2 diverged: seqs 0,3
+11:13:07	B=4	blk=8	984 tokens in 14.50 s = 67.9 tok/s total over 4 seqs, 4.56 tokens per cycle, 267.4 ms GPU per cycle	| 1:26 2:44 3:25 4:24 5:12 6:16 7:13 8:56	| 2/4 identical, 2 diverged: seqs 0,3
+11:14:17	B=4	blk=t8	937 tokens in 13.41 s = 69.9 tok/s total over 4 seqs, 4.88 tokens per cycle, 278.2 ms GPU per cycle	| 1:7 2:26 3:32 4:34 5:17 6:19 7:13 8:44	| 2/4 identical, 2 diverged: seqs 0,3
+11:16:16	B=8	blk=2	1630 tokens in 17.91 s = 91.0 tok/s total over 8 seqs, 1.90 tokens per cycle, 166.3 ms GPU per cycle	| 1:90 2:766	| 6/8 identical, 2 diverged: seqs 1,4
+11:18:19	B=8	blk=4	1778 tokens in 18.25 s = 97.4 tok/s total over 8 seqs, 3.37 tokens per cycle, 275.4 ms GPU per cycle	| 1:51 2:60 3:69 4:348	| 6/8 identical, 2 diverged: seqs 1,4
+11:20:26	B=8	blk=7	2026 tokens in 23.75 s = 85.3 tok/s total over 8 seqs, 4.60 tokens per cycle, 428.7 ms GPU per cycle	| 1:40 2:71 3:60 4:40 5:40 6:27 7:162	| 6/8 identical, 2 diverged: seqs 1,4
+11:24:24	B=16	blk=5	3679 tokens in 36.34 s = 101.2 tok/s total over 16 seqs, 3.83 tokens per cycle, 603.1 ms GPU per cycle	| 1:99 2:130 3:123 4:105 5:503	| 10/16 identical, 6 diverged: seqs 1,3,6,9,11,14

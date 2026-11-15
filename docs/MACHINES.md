@@ -178,7 +178,9 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
     accelerators the quantized GEMMs no longer touch them: 1-10 rows go to MLX's `qmv_wide`, 11 rows and more
     (`SG_MIN`) to MLX's simdgroup `mlx_qmm_sg`, both with bf16 activations, so W4A8 is unused by default (`SG_MIN=0`
     sends 11+ rows back to it); every multi-row chunk runs on the key-split `attn_shared` path. (The first fix kept
-    every GEMM on W4A8; this routing replaced it.)
+    every GEMM on W4A8; this routing replaced it.) Since 15 November, on GPUs of up to 40 cores, `SG_TILES` moves the
+    boundary to 5 / 6 rows and gives `mlx_qmm_sg` row tiles in 8-row steps; measured on an M3 Max only (RESULTS (af)),
+    `SG_TILES=0` restores the routing above.
     `NAX_GPU=0/1` overrides the detection. Our own `attn_paged_nax` (used only with `NAX_MPP=0`) is also wrong there.
   - **On every machine:** the DFlash2 drafter's input layer (`fc`, K = 25,600) is wider than the W4A8 activation
     scratch was sized for; a prefill chunk of more than ~0.68 x max_tokens rows overflowed it and filled the draft
