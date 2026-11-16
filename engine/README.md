@@ -252,7 +252,7 @@ See `CLAUDE.md` in the project root for the rest.
   endpoints answer a clean 501 ([docs/API-COMPAT.md](../docs/API-COMPAT.md)). Qwen3.6-35B-A3B fleets: int8 experts on the
   QA8 path, the router as a matmul from 64 rows, drafter attention on simdgroup matrices (M5 Pro fleet 60–71 → 81–93
   turns/min), and decode snapshots off when a chat template drops earlier reasoning (Studio 16k x 32: 269 → 1,079 tok/s).
-  M4 / M4 Pro: the Neural Engine FFN split (8k prompt 64.2 → 42.8 s; on by default in 0.4.0-0.4.1, opt-in since 0.4.2). `install.sh` / `run.sh start` find
+  M4 / M4 Pro: the Neural Engine FFN split (8k prompt 64.2 → 42.8 s; on by default in 0.4.0-0.4.1 and since 0.4.4; off in 0.4.2-0.4.3). `install.sh` / `run.sh start` find
   models in `~/models`, the Hugging Face cache and LM Studio, and accept known equivalent builds (with a note; `--exact`
   for exact repo ids). `run.sh start` sizing: the Mac Studio gets 192 snapshots (27B fleet at 64 in flight 59.6 → 95.3
   turns/min), Flash-Next 64 running / 128 snapshots (64 agents at 16k: 209–287 → 1,289–1,323 tok/s). A macOS 26 build

@@ -2390,6 +2390,9 @@ struct Qwen35 {
     const std::string name = g.dev.name.UTF8String;
     const bool m3max30 = name.find("Apple M3 Max") != std::string::npos && g.cores == 30;
     const bool roomy = g.dev.recommendedMaxWorkingSetSize > (64ull << 30);
+    // M4 / M4 Pro (<= 20 GPU cores): 26 units, as in 0.4.0-0.4.1; off in 0.4.2-0.4.3 until the split-step tree fix (0.4.3)
+    const bool m4 = name.find("Apple M4") != std::string::npos && name.find("Max") == std::string::npos && g.cores <= 20;
+    if (!g.nax && m4) return 26;
     return !g.nax && m3max30 && roomy && cfg.inter == 34 * 512 ? 20 : 0;
   }
   // The Neural Engine function a step of T rows takes (its row count; 0 = no split). Such a step runs while it is

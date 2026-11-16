@@ -65,7 +65,7 @@ pays only where the Neural Engine is fast relative to the GPU:
 | Machine | Neural Engine, one FFN unit (1,024 rows) | GPU, one unit | Prefill sweep, GPU alone → best split | In the server |
 |---|---|---|---|---|
 | Mac mini M6 | 0.71 ms (22.7 TFLOPS) | ~2.1 ms at 2,048 rows | 259 → 335 tok/s at 24 units (+29%) | 8k fleet prime 31.2 → 25.5 s; fleets +13–17% at 8k, +8–13% at 16k |
-| Mac mini M4 Pro (no GPU neural accelerators) | 1.63 ms (9.9 TFLOPS); 3.1 ms at 2,048 rows (10.3) | ~5.2 ms at 2,048 rows (MLX's `mlx_qmm_sg` at ~6.2 TFLOPS) | 114 → 218 tok/s at 26 units (+91%, 2,048-row chunks; 122 → 212 at 1,024) | default in 0.4.0–0.4.1 (26 units), opt-in since 0.4.2 (the 14 and 15 Nov notes below): cold first token 8k 64.2 → 42.1–43.5 s, 32k 286 → 188–191 s; follow-ups level |
+| Mac mini M4 Pro (no GPU neural accelerators) | 1.63 ms (9.9 TFLOPS); 3.1 ms at 2,048 rows (10.3) | ~5.2 ms at 2,048 rows (MLX's `mlx_qmm_sg` at ~6.2 TFLOPS) | 114 → 218 tok/s at 26 units (+91%, 2,048-row chunks; 122 → 212 at 1,024) | default again since 0.4.4 (26 units; 0.4.0–0.4.1 had it, 0.4.2–0.4.3 turned it off until the 0.4.3 fix, the 14 and 15 Nov notes below). 0.4.3 fleets at 8 and 16 agents: 0/96 short replies, 6.9–7.3 turns/min against 5.06 with it off (+40%): cold first token 8k 64.2 → 42.1–43.5 s, 32k 286 → 188–191 s; follow-ups level |
 | MacBook Pro M3 Max, 30-core GPU (no GPU neural accelerators) | 2.19 ms (7.4 TFLOPS), 1.92 ms with int8 activations; 1.42 ms a unit inside a 20-unit function (11.3) | 2.15 ms beside the Neural Engine (30.1 ms for the 14 units it keeps at 1,024 rows) | 175 → 257 tok/s at 20 units (+47%, 1,024-row chunks; 176 → 270 at 2,048, +53%) | **default since 15 Nov on the 96 GB configuration** (20 units; off on the 36 GB one, not measured): 8 agents on cold 2k prompts, all first tokens 95.5 → 71.4 s; 4 agents 47.7 → 35.6 s; decode level |
 | Mac mini M5 Pro | 1.44 ms (11.2 TFLOPS) | ~0.55 ms | 475 → 488 tok/s at 14 units (+3%) | not used (gain below noise) |
 | MacBook Pro M5 Max | 1.40 ms (11.5 TFLOPS); 0.99 ms with int8 activations | stronger than the Neural Engine | no gain (730–875 tok/s either way, noisy) | not used |
@@ -139,7 +139,7 @@ What each machine taught us:
 | Verify attention on whole-tile matmuls (`attn_mpp`) | on; needs bf16 KV at first, 8-bit KV variant since 31 Oct | on | the minis' early 8-bit KV runs used the older kernel | on |
 | 8-bit KV | default (halves KV memory; 10–12% faster verify steps at 64k–128k) | default | default (memory) | on; bf16 for Gemma-4 |
 | Residency set over every buffer | no measured gain (`RESIDENCY=1` opt-in) | – | required with the Neural Engine split | on only with `ANE_UNITS` |
-| Neural Engine FFN split | not used | no gain | M6: on (24 units); M5 Pro: off | 20 units on a 96 GB 30-core M3 Max since 15 Nov; off elsewhere since 0.4.2 (`ANE_UNITS` opt-in; 0.4.1 put 26 units on M4 / M4 Pro: see below) |
+| Neural Engine FFN split | not used | no gain | M6: on (24 units); M5 Pro: off | 20 units on a 96 GB 30-core M3 Max since 15 Nov; 26 units on M4 / M4 Pro (on in 0.4.0–0.4.1 and since 0.4.4); off elsewhere (`ANE_UNITS` opt-in) |
 | Drafter linears | 4-bit (`DRAFT_BITS=4`) | 4-bit | 4-bit (the fleet scripts once pinned 8-bit; 4-bit gives 0.8 GiB back for KV) | 4-bit |
 
 Sources: the study log sections "Mac minis (2026-10-30)", "Lessons from the mlx.fast competition", "attn_mpp", "Splash at
