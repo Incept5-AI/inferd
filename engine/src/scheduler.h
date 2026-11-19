@@ -812,7 +812,9 @@ struct Scheduler {
              std::equal(s.tokens.begin() + c * KV_BLOCK, s.tokens.begin() + (c + 1) * KV_BLOCK, r.tokens.begin() + c * KV_BLOCK))
         c++;
       const int ct = c * KV_BLOCK;
-      if (ct < fanout_min || c <= cached_blocks + 2 || r.computed >= ct) continue;
+      if (ct < fanout_min || c <= cached_blocks || r.computed >= ct) continue;
+      // The leader will publish its next snapshot anyway. Followers can share even the last block.
+      if (c <= cached_blocks + 2 && r.next_snap() != ct) continue;
       r.add_snap(ct);
       if (debug) fprintf(stderr, "fan-out: id%llu waits for id%llu to snapshot at %d\n", (unsigned long long)s.req.id,
                          (unsigned long long)r.req.id, ct);
