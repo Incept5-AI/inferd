@@ -720,8 +720,24 @@ struct Scheduler {
   }
 
   bool redundant_evict = !getenv("SNAP_REDUNDANT") || atoi(getenv("SNAP_REDUNDANT"));  // see redundant_victim
-  // LRU order with agent sessions' latest snapshots after everything else (pinned contexts are never candidates).
-  static uint64_t evict_key(const PrefixCache::Node& n) { return n.last_used + (n.sess ? 1ull << 62 : 0); }
+  // A system prefix can serve a different agent even after one turn extends its only branch.
+  // Give a bounded set of recently used system boundaries preference under slot pressure.
+  // Pinned snapshots keep their original guarantees and session snapshots keep their priority.
+  std::vector<int> recent_prefixes;
+  bool retained_prefix(int id) const {
+    return std::find(recent_prefixes.begin(), recent_prefixes.end(), id) != recent_prefixes.end();
+  }
+  void touch_prefix(int id) {
+    const int limit = std::min(8, (m.n_slots - max_running) / 4);
+    if (limit <= 0) return;
+    auto it = std::find(recent_prefixes.begin(), recent_prefixes.end(), id);
+    if (it != recent_prefixes.end()) recent_prefixes.erase(it);
+    else if ((int)recent_prefixes.size() == limit) recent_prefixes.erase(recent_prefixes.begin());
+    recent_prefixes.push_back(id);
+  }
+  uint64_t evict_key(int id, const PrefixCache::Node& n, bool need_slot) const {
+    return n.last_used + (n.sess ? 1ull << 62 : (need_slot && retained_prefix(id) ? 1ull << 61 : 0));
+  }
   // Evict least-recently-used trie leaves until `blocks` blocks and `slots` slots are free.
   // `keep`: a node whose snapshot the caller is about to use (never the victim, nor its snapshot dropped).
   bool evict(size_t blocks, size_t slots, int keep = -1) {
@@ -741,13 +757,13 @@ struct Scheduler {
       for (auto& [id, n] : cache.nodes) {
         if (n.children || n.pin || id == keep || pending_nodes.count(id)) continue;
         if (need_slot && n.snapshot < 0 && n_free >= blocks) continue;
-        if (evict_key(n) < best) { best = evict_key(n); victim = id; }
+        if (evict_key(id, n, need_slot) < best) { best = evict_key(id, n, need_slot); victim = id; }
       }
       if (victim < 0) {
         // No leaf to free; drop the oldest snapshot anywhere when a slot is what's missing.
         if (!need_slot) return false;
         for (auto& [id, n] : cache.nodes)
-          if (n.snapshot >= 0 && !n.pin_snap && id != keep && !pending_nodes.count(id) && evict_key(n) < best) { best = evict_key(n); victim = id; }
+          if (n.snapshot >= 0 && !n.pin_snap && id != keep && !pending_nodes.count(id) && evict_key(id, n, need_slot) < best) { best = evict_key(id, n, need_slot); victim = id; }
         if (victim < 0) return false;
         // Inner nodes too: an agent's turn start becomes one as soon as its next turn extends it, and a later prompt
         // that resumes there (a retry, a fork, a fleet restarting from its primed contexts) would re-prefill it all.
@@ -863,7 +879,7 @@ struct Scheduler {
       for (int x = n.parent; x >= 0;) {
         auto& a = cache.nodes.at(x);
         if (a.children != 1) break;
-        if (a.snapshot >= 0 && !a.pin_snap && !a.sess && x != keep && !pending_nodes.count(x) && a.last_used < best) { best = a.last_used; victim = x; }
+        if (a.snapshot >= 0 && !a.pin_snap && !a.sess && x != keep && !pending_nodes.count(x) && !retained_prefix(x) && a.last_used < best) { best = a.last_used; victim = x; }
         x = a.parent;
       }
     }
@@ -1018,6 +1034,7 @@ struct Scheduler {
           block_ref[n.block]++;
           s.blocks.push_back(n.block);
         }
+        if (retained_prefix(best_node)) touch_prefix(best_node);
         if (cache.nodes[best_node].snapshot >= 0) restores.push_back({cache.nodes[best_node].snapshot, s.slot});
         s.computed = s.cached = best_depth * KV_BLOCK;
         if (s.resumed) s.cached = was_cached;  // report the first admission's hit, not the resume's
@@ -1075,9 +1092,22 @@ struct Scheduler {
       mark_session(s, parent, nb);
       return false;
     }
-    if (node.snapshot >= 0) { mark_session(s, parent, nb); return false; }  // an identical prefix already has one
+    // The normal prompt snapshot can land before the system boundary for very short questions.
+    auto remember_prefix = [&] {
+      if (!branch_min || s.req.prefill_only || sa < branch_min) return;
+      const int prompt = (int)s.req.prompt.size();
+      const int end = (prompt - snap_margin) / KV_BLOCK * KV_BLOCK;
+      for (int hint : s.req.snap_hints) {
+        if (hint > 0 && hint <= prompt && sa == std::min(hint / KV_BLOCK * KV_BLOCK, end)) {
+          touch_prefix(parent);
+          break;
+        }
+      }
+    };
+    if (node.snapshot >= 0) { remember_prefix(); mark_session(s, parent, nb); return false; }
     if (donate) {
       node.snapshot = s.slot;
+      remember_prefix();
       snapshot_count++;
       mark_session(s, parent, nb);
       return true;
@@ -1085,6 +1115,7 @@ struct Scheduler {
     if (free_slots.empty() && !evict(0, 1, parent)) return false;
     if (!cache.nodes.count(parent)) return false;  // evicted while making room
     node.snapshot = free_slots.back();
+    remember_prefix();
     free_slots.pop_back();
     snapshot_count++;
     snaps.push_back({s.slot, node.snapshot});
