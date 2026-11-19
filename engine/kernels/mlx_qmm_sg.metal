@@ -117,3 +117,9 @@ qmm_t_wmwn<bfloat16_t, 64, 4, true, 48, 64, 32, 1, 4, 17408, 5120>(
     const device uint32_t*, const device bfloat16_t*, const device bfloat16_t*, const device bfloat16_t*,
     device bfloat16_t*, const constant int&, const constant int&, const constant int&, const constant int&, uint3,
     uint, uint);
+
+template [[host_name("mlx_qmm_sgw_out48_residual")]] [[kernel]] void
+qmm_t_wmwn<bfloat16_t, 64, 4, true, 48, 64, 32, 1, 4, 6144, 5120>(
+    const device uint32_t*, const device bfloat16_t*, const device bfloat16_t*, const device bfloat16_t*,
+    device bfloat16_t*, const constant int&, const constant int&, const constant int&, const constant int&, uint3,
+    uint, uint);

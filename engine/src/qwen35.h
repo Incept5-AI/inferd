@@ -1059,6 +1059,7 @@ struct Qwen35 {
   // rows (sg_tile below), so qmv_wide keeps 1..5 rows and mlx_qmm_sg starts at 6. Measured on an M3 Max only (30
   // cores), so the default is on up to 40 GPU cores: the 0.4.2 thresholds were set on an 80-core M3 Ultra, where one
   // 8-row tile of a narrow output is too few threadgroups to judge from here (SG_TILES=1 tries it there).
+  bool sg_fused_out = env_knob("SG_FUSED_OUT", 1, 0, 1);
   bool sg_fused_down = env_knob("SG_FUSED_DOWN", 1, 0, 1);
   int sg_tiles = getenv("SG_TILES") ? atoi(getenv("SG_TILES")) : g.cores <= 40;
   int sg_min = getenv("SG_MIN") ? atoi(getenv("SG_MIN")) : sg_tiles ? 6 : 11;  // no neural accelerators: M >= this goes to mlx_qmm_sg
@@ -1432,20 +1433,23 @@ struct Qwen35 {
       bool sgw = sg_w;
       if (!getenv("SG_BM")) sg_tile(M, sg_tiles, sgw, bm, bk, bn);
       if (W.ldk && !sgw) sgw = true, bm = bm == 16 ? 16 : 32, bn = 32;  // K-slice views: only the 1x4 copy takes ldw
-      const bool fused_down = sg_fused_down && sgw && mode == 1 && M == 48 && bm == 48 && bn == 32 &&
-          W.bits == 4 && !W.ldk && W.K == 17408 && W.N == 5120;
-      if (fused_down) snprintf(name, sizeof name, "mlx_qmm_sgw_down48_residual");
+      // These two residual projections cover the entire 48-row tile. Both use BF16 rounding before the add.
+      const bool residual_tile = sgw && mode == 1 && M == 48 && bm == 48 && bn == 32 &&
+          W.bits == 4 && !W.ldk && W.N == 5120;
+      const bool fused_residual = residual_tile && ((sg_fused_down && W.K == 17408) || (sg_fused_out && W.K == 6144));
+      if (fused_residual)
+        snprintf(name, sizeof name, "%s", W.K == 6144 ? "mlx_qmm_sgw_out48_residual" : "mlx_qmm_sgw_down48_residual");
       else if (sgw)
         snprintf(name, sizeof name, "mlx_qmm_sgw_b%d_al%s_%dx%d", W.bits, W.N % bn == 0 ? "true" : "false", bm, bn);
       else if (bm == 32 && bk == 32 && bn == 32)
         snprintf(name, sizeof name, "mlx_qmm_sg_b%d_al%s", W.bits, W.N % 32 == 0 ? "true" : "false");
       else
         snprintf(name, sizeof name, "mlx_qmm_sg_b%d_al%s_%dx%dx%d", W.bits, W.N % bn == 0 ? "true" : "false", bm, bk, bn);
-      const BufRef& out = mode == 1 && !fused_down ? tmp : C;
+      const BufRef& out = mode == 1 && !fused_residual ? tmp : C;
       e.k(g.pso_fc(name, {{40, W.flipped}})).buf(0, W.wq).buf(1, W.s).buf(2, W.b).buf(3, A).buf(4, out).args(5, W.K).args(6, W.N).args(7, M);
       if (sgw) { int ldw = W.ldk ? W.ldk : W.K; e.args(8, ldw); }
       e.groups(S3((W.N + bn - 1) / bn, (M + bm - 1) / bm), S3(128));
-      if (mode == 1 && !fused_down) {
+      if (mode == 1 && !fused_residual) {
         ActArgs aa{W.N};
         e.k("add_inplace").buf(0, C).buf(1, tmp).args(2, aa);
         e.threads(S3(W.N, M), S3(256));
