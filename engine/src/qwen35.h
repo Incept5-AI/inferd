@@ -2903,7 +2903,7 @@ struct Qwen35 {
       }
   }
 
-  void encode_step(id<MTLCommandBuffer> __strong& cb, int T, int S) {
+  void encode_step(id<MTLCommandBuffer> __strong& cb, int T, int S, bool plain_argmax = false) {
     Enc e(g, cb);
     const int H = cfg.hidden;
     EmbedArgs ea{H};
@@ -2953,10 +2953,11 @@ struct Qwen35 {
       e.k("logit_softcap").buf(0, logits).args(1, sa);
       e.threads(S3(cfg.vocab, n_out), S3(256));
     }
-    if (verify) {
-      // Argmax every output row, accept greedily, then replay each GDN layer over the committed rows.
+    if (verify || plain_argmax) {
       e.k("row_argmax").buf(0, logits).buf(1, pred).args(2, cfg.vocab);
       e.groups(S3(n_out), S3(1024));
+    }
+    if (verify) {
       if (any_sample) {  // speculative sampling: each verify row's top-K, then accept/resample per sequence
         struct { int V, SH, PS, P0, LO; } ta{cfg.vocab, kVTopShards, kVTopShards, 0, 0};
         const bool k64 = vtop_k == 64 && samp_wide;  // 16 candidates suffice when every top_k is 1..16

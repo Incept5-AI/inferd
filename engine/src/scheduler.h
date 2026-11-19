@@ -246,6 +246,7 @@ struct Scheduler {
   Mtp* mtp = nullptr;  // Flash-Next's own MTP head as the drafter (src/mtp.h); exclusive with d
   std::vector<int> last_prompt;  // per planned sequence: its last row completes a greedy prompt (MTP fold)
   bool debug = getenv("INFERD_DEBUG") != nullptr;
+  bool plain_gpu_greedy = env_knob("PLAIN_GPU_GREEDY", g.cores == 40 && [g.dev.name isEqualToString:@"Apple M4 Max"], 0, 1);
   std::vector<std::pair<int, int>> spec_blocks = parse_blocks(getenv("SPEC_BLOCKS") ? getenv("SPEC_BLOCKS") : "");
   static std::vector<std::pair<int, int>> parse_blocks(const std::string& v) {
     // "8:4,16:3,32:2": more than 8 decoding -> block 4, more than 16 -> 3, ...
@@ -1858,7 +1859,13 @@ struct Scheduler {
     const bool host_trees = m.n_tree && !tree_gpu;
     const bool trees_first = host_trees && m.ane_rows(T);
     if (trees_first) install_trees();
-    m.encode_step(cb, T, (int)work.size());
+    // At 48 plain greedy rows the CPU otherwise scans the whole vocabulary for each sequence.
+    const bool gpu_greedy_step = plain_gpu_greedy && !d && !mtp && T == 48 && who.size() == 48 &&
+        std::all_of(who.begin(), who.end(), [&](int i) {
+          const Seq& s = running[i];
+          return s.decoding() && s.req.temperature <= 0 && !s.req.grammar && !s.req.processed() && s.req.logprobs < 0;
+        });
+    m.encode_step(cb, T, (int)work.size(), gpu_greedy_step);
     if (mtp) {
       Enc e(g, cb);
       mtp->encode_context(e, cb, T, (int)work.size(), any_spec, last_prompt);
@@ -2036,7 +2043,7 @@ struct Scheduler {
       s.resumed = false;
       if (s.req.prefill_only) { done.push_back({who[j], "stop"}); continue; }  // a context: computed, nothing to sample
       int out = m.out_base.ptr<int>()[j];
-      int t = ((d || mtp) && s.req.temperature <= 0 && !s.req.grammar && !s.req.processed())
+      int t = (gpu_greedy_step || ((d || mtp) && s.req.temperature <= 0 && !s.req.grammar && !s.req.processed()))
                   ? m.pred.ptr<int>()[out]
                   : sample(m.logits.ptr<uint16_t>() + (size_t)out * m.cfg.vocab, s);
       if (deliver(s, &t, 1, why, &out)) done.push_back({who[j], why});
