@@ -37,15 +37,24 @@ QMVW_ALL(4, 8) QMVW_ALL(4, 16) QMVW_ALL(8, 8) QMVW_ALL(8, 16)
 // Ultra), so rounding M up to 8 instead of 16 or 32 is the gain. Same loaders and BlockMMA as MLX; flip-aware via the
 // patched dequantize (function constant 40); buffer 8 = the weight row length, so it also serves K-slice views (the ANE
 // split's down projection). Name: mlx_qmm_sgw_b<bits>_al<aligned N to BN>_<BM>x<BN>, BK = 64.
+// The ordinary path rounds the projection to bf16 before adding it to the residual.
+struct SgRoundedResidual {
+  static float apply(float product, bfloat16_t residual) {
+    return float(bfloat16_t(product)) + float(residual);
+  }
+};
+
 template <typename T, const int group_size, const int bits, const bool aligned_N, const int BM, const int BK,
-          const int BN, const int WM, const int WN>
+          const int BN, const int WM, const int WN, int residual_k = 0, int residual_n = 0>
 [[kernel]] void qmm_t_wmwn(
     const device uint32_t* w [[buffer(0)]], const device T* scales [[buffer(1)]], const device T* biases [[buffer(2)]],
-    const device T* x [[buffer(3)]], device T* y [[buffer(4)]], const constant int& K [[buffer(5)]],
-    const constant int& N [[buffer(6)]], const constant int& M [[buffer(7)]],
-    const constant int& ldw [[buffer(8)]],  // weight row length in elements: K, or the full K of a K-slice view
+    const device T* x [[buffer(3)]], device T* y [[buffer(4)]], const constant int& input_k [[buffer(5)]],
+    const constant int& output_n [[buffer(6)]], const constant int& rows [[buffer(7)]],
+    const constant int& weight_stride [[buffer(8)]],  // weight row length in elements: K, or the full K of a K-slice view
     uint3 tid [[threadgroup_position_in_grid]], uint simd_gid [[simdgroup_index_in_threadgroup]],
     uint simd_lid [[thread_index_in_simdgroup]]) {
+  const int K = residual_k ? residual_k : input_k, N = residual_n ? residual_n : output_n;
+  const int M = residual_k ? BM : rows, ldw = residual_k ? residual_k : weight_stride;
   constexpr int pack_factor = get_pack_factor<bits, 8>();
   constexpr int bytes_per_pack = get_bytes_per_pack<bits>();
   constexpr int BK_padded = (BK + 16 / sizeof(T));
@@ -62,7 +71,9 @@ template <typename T, const int group_size, const int bits, const bool aligned_N
   using loader_w_t = QuantizedBlockLoader<T, BN, BK, BK_padded, 1, WM * WN * SIMD_SIZE, group_size, bits>;
   const int K_w = ldw * bytes_per_pack / pack_factor;
   const int K_g = ldw / group_size;
-  const int y_row = tid.y * BM;
+  // The fixed-shape residual dispatch covers all 48 rows with one tile vertically.
+  // Making that explicit also lets the compiler omit the partial-row loader.
+  const int y_row = residual_k ? 0 : int(tid.y) * BM;
   const int y_col = tid.x * BN;
   auto wl = (const device uint8_t*)w;
   x += y_row * static_cast<int64_t>(K);
@@ -85,7 +96,8 @@ template <typename T, const int group_size, const int bits, const bool aligned_N
     loader_x.next();
     loader_w.next();
   }
-  threadgroup_barrier(mem_flags::mem_threadgroup);
+  if constexpr (!residual_k) threadgroup_barrier(mem_flags::mem_threadgroup);
+  if constexpr (residual_k != 0) mma_op.apply_epilogue(y, N, 1, SgRoundedResidual{});
   if (!full_m || !full_n) mma_op.store_result_safe(y, N, short2(num_outs, num_els));
   else mma_op.store_result(y, N);
 }
@@ -99,3 +111,9 @@ template <typename T, const int group_size, const int bits, const bool aligned_N
 #define QMMSGW_AL(bm, bn) QMMSGW(4, true, bm, bn) QMMSGW(4, false, bm, bn) QMMSGW(8, true, bm, bn) QMMSGW(8, false, bm, bn)
 QMMSGW_AL(8, 32) QMMSGW_AL(16, 32) QMMSGW_AL(24, 32) QMMSGW_AL(32, 32) QMMSGW_AL(40, 32) QMMSGW_AL(48, 32)
 QMMSGW_AL(56, 32)  // 64x32: 442 ms per 27B step at 64 rows against 406 for the 2x2 32x64x32 above (M3 Max)
+
+template [[host_name("mlx_qmm_sgw_down48_residual")]] [[kernel]] void
+qmm_t_wmwn<bfloat16_t, 64, 4, true, 48, 64, 32, 1, 4, 17408, 5120>(
+    const device uint32_t*, const device bfloat16_t*, const device bfloat16_t*, const device bfloat16_t*,
+    device bfloat16_t*, const constant int&, const constant int&, const constant int&, const constant int&, uint3,
+    uint, uint);
