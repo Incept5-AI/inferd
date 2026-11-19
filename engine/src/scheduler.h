@@ -246,7 +246,7 @@ struct Scheduler {
   Mtp* mtp = nullptr;  // Flash-Next's own MTP head as the drafter (src/mtp.h); exclusive with d
   std::vector<int> last_prompt;  // per planned sequence: its last row completes a greedy prompt (MTP fold)
   bool debug = getenv("INFERD_DEBUG") != nullptr;
-  bool plain_gpu_greedy = env_knob("PLAIN_GPU_GREEDY", g.cores == 40 && [g.dev.name isEqualToString:@"Apple M4 Max"], 0, 1);
+  bool plain_gpu_greedy = false;
   std::vector<std::pair<int, int>> spec_blocks = parse_blocks(getenv("SPEC_BLOCKS") ? getenv("SPEC_BLOCKS") : "");
   static std::vector<std::pair<int, int>> parse_blocks(const std::string& v) {
     // "8:4,16:3,32:2": more than 8 decoding -> block 4, more than 16 -> 3, ...
@@ -563,6 +563,10 @@ struct Scheduler {
     } else if (mtp) {
       m.enable_spec({}, mtp->block);
       m.verify = true;
+    } else if (env_knob("PLAIN_GPU_GREEDY", 1, 0, 1)) {
+      // row_argmax reduces 32 SIMD groups of 32 lanes per output row.
+      auto kernel = g.pso("row_argmax");
+      plain_gpu_greedy = kernel.threadExecutionWidth == 32 && kernel.maxTotalThreadsPerThreadgroup >= 1024;
     }
     stateless = m.conv_state.empty() && !m.ple_state.buf && !d && !mtp && (!getenv("PREFIX_ANY") || atoi(getenv("PREFIX_ANY")));
     if (d && m.cfg.experts) {
@@ -1859,12 +1863,10 @@ struct Scheduler {
     const bool host_trees = m.n_tree && !tree_gpu;
     const bool trees_first = host_trees && m.ane_rows(T);
     if (trees_first) install_trees();
-    // At 48 plain greedy rows the CPU otherwise scans the whole vocabulary for each sequence.
-    const bool gpu_greedy_step = plain_gpu_greedy && !d && !mtp && T == 48 && who.size() == 48 &&
-        std::all_of(who.begin(), who.end(), [&](int i) {
-          const Seq& s = running[i];
-          return s.decoding() && s.req.temperature <= 0 && !s.req.grammar && !s.req.processed() && s.req.logprobs < 0;
-        });
+    const bool gpu_greedy_step = plain_gpu_greedy && std::all_of(who.begin(), who.end(), [&](int i) {
+      const Seq& s = running[i];
+      return s.decoding() && s.req.temperature <= 0 && !s.req.grammar && !s.req.processed() && s.req.logprobs < 0;
+    });
     m.encode_step(cb, T, (int)work.size(), gpu_greedy_step);
     if (mtp) {
       Enc e(g, cb);

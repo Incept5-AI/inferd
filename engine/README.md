@@ -235,6 +235,9 @@ simdgroup matrices for blocks of up to 8 rows, 1).
 GPU's first use of the weights; 1, 0 off), `PSO_LOG` (log every pipeline creation and its time).
 See `CLAUDE.md` in the project root for the rest.
 
+Plain greedy decode batches of any size select tokens on the GPU when the Metal kernel supports 32-lane SIMD groups
+and 1,024 threads per threadgroup. Set `PLAIN_GPU_GREEDY=0` to use CPU selection for these batches.
+
 ## Changes
 
 - **0.4.1 (2026-11-05)** — engine unchanged from 0.4.0 (same kernels and binaries' code). First-run fixes from an external tester's report: `build.sh` uses `/Applications/Xcode.app`
