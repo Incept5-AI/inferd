@@ -1,3 +1,4 @@
+#import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 // Qwen3.5 / Qwen3.8 hybrid text model (dense MLP variant), batched decode.
 // Layers: Gated DeltaNet (3 of 4) and gated full attention (1 of 4), each followed by a SwiGLU MLP.
 #pragma once
@@ -370,7 +371,84 @@ struct Qwen35 {
   int qsa_dense = 0;  // QSA_DENSE=1: every row attends densely (the indexer cache is still kept); A/B and timing
   bool on(const char* what) const { return skip.find(what) == std::string::npos; }
   Qwen35Config cfg;
+  MPSMatrixMultiplication *qk=nil,*pv=nil;
+  MPSMatrix *qm=nil,*sm=nil,*pm=nil,*om=nil;
+  std::vector<MPSMatrix*> km,vm;
+  BufRef suffix_pos;
+  MPSMatrix* matrix(BufRef& buffer,int rows,int cols){
+    buffer=g.alloc(size_t(4)*rows*cols*2);
+    auto desc=[MPSMatrixDescriptor matrixDescriptorWithRows:rows columns:cols matrices:4 rowBytes:cols*2 matrixBytes:size_t(rows)*cols*2 dataType:MPSDataTypeFloat16];
+    return [[MPSMatrix alloc] initWithBuffer:buffer.buf descriptor:desc];
+  }
+  void setup_prefix(int n){
+    if(n%32||cfg.hq!=24||cfg.hkv!=4||cfg.dh!=256||!kv8||kv4)abort();
+    constexpr int rows=288;
+    qm=matrix(packed_queries,rows,256);sm=matrix(prefix_scores,rows,n);pm=matrix(prefix_probs,rows,n);
+    om=matrix(prefix_vectors,rows,256);prefix_stats=g.alloc(4*rows*4);suffix_pos=g.alloc(48*4);
+    packed_keys.resize(kc.size());packed_vals.resize(kc.size());
+    for(size_t i=0;i<kc.size();++i){km.push_back(matrix(packed_keys[i],n,256));vm.push_back(matrix(packed_vals[i],n,256));}
+    qk=[[MPSMatrixMultiplication alloc] initWithDevice:g.dev transposeLeft:NO transposeRight:YES resultRows:rows resultColumns:n interiorColumns:256 alpha:1./16. beta:0];
+    pv=[[MPSMatrixMultiplication alloc] initWithDevice:g.dev transposeLeft:NO transposeRight:NO resultRows:rows resultColumns:256 interiorColumns:n alpha:1 beta:0];
+    qk.batchSize=4;pv.batchSize=4;
+  }
+  void run_shared(Enc& e,id<MTLCommandBuffer> cb, Layer& ly,GqaArgs& qa){
+    if(qa.T!=48||qa.Hq!=24||qa.Dh!=256||qa.win||cascade||verify)abort();
+    const int i=ly.idx,n=prefix_rows;
+    struct{int n,ns,mb;} a{n,kv_ns(),max_blocks};
+    if(prefix_pack){
+      e.k("prefix_kv").buf(0,kc[i]).buf(1,vc[i]).buf(2,ks[i]).buf(3,vs[i]).buf(4,block_table)
+        .buf(5,packed_keys[i]).buf(6,packed_vals[i]).args(7,a);
+      e.threads(S3(64,n,4),S3(64,4,1));
+    }
+    e.k("prefix_q").buf(0,qbuf).buf(1,packed_queries).buf(2,pos).buf(3,suffix_pos).args(4,n);
+    e.threads(S3(64,48,24),S3(64,4,1));e.end();
+    [qk encodeToCommandBuffer:cb leftMatrix:qm rightMatrix:km[i] resultMatrix:sm];
+    e.restart(cb);
+    e.k("prefix_softmax").buf(0,prefix_scores).buf(1,prefix_probs).buf(2,prefix_stats).args(3,n);
+    e.groups(S3(4*288),S3(256));e.end();
+    [pv encodeToCommandBuffer:cb leftMatrix:pm rightMatrix:vm[i] resultMatrix:om];
+    e.restart(cb);
+    qa.splits=2;qa.chunk=std::max(32,((max_ctx-n+31)/32)*32);qa.own_splits=0;
+    e.k(kvk("attn_gqa_row_g6_d256")).buf(0,qbuf).buf(1,kc[i]).buf(2,vc[i]).buf(3,block_table.at(n/32*4))
+      .buf(4,suffix_pos).buf(5,tseq).buf(6,attn_part).args(7,qa).buf(8,rflag).buf(9,ks[i]).buf(10,vs[i]);
+    e.groups(S3(4,48,1),S3(128));
+    e.k("prefix_partial").buf(0,prefix_vectors).buf(1,prefix_stats).buf(2,attn_part);
+    e.threads(S3(256,48,24),S3(256));
+  }
+
   std::vector<Layer> L;
+  int pending_log=0, prefix_capacity=0;
+  std::vector<int> previous_slots, previous_pages;
+
+  void materialize(id<MTLCommandBuffer> cb) {
+    if(!pending_log)return;
+    Enc enc(g,cb);
+    struct { int phase, interval; } p{pending_log,log_interval};
+    for(size_t i=0;i<log_keys.size();++i){
+      enc.k("flush_logs").buf(0,ssm_state[i]).buf(1,log_keys[i]).buf(2,log_decay[i])
+        .buf(3,log_delta[i]).args(5,p);
+      [enc.e setBytes:previous_slots.data() length:48*sizeof(int) atIndex:4];
+      enc.threads(S3(32,128,48*48),S3(32,4,1));
+    }
+    enc.end();pending_log=0;
+  }
+  int log_interval = 0, log_phase = -1, prefix_rows = 0;
+  bool prefix_pack = false, log_exact=false, log_force_merge=false;
+  std::vector<BufRef> log_keys, log_decay, log_delta, packed_keys, packed_vals;
+  BufRef log_coeffs, packed_queries, prefix_scores, prefix_probs, prefix_stats, prefix_vectors;
+  void setup_log(int interval) {
+    log_exact=interval>=100; interval%=100;
+    if (interval != 2 && interval != 4 && interval != 8 && interval != 16) abort();
+    log_interval=interval;
+    size_t entries=size_t(n_slots)*48*interval;
+    for (size_t i=0;i<ssm_state.size();++i){
+      log_keys.push_back(g.alloc(entries*128*2));
+      log_decay.push_back(g.alloc(entries*4));
+      log_delta.push_back(g.alloc(entries*128*4));
+    }
+    log_coeffs=g.alloc(size_t(max_seqs)*48*17*16);
+  }
+
   // GDN recurrent state in bf16 (STATE_BF16=1, opt-in): half the slot memory and state traffic; the arithmetic stays
   // fp32 in registers. KL vs mlx_lm +0.0001-0.0003 at 8k/32k, flat over 2,048 decode steps (NOTES 2026-11-13).
   bool state_bf16 = getenv("STATE_BF16") && atoi(getenv("STATE_BF16")) != 0;
@@ -2661,7 +2739,22 @@ struct Qwen35 {
       }
       e.k("gdn_prep").buf(0, co).buf(1, proj).buf(2, ly.A_log).buf(3, ly.dt_bias).buf(4, gb).buf(5, bb).args(6, ga);
       e.groups(S3(2 * cfg.lhk + 1, T), S3(cfg.ldk));
-      if (fpf && fn_gdn_r > 1) {
+      if (log_phase>=0) {
+        if (T!=48 || S!=48 || cfg.lhk!=16 || cfg.lhv!=48 || cfg.ldv!=128 || cfg.ldk!=128 || state_bf16 || verify) abort();
+        struct { int phase, interval; } p{log_phase,log_interval};
+        auto i=ly.idx;
+        bool merge=log_phase+1==log_interval || log_force_merge;
+        if(log_exact){
+          e.k(merge?"exact_merge":"exact_append").buf(0,co).buf(1,gb).buf(2,bb).buf(3,ssm_state[i]).buf(4,ybuf)
+            .buf(5,slot).buf(6,log_keys[i]).buf(7,log_decay[i]).buf(8,log_delta[i]).args(9,p);
+        }else{
+        e.k("log_coeff").buf(0,co).buf(1,gb).buf(2,slot).buf(3,log_keys[i]).buf(4,log_decay[i]).buf(5,log_coeffs).args(6,p);
+        e.groups(S3(S*48),S3(32));
+        e.k(merge?"log_merge":"log_append").buf(0,co).buf(1,bb).buf(2,ssm_state[i]).buf(3,ybuf)
+          .buf(4,slot).buf(5,log_keys[i]).buf(6,log_delta[i]).buf(7,log_coeffs).args(8,p);
+        }
+        e.threads(S3(32,32,S*48),S3(32,4,1));
+      } else if (fpf && fn_gdn_r > 1) {
         char sn[24];
         snprintf(sn, sizeof sn, "gdn_step_r%d%s", fn_gdn_r, state_bf16 ? "_s16" : "");
         e.k(sn).buf(0, co).buf(1, gb).buf(2, bb).buf(3, ssm_state[ly.idx]).buf(4, ybuf).buf(5, slot)
@@ -2732,10 +2825,13 @@ struct Qwen35 {
         const bool casc = cascade && sh_splits > 0;
         GqaArgs qa{T, cfg.hq, ly.hkv, ly.dh, max_blocks, splits + sh_splits, chunk, ly.proj, cfg.attn_scale(ly.dh),
                    nax_tiles, casc ? splits : 0, kv_ns(), ly.window, ly.gated};
+        if (prefix_rows) {
+          run_shared(e,cb,ly,qa);
+        } else
         e.k(kvk((std::string("attn_gqa_row") + sfx).c_str())).buf(0, qbuf).buf(1, kc[ly.idx]).buf(2, vc[ly.idx]).buf(3, block_table)
             .buf(4, pos).buf(5, tseq).buf(6, attn_part).args(7, qa).buf(8, rflag).buf(9, ks[ly.idx])
             .buf(10, vs[ly.idx]);
-        e.groups(S3(ly.hkv, T, splits), S3(128));
+        if (!prefix_rows) e.groups(S3(ly.hkv, T, splits), S3(128));
         if (any_multi) {
           e.k(kvk((std::string("attn_gqa") + sfx).c_str())).buf(0, qbuf).buf(1, kc[ly.idx]).buf(2, vc[ly.idx]).buf(3, block_table)
               .buf(4, pos).buf(5, seq_start).buf(6, attn_part).args(7, qa).buf(8, rflag).buf(9, seq_len)

@@ -1795,6 +1795,34 @@ struct Scheduler {
     id<MTLCommandBuffer> cb = [g.queue commandBuffer];
     id<MTLCommandBuffer> dcb = nil;          // tree steps: the drafter's command buffer
     std::vector<int> dblk(who.size(), -1);   // tree steps: each sequence's block index in the drafter's rows
+    if(m.log_interval || m.prefix_capacity) {
+      bool ok=work.size()==48 && T==48 && !d && !mtp && !spill &&
+        std::all_of(who.begin(),who.end(),[&](int i){const auto &s=running[i];return s.decoding() &&
+          s.req.temperature==0 && s.req.grammar==nullptr && s.req.session.empty() && s.req.ctx_name.empty();});
+      std::vector<int> slots;
+      if(ok)for(auto &w:work) slots.push_back(w.slot);
+      bool change=!ok || m.previous_slots!=slots;
+      if(change || !gsnaps.empty() || !restores.empty() || !zeros.empty())m.materialize(cb);
+      m.log_phase=-1;m.prefix_rows=0;m.prefix_pack=false;
+      if(ok && m.log_interval) {
+
+        m.log_phase=m.pending_log;
+        m.log_force_merge=!snaps.empty() || std::any_of(who.begin(),who.end(),[&](int i){auto& s=running[i];return s.generated+1>=s.req.max_tokens || (s.req.gen_snap && !s.req.stop_ids.empty() && (s.computed+1)%KV_BLOCK==0);});
+        m.pending_log=(m.log_force_merge || m.pending_log+1==m.log_interval)?0:m.pending_log+1;
+      }
+      if(ok && m.prefix_capacity) {
+        int blocks=m.prefix_capacity/32;const auto& first=*work.front().blocks;
+        for(auto& w:work) if(w.pos0<m.prefix_capacity || int(w.blocks->size())<blocks ||
+            !std::equal(w.blocks->begin(),w.blocks->begin()+blocks,first.begin())){ok=false;break;}
+        if(ok){
+          std::vector<int> common(first.begin(),first.begin()+blocks);
+          m.prefix_rows=m.prefix_capacity;m.prefix_pack=change || common!=m.previous_pages;
+          m.previous_pages=std::move(common);
+        }
+      }
+      if(!ok)m.previous_pages.clear();
+      m.previous_slots=std::move(slots);
+    }
     if (!restores.empty() || !zeros.empty() || !gsnaps.empty()) {
       id<MTLBlitCommandEncoder> b = [cb blitCommandEncoder];
       for (auto [src, dst] : gsnaps) { m.encode_copy_slot(b, src, dst); if (d) d->encode_copy_slot(b, src, dst); }
@@ -1934,6 +1962,9 @@ struct Scheduler {
     if (host_trees && !trees_first) install_trees();
     [cb commit];
     [cb waitUntilCompleted];
+    if(work.size()==48 && T==48 && getenv("STUDY_TIMES"))
+      fprintf(stderr,"STUDY_STEP phase %d prefix %d pack %d forced %d ms %.5f\n",m.log_phase,m.prefix_rows,m.prefix_pack,m.log_force_merge,
+        std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-t_plan).count());
     if (debug) fprintf(stderr, "[%.3f s] ", std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
     if (debug)
       fprintf(stderr, "  step %.1f ms since planning (last command buffer GPU %.1f ms)\n",

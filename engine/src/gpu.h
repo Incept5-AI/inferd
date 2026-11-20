@@ -21,6 +21,7 @@ struct Gpu {
   // overrides the detection.
   bool nax = true;
 
+  id<MTLLibrary> experiments=nil;
   explicit Gpu(const std::string& metallib) {
     dev = MTLCreateSystemDefaultDevice();
     io_service_t svc = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("AGXAccelerator"));
@@ -46,6 +47,13 @@ struct Gpu {
       if (resident) { [resident requestResidency]; [queue addResidencySet:resident]; }
     }
     lib = [dev newLibraryWithURL:[NSURL fileURLWithPath:[NSString stringWithUTF8String:metallib.c_str()]] error:&err];
+    if(const char* path=getenv("STUDY_METAL")){
+      NSString* source=[NSString stringWithContentsOfFile:[NSString stringWithUTF8String:path] encoding:NSUTF8StringEncoding error:&err];
+      if(!source){fprintf(stderr,"Study source missing %s\n",path);exit(7);}
+      MTLCompileOptions* options=[MTLCompileOptions new];options.languageVersion=MTLLanguageVersion4_0;
+      experiments=[dev newLibraryWithSource:source options:options error:&err];
+      if(!experiments){fprintf(stderr,"Metal compiler %s\n",err.localizedDescription.UTF8String);exit(8);}
+    }
     if (!lib) { fprintf(stderr, "metallib %s: %s\n", metallib.c_str(), err.localizedDescription.UTF8String); exit(1); }
   }
 
@@ -66,6 +74,7 @@ struct Gpu {
     const auto t0 = std::chrono::steady_clock::now();
     NSError* err = nil;
     id<MTLFunction> f = [lib newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
+    if (!f && experiments) f=[experiments newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
     if (!f) { fprintf(stderr, "no kernel %s\n", name.c_str()); exit(1); }
     id<MTLComputePipelineState> p = [dev newComputePipelineStateWithFunction:f error:&err];
     if (!p) { fprintf(stderr, "pso %s: %s\n", name.c_str(), err.localizedDescription.UTF8String); exit(1); }

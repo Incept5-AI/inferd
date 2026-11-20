@@ -288,6 +288,10 @@ int main(int argc, char** argv) {
     Qwen35::pf8_defer = true;  // PF8 auto: decided below, once the KV need is known
     Qwen35 m(g, ck, std::max(step_tokens, prefill_step) + max_running * kMaxBlock, max_running, max_running + snapshots,
              n_blocks, max_blocks);
+    const char* interval=getenv("STUDY_LOG");
+    if(interval && atoi(interval)){m.setup_log(atoi(interval));}
+    const char* prefix=getenv("STUDY_PREFIX");
+    if(prefix && atoi(prefix)){m.prefix_capacity=atoi(prefix);m.setup_prefix(m.prefix_capacity);}
     const double after_model = g.dev.currentAllocatedSize / gib - n_blocks * (double)block_bytes / gib;  // less the KV pool
     const double pf8_in_model = m.pf8_bytes / gib;  // copies made at construction (PF8=1 forced)
     Drafter* drafter = nullptr;
