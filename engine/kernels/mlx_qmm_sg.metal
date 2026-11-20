@@ -123,3 +123,41 @@ qmm_t_wmwn<bfloat16_t, 64, 4, true, 48, 64, 32, 1, 4, 6144, 5120>(
     const device uint32_t*, const device bfloat16_t*, const device bfloat16_t*, const device bfloat16_t*,
     device bfloat16_t*, const constant int&, const constant int&, const constant int&, const constant int&, uint3,
     uint, uint);
+
+// A separate unpack lets all row tiles share the same BF16 weights in a large prefill.
+// dequantize uses the same affine BF16 arithmetic and flip flag as the packed simdgroup path.
+kernel void prefill_unpack4(device const uchar* packed [[buffer(0)]], device const bfloat* scales [[buffer(1)]],
+                            device const bfloat* biases [[buffer(2)]], device bfloat* weights [[buffer(3)]],
+                            uint pack [[thread_position_in_grid]]) {
+  dequantize<bfloat, 8, 4>(packed + 4 * pack, scales[pack / 8], biases[pack / 8], weights + 8 * pack);
+}
+
+kernel void prefill_dense_gdn(device const bfloat* input [[buffer(0)]], device const bfloat* weights [[buffer(1)]],
+                              device bfloat* output [[buffer(2)]], constant int& M [[buffer(3)]],
+                              constant int& N [[buffer(4)]], constant int& K [[buffer(5)]],
+                              uint3 group [[threadgroup_position_in_grid]], uint simd [[simdgroup_index_in_threadgroup]],
+                              uint lane [[thread_index_in_simdgroup]]) {
+  constexpr int BM = 64, BN = 64, BK = 32, stride = BK + 8;
+  threadgroup bfloat xs[BM * stride], ws[BN * stride];
+  using XLoader = mlx::steel::BlockLoader<bfloat, BM, BK, stride, 1, 128, 1, 4>;
+  using WLoader = mlx::steel::BlockLoader<bfloat, BN, BK, stride, 1, 128, 1, 4>;
+  using MMA = mlx::steel::BlockMMA<bfloat, bfloat, BM, BN, BK, 2, 2, false, true, stride, stride>;
+  const int row = group.y * BM, col = group.x * BN;
+  const short rows = min(BM, M - row), cols = min(BN, N - col);
+  XLoader x(input + size_t(row) * K, K, xs, simd, lane);
+  WLoader w(weights + size_t(col) * K, K, ws, simd, lane);
+  MMA mma(simd, lane);
+  for (int k = 0; k < K; k += BK) {
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    if (rows == BM) x.load_unsafe(); else x.load_safe(short2(BK, rows));
+    if (cols == BN) w.load_unsafe(); else w.load_safe(short2(BK, cols));
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    mma.mma(xs, ws);
+    x.next();
+    w.next();
+  }
+  threadgroup_barrier(mem_flags::mem_threadgroup);
+  output += size_t(row) * N + col;
+  if (rows == BM && cols == BN) mma.store_result(output, N);
+  else mma.store_result_safe(output, N, short2(cols, rows));
+}

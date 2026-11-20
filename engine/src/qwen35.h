@@ -388,6 +388,11 @@ struct Qwen35 {
   // Capacity: a step carries up to max_tokens token rows from up to max_seqs sequences.
   int max_tokens, max_seqs, n_slots, n_blocks, max_blocks;
   // Activations (sized for max_tokens; logits for max_seqs)
+  // Unpack each layer once for all its row tiles. One shared workspace costs 161 MiB on the 27B.
+  BufRef gdn_prefill_weights;
+  static bool expandable_gdn(const QLinear& w) {
+    return w.bits == 4 && !w.ldk && w.K == 5120 && w.N == 16480;
+  }
   BufRef qpack;  // packed verify queries for attn_mpp
   BufRef qscale;  // IQ: per packed row query scales
   BufRef kbeg, shrow, sh_rows_t, sh_rows_j, sh_tinfo, qpack_sh;  // cascade attention scratch
@@ -546,6 +551,14 @@ struct Qwen35 {
       if (!getenv("W4A8_MAX")) w4a8_max = sg_min > 0 ? sg_min : 1 << 30;
       if (!getenv("FLASH_ROWS")) flash_rows = 1 << 30;
       if (!getenv("CHUNK_TILE_MAX")) chunk_tile_max = 1 << 30;
+    }
+    if (!g.nax && B >= 1536 && !getenv("SG_BM") && env_knob("SG_EXPAND_GDN", 0, 0, 1)) {
+      for (const auto& ly : L) {
+        if (ly.linear && expandable_gdn(ly.in_proj)) {
+          gdn_prefill_weights = g.alloc((size_t)ly.in_proj.K * ly.in_proj.N * 2);
+          break;
+        }
+      }
     }
     proj = g.alloc((size_t)B * pmax * 2);
     if (cfg.qwen4) {
@@ -1429,6 +1442,13 @@ struct Qwen35 {
   void mlx_qmm(Enc& e, const BufRef& A, const QLinear& W, const BufRef& C, int M, int mode, int bm) {
     char name[48];
     if (!g.nax) {  // no neural accelerators: MLX's simdgroup qmm (tile per sg_tile, 128 threads)
+      if (M >= 1536 && M <= 2048 && mode == 0 && gdn_prefill_weights.buf && expandable_gdn(W)) {
+        e.k(g.pso_fc("prefill_unpack4", {{40, W.flipped}})).buf(0, W.wq).buf(1, W.s).buf(2, W.b).buf(3, gdn_prefill_weights);
+        e.threads(S3((size_t)W.N * W.K / 8), S3(256));
+        e.k("prefill_dense_gdn").buf(0, A).buf(1, gdn_prefill_weights).buf(2, C).args(3, M).args(4, W.N).args(5, W.K);
+        e.groups(S3((W.N + 63) / 64, (M + 63) / 64), S3(128));
+        return;
+      }
       int bm = sg_bm, bk = sg_bk, bn = sg_bn;
       bool sgw = sg_w;
       if (!getenv("SG_BM")) sg_tile(M, sg_tiles, sgw, bm, bk, bn);

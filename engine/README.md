@@ -241,6 +241,10 @@ and 1,024 threads per threadgroup. Set `PLAIN_GPU_GREEDY=0` to use CPU selection
 The 48-row SIMD-group kernel for the 27B model's 4-bit feed-forward down projection adds the
 BF16-rounded result directly to the residual. Set `SG_FUSED_DOWN=0` to time the separate add.
 
+Set `SG_EXPAND_GDN=1` to unpack the 27B model's 4-bit DeltaNet input projection into a reusable
+161 MiB BF16 workspace during large prefills. The simdgroup path uses it for 1,536 through 2,048
+token rows on GPUs without NAX. An explicit `SG_BM` tile override takes precedence. The default is off.
+
 ## Changes
 
 - **0.4.1 (2026-11-05)** — engine unchanged from 0.4.0 (same kernels and binaries' code). First-run fixes from an external tester's report: `build.sh` uses `/Applications/Xcode.app`

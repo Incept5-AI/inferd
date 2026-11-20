@@ -465,3 +465,21 @@ tokens (worst gap 0.375) and steps without the split are byte-identical. What hi
 split step, logits checks have no trees, and a comparison of two servers' token streams stops at the first near-tie.
 The check that found it scores every generated token against the reference model, teacher-forced on the stream's own
 output. Not re-run on the M4 Pro or the M6.
+
+### 2026-11-20 — BF16 expansion for large DeltaNet prefills on M4 Max
+
+On a 40-core M4 Max with 128 GiB, Qwen3.8-27B-4bit and 16 Neural Engine units, unpacking the
+DeltaNet input weights once per projection reduced the 2,048-row GPU time from 26.07 to 23.40 ms,
+including unpacking. Eight interleaved 4,096-token prefill trials averaged 11.60 s with packed
+weights and 11.39 s with expansion. Final logits matched byte for byte at chunk widths 2,048 and 1,842.
+
+Six cold 48-agent fixtures compared the prototype with `da423f7`. Each client generated 256 tokens
+after a shared roughly 4k-token prompt. Pooled release-to-last-token throughput rose from 142.12 to
+143.27 tok/s (+0.81%), with four wins in six pairs and 288 identical responses. Excluding the largest
+swing leaves +0.25%. A seventh fixture on the final binary measured 139.96 tok/s with the default
+and 140.79 tok/s with the option enabled (+0.59%). All 48 responses matched. The 161 MiB workspace
+is opt-in through `SG_EXPAND_GDN=1`.
+
+A separate guard skipped 80 empty attention dispatches per cold batch. They took 2.70 to 2.75 ms
+of GPU time in two traces. With the guard, full prefill averaged 11.550 s versus 11.545 s without it.
+The guard was dropped.
