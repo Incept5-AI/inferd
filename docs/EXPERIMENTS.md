@@ -483,3 +483,31 @@ is opt-in through `SG_EXPAND_GDN=1`.
 A separate guard skipped 80 empty attention dispatches per cold batch. They took 2.70 to 2.75 ms
 of GPU time in two traces. With the guard, full prefill averaged 11.550 s versus 11.545 s without it.
 The guard was dropped.
+
+### 2026-11-20 — Two-way split-K for the 48-row feed-forward down projection
+
+On the 40-core M4 Max, two workgroups can share the 27B model's 17,408-element dot product.
+Both write FP32 partial sums into the existing scratch buffer. A second dispatch sums them, rounds
+to BF16 and adds the residual. Across all 64 layers, the down projections took 42.35 ms with the
+two-way split and 45.66 ms with the branch's existing fused kernel. A warm full-model decode step
+took 257.50 ms versus 261.80 ms with the existing kernel.
+
+Six paired cold HTTP fixtures used 48 simultaneous clients, a shared roughly 4k-token prompt, 256
+generated tokens per client and 16 Neural Engine units for prefill. With `SG_SPLIT_DOWN=1`, pooled
+release-to-last-token throughput rose from 122.71 to 123.73 tok/s (+0.84%, five wins). Full-batch
+decode went from 172.06 to 172.14 tok/s (+0.05%). Control throughput varied from 114.69 to
+133.50 tok/s. The mean wall saving was 0.83 s, including 0.80 s before all clients had their
+first token. Two live servers also alternated kernels in groups of eight full-batch decode steps
+with opposite orders. The split took 270.84 ms versus 272.90 ms from step planning to GPU
+completion (+0.76% step throughput, 53 of 60 blocks faster).
+
+The split passed all 96 MLX prompt checks and both servers answered all 48 retrieval questions.
+Changing the FP32 summation order changed 19 of 3,072 greedy choices on identical token histories.
+Each was within one BF16 logit rounding step of the control's choice. In free generation, 102 of
+288 complete responses matched the control. The option defaults to off.
+
+A four-way split gained 0.88% whole-batch throughput on four separate matched fixtures but failed
+one of the 48 standard short-prompt cosine checks (0.99871 against 0.999). Six independent-SIMD
+gate/up kernels matched all sampled outputs and ran slower. The fastest reduced warm full-step
+throughput by 6.21%. The installed llama.cpp GGML Metal Q4_1 matmul also took longer on both
+projection shapes with eight real layers, even when timed without activation or output conversions.

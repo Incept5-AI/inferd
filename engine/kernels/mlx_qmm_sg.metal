@@ -161,3 +161,38 @@ kernel void prefill_dense_gdn(device const bfloat* input [[buffer(0)]], device c
   if (rows == BM && cols == BN) mma.store_result(output, N);
   else mma.store_result_safe(output, N, short2(cols, rows));
 }
+
+// Two workgroups share one 48-row down-projection output tile. Each computes half of K
+// into the existing FP32 split-K workspace. The change in summation order can affect greedy output.
+kernel void sg_down48_split2(device const uint8_t* packed [[buffer(0)]], device const bfloat* scales [[buffer(1)]],
+                             device const bfloat* biases [[buffer(2)]], device const bfloat* input [[buffer(3)]],
+                             device float* partial [[buffer(4)]], uint3 group [[threadgroup_position_in_grid]],
+                             uint sg [[simdgroup_index_in_threadgroup]], uint lane [[thread_index_in_simdgroup]]) {
+  constexpr int M = 48, N = 5120, K = 17408, BN = 32, BK = 64, stride = BK + 8, slice = K / 2;
+  threadgroup bfloat xs[M * stride], ws[BN * stride];
+  using XLoader = mlx::steel::BlockLoader<bfloat, M, BK, stride, 1, 128, 1, 4>;
+  using WLoader = QuantizedBlockLoader<bfloat, BN, BK, stride, 1, 128, 64, 4>;
+  using MMA = mlx::steel::BlockMMA<bfloat, float, M, BN, BK, 2, 2, false, true, stride, stride>;
+  const int col = group.x * BN, start = group.z * slice;
+  const size_t offset = size_t(col) * K + start;
+  XLoader x(input + start, K, xs, sg, lane);
+  WLoader w(packed + offset / 2, scales + offset / 64, biases + offset / 64, K, ws, sg, lane);
+  MMA mma(sg, lane);
+  for (int k = 0; k < slice; k += BK) {
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    x.load_unsafe();
+    w.load_unsafe();
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+    mma.mma(xs, ws);
+    x.next();
+    w.next();
+  }
+  mma.store_result(partial + group.z * M * N + col, N);
+}
+
+kernel void sg_down48_split2_residual(device const float* partial [[buffer(0)]], device bfloat* residual [[buffer(1)]],
+                                      uint i [[thread_position_in_grid]]) {
+  constexpr int elements = 48 * 5120;
+  const float sum = partial[i] + partial[elements + i];
+  residual[i] = bfloat(SgRoundedResidual::apply(sum, residual[i]));
+}

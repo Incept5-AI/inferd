@@ -1073,6 +1073,7 @@ struct Qwen35 {
   // cores), so the default is on up to 40 GPU cores: the 0.4.2 thresholds were set on an 80-core M3 Ultra, where one
   // 8-row tile of a narrow output is too few threadgroups to judge from here (SG_TILES=1 tries it there).
   bool sg_fused_out = env_knob("SG_FUSED_OUT", 1, 0, 1);
+  bool sg_split_down = env_knob("SG_SPLIT_DOWN", 0, 0, 1);
   bool sg_fused_down = env_knob("SG_FUSED_DOWN", 1, 0, 1);
   int sg_tiles = getenv("SG_TILES") ? atoi(getenv("SG_TILES")) : g.cores <= 40;
   int sg_min = getenv("SG_MIN") ? atoi(getenv("SG_MIN")) : sg_tiles ? 6 : 11;  // no neural accelerators: M >= this goes to mlx_qmm_sg
@@ -1457,6 +1458,13 @@ struct Qwen35 {
       const bool residual_tile = sgw && mode == 1 && M == 48 && bm == 48 && bn == 32 &&
           W.bits == 4 && !W.ldk && W.N == 5120;
       const bool fused_residual = residual_tile && ((sg_fused_down && W.K == 17408) || (sg_fused_out && W.K == 6144));
+      if (sg_split_down && fused_residual && W.K == 17408) {
+        e.k(g.pso_fc("sg_down48_split2", {{40, W.flipped}})).buf(0, W.wq).buf(1, W.s).buf(2, W.b).buf(3, A).buf(4, splitk);
+        e.groups(S3(W.N / 32, 1, 2), S3(128));
+        e.k("sg_down48_split2_residual").buf(0, splitk).buf(1, C);
+        e.threads(S3(M * W.N), S3(256));
+        return;
+      }
       if (fused_residual)
         snprintf(name, sizeof name, "%s", W.K == 6144 ? "mlx_qmm_sgw_out48_residual" : "mlx_qmm_sgw_down48_residual");
       else if (sgw)

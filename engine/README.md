@@ -240,6 +240,9 @@ and 1,024 threads per threadgroup. Set `PLAIN_GPU_GREEDY=0` to use CPU selection
 
 The 48-row SIMD-group kernel for the 27B model's 4-bit feed-forward down projection adds the
 BF16-rounded result directly to the residual. Set `SG_FUSED_DOWN=0` to time the separate add.
+With the fused path enabled, `SG_SPLIT_DOWN=1` splits the input dimension between two GPU workgroups
+and combines their FP32 partial sums before the BF16 rounding and residual add. It reuses existing
+scratch space. The default is off. The different summation order can change greedy choices on close logits.
 
 Set `SG_EXPAND_GDN=1` to unpack the 27B model's 4-bit DeltaNet input projection into a reusable
 161 MiB BF16 workspace during large prefills. The simdgroup path uses it for 1,536 through 2,048
