@@ -12,5 +12,6 @@ steel_attention_nax.h start at the first key block the query block can see and m
 (sliding-window attention for Muse Glimmer and Gemma-4).
 
 Added (2026-11-01): quantized.h and quantized_utils.h from v0.32.3 (64ea011) for GPUs without neural accelerators
-(kernels/mlx_qmm_sg.metal: affine_qmm_t and affine_qmv_wide). quantized.h carries the same function constant 40
+(kernels/mlx_qmm_sg.metal: affine_qmm_t and affine_qmv_wide; since 2026-11-21 also affine_gather_qmm_rhs, the no-NAX
+sorted-MoE gathered qmm, src/ops/gather.h). quantized.h carries the same function constant 40
 flip-back patch in dequantize (4-bit and 8-bit); qdot and the other paths are unmodified.

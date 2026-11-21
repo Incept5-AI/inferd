@@ -189,7 +189,16 @@ The M4 has Metal 4 but no GPU neural accelerators (`supportsFamily(MTLGPUFamilyA
     every GEMM on W4A8; this routing replaced it.) Since 15 November, on GPUs of up to 40 cores, `SG_TILES` moves the
     boundary to 5 / 6 rows and gives `mlx_qmm_sg` row tiles in 8-row steps; measured on an M3 Max only (RESULTS (af)),
     `SG_TILES=0` restores the routing above.
-    `NAX_GPU=0/1` overrides the detection. Our own `attn_paged_nax` (used only with `NAX_MPP=0`) is also wrong there.
+    `NAX_GPU=0/1` overrides the detection.
+  - **Fixed in 0.4.5 (21 Nov 2026): Qwen3.6-35B-A3B on M1–M4.** Two more routes still reached MLX-NAX code there: the
+    sorted-MoE prefill (any step of 16+ tokens) ran MLX's NAX gathered qmm (`mlx_gqmm_b*`, relative RMS error 1.40 vs
+    fp64), and the 35B's 2..8-row attention runs (verify blocks, the last step of a chunked prompt) went to our
+    `attn_paged_nax` (attention mode 3). Without neural accelerators the gathers now run MLX's simdgroup
+    `affine_gather_qmm_rhs` (`mlx_gqmm_sg_b4/b8`, `src/ops/gather.h`; MLX's own non-NAX tiles), and mode 3 needs
+    `g.nax` (those runs take the multi-row `attn_gqa`). `Gpu::pso` now refuses every MLX-NAX kernel on such a GPU with
+    an error naming it (`NAX_ON_NONAX=1` overrides, for experiments), and `build/gqmm_test` (in the release gate)
+    checks the gathered kernel this GPU routes to against fp64. M4 Pro, 35B at 256-token chunks: KL vs mlx_lm 3.16 →
+    0.0108, top-1 flips 53% → bf16 noise; the 27B, the 9B and every M5/M6 GPU are byte-identical to 0.4.4.
   - **On every machine:** the DFlash2 drafter's input layer (`fc`, K = 25,600) is wider than the W4A8 activation
     scratch was sized for; a prefill chunk of more than ~0.68 x max_tokens rows overflowed it and filled the draft
     context with NaN (on the M4 this drafted junk, 1.0 tokens per cycle, and the server emitted garbage).

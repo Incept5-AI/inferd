@@ -21,28 +21,29 @@ Up and running in four steps (click a step to open it). You need a Mac with Appl
 its drafter runs from 32 GB. The same steps, with a client example in 14 languages, are on
 **[inferd.incept5.ai](https://inferd.incept5.ai/#start)**.
 
-<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.4 release</summary>
+<details><summary><b>1. Download and check</b>: the file for your macOS (27 or 26) from the v0.4.5 release</summary>
 
-Download [inferd-0.4.4-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.4/inferd-0.4.4-macos27-arm64.tar.gz)
-and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.4/inferd-0.4.4-macos27-arm64.tar.gz.sha256)
-from the [v0.4.4 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.4). No Xcode needed.
+Download [inferd-0.4.5-macos27-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.5/inferd-0.4.5-macos27-arm64.tar.gz)
+and its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.5/inferd-0.4.5-macos27-arm64.tar.gz.sha256)
+from the [v0.4.5 release](https://github.com/Incept5-AI/inferd/releases/tag/v0.4.5). No Xcode needed.
 
 ```bash
-cd ~/Downloads && shasum -a 256 -c inferd-0.4.4-macos27-arm64.tar.gz.sha256   # prints OK
-tar xzf inferd-0.4.4-macos27-arm64.tar.gz && cd inferd-0.4.4
+cd ~/Downloads && shasum -a 256 -c inferd-0.4.5-macos27-arm64.tar.gz.sha256   # prints OK
+tar xzf inferd-0.4.5-macos27-arm64.tar.gz && cd inferd-0.4.5
 ```
 
-On **macOS 26** there is no 0.4.4 prebuilt yet: build it yourself (below), or use
+On **macOS 26** there is no 0.4.5 prebuilt yet: build it yourself (below), or use
 [inferd-0.4.1-macos26-arm64.tar.gz](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz)
 (its [.sha256](https://github.com/Incept5-AI/inferd/releases/download/v0.4.1/inferd-0.4.1-macos26-arm64.tar.gz.sha256)), and on
-an **M4 or M4 Pro** start it with `ANE_UNITS=0` (see the v0.4.2 release notes). During the gate
+an **M4 or M4 Pro** start it with `ANE_UNITS=0` (see the v0.4.2 release notes); on **M1–M4** that build also gives
+wrong output for Qwen3.6-35B-A3B prompts longer than one chunk (fixed in 0.4.5). During the gate
 macOS may show a Python crash report: `test_image_decode` aborts a helper process on purpose, and it is not a failure. To build it yourself, then carry on from step 2
 in `engine/`. That needs Xcode, not just the Command Line Tools, with its Metal toolchain (once:
 `xcodebuild -downloadComponent MetalToolchain`); `./build.sh` uses `/Applications/Xcode.app` by itself when the
 Command Line Tools are the active developer directory (see [Building from source](#building-from-source)):
 
 ```bash
-git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.4 && cd engine
+git clone https://github.com/Incept5-AI/inferd && cd inferd && git checkout v0.4.5 && cd engine
 ./build.sh                                   # under a minute
 ```
 

@@ -58,6 +58,7 @@ clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framew
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/server.mm -o build/inferd
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/spec_test.mm -o build/spec_test
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/moe_bench.mm -o build/moe_bench  # MoE launch timing (35B-A3B shapes)
+clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/gqmm_test.mm -o build/gqmm_test  # sorted-MoE chain per op (moe_sort, moe_gather, gathered qmm)
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/kv_check.mm -o build/kv_check
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/qsa_bench.mm -o build/qsa_bench
 clang++ -std=c++20 -O2 -fobjc-arc -framework Metal -framework Foundation -framework IOKit -framework IOSurface tools/fn_gemm.mm -o build/decode_test_fngemm

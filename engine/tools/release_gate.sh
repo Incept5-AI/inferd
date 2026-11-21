@@ -2,7 +2,8 @@
 # release_gate.sh MODEL [DRAFT]: the hardware gate for a release candidate on one Mac (2026-11-03; 2026-11-04 Codex
 # review R04/R08). Run from engine/ after ./build.sh, with no other model process on the machine. Steps, each must pass:
 #   1. host tests (grammar, json, spill, weights), spec_sample_test (the GPU speculative sampler's top-K and accept /
-#      resample distribution vs src/sampling.h, no model), the front-end tests (hardening, structured output, tools, streaming,
+#      resample distribution vs src/sampling.h, no model), gqmm_test (the sorted-MoE chain and the
+#      gathered qmm this GPU routes to vs fp64, no model; 2026-11-21, the M1-M4 35B-A3B bug), the front-end tests (hardening, structured output, tools, streaming,
 #      image decoder, vision) and the logits-gate fixtures (compare must FAIL on deliberately bad logits)
 #   2. decode_test check at chunks 1, 24, 256 and 1536 on 4 prompts of 2,048 tokens vs the mlx_lm reference
 #      (ref_logits.py compare: finite logits, top-1 (explicit bf16 near-ties only), cos >= 0.995 and KL <= 0.03 on the
@@ -48,6 +49,7 @@ step "host: json" ./build/json_test
 step "host: spill" ./build/spill_test
 step "host: weights" ./build/weights_test
 step "gpu: speculative sampler = the sampling contract" ./build/spec_sample_test
+step "gpu: sorted-MoE chain (moe_sort, moe_gather, gathered qmm routed on this GPU) = fp64" ./build/gqmm_test
 for t in test_hardening test_structured test_tools test_stream test_image_decode test_vision; do
   step "front end: $t" zsh -c "cd frontend && $PY $t.py"
 done
