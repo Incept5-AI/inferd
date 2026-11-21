@@ -60,9 +60,31 @@ struct Gpu {
     if (pso_log) fprintf(stderr, "pso %s %.1f ms\n", key.c_str(), ms);
   }
 
+  // MLX's vendored NAX kernels (NAXTile / tile_matmad_nax: quantized_nax.h, steel_attention_nax.h, gemm_nax.h,
+  // fp_quantized_nax.h, and our attn_paged_nax built on them) compute wrong results on GPUs without neural accelerators
+  // (M1-M4; the 35B-A3B's sorted MoE and 2..8-row attention, results/m4-35b-moe-fix-2026-11-21). Every route checks
+  // g.nax; this is the backstop: such a pipeline is refused on a no-NAX GPU instead of returning garbage silently.
+  // NAX_ON_NONAX=1 allows it (experiments). Our own matmul2d kernels (attn_mpp, attn_shared, w4a8, ...) are not listed.
+  static bool mlx_nax_kernel(const std::string& n) {
+    static const char* pre[] = {"mlx_qmm_b", "qmm_splitk_b", "mlx_gemm_", "mlx_attn_", "attn_paged_nax", "mlx_gqmm_b"};
+    for (const char* p : pre)
+      if (n.rfind(p, 0) == 0) return true;
+    return n.find("_qmm_t_nax") != std::string::npos || n.find("_qmm_n_nax") != std::string::npos ||
+           n.find("_gather_qmm_rhs_nax") != std::string::npos;
+  }
+  void nax_check(const std::string& name) {
+    static const bool allow = getenv("NAX_ON_NONAX") && atoi(getenv("NAX_ON_NONAX"));
+    if (!nax && !allow && mlx_nax_kernel(name)) {
+      fprintf(stderr, "kernel %s is MLX-NAX code and computes wrong results on this GPU (no neural accelerators); "
+                      "the route that picked it lacks a g.nax guard (NAX_ON_NONAX=1 overrides)\n", name.c_str());
+      exit(1);
+    }
+  }
+
   id<MTLComputePipelineState> pso(const std::string& name) {
     auto it = psos.find(name);
     if (it != psos.end()) return it->second;
+    nax_check(name);
     const auto t0 = std::chrono::steady_clock::now();
     NSError* err = nil;
     id<MTLFunction> f = [lib newFunctionWithName:[NSString stringWithUTF8String:name.c_str()]];
@@ -80,6 +102,7 @@ struct Gpu {
     for (auto& [i, v] : fcs) key += "_" + std::to_string(i) + (v ? "t" : "f");
     auto it = psos.find(key);
     if (it != psos.end()) return it->second;
+    nax_check(name);
     const auto t0 = std::chrono::steady_clock::now();
     MTLFunctionConstantValues* cv = [MTLFunctionConstantValues new];
     for (auto& [i, v] : fcs) {

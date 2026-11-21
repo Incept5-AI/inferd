@@ -23,7 +23,7 @@ if [[ -z ${SKIP_BUILD:-} ]]; then
   print "package.sh: ./build.sh"
   ./build.sh || die "build.sh failed"
 fi
-bins=(inferd decode_test spec_test spec_sample_test grammar_test json_test spill_test weights_test)  # inferd + what release_gate.sh runs
+bins=(inferd decode_test spec_test spec_sample_test gqmm_test grammar_test json_test spill_test weights_test)  # inferd + what release_gate.sh runs
 for b in $bins; do [[ -x build/$b ]] || die "build/$b is missing: run ./build.sh"; done
 [[ -f build/core.metallib ]] || die "build/core.metallib is missing: run ./build.sh"
 

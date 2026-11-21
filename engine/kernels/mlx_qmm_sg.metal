@@ -99,3 +99,11 @@ template <typename T, const int group_size, const int bits, const bool aligned_N
 #define QMMSGW_AL(bm, bn) QMMSGW(4, true, bm, bn) QMMSGW(4, false, bm, bn) QMMSGW(8, true, bm, bn) QMMSGW(8, false, bm, bn)
 QMMSGW_AL(8, 32) QMMSGW_AL(16, 32) QMMSGW_AL(24, 32) QMMSGW_AL(32, 32) QMMSGW_AL(40, 32) QMMSGW_AL(48, 32)
 QMMSGW_AL(56, 32)  // 64x32: 442 ms per 27B step at 64 rows against 406 for the 2x2 32x64x32 above (M3 Max)
+
+// MLX's simdgroup gathered quantized matmul over expert-sorted rows (affine_gather_qmm_rhs, transposed weights
+// [E, N, K]): the no-NAX twin of kernels/mlx_gather.metal's NAX kernel, with MLX's own non-NAX tiles (BM 16, BN 32,
+// BK 32, 1 x 2 simdgroups = 64 threads; mlx/backend/metal/quantized.cpp gather_qmm_rhs). Buffers as the NAX kernel's;
+// function constants 201/202 = N/K aligned to 32, 40 = flipped weights. Name: mlx_gqmm_sg_b<bits>.
+#define GQMMSG(bits) \
+  instantiate_kernel("mlx_gqmm_sg_b" #bits, affine_gather_qmm_rhs, bfloat16_t, 64, bits, 16, 32, 32, 1, 2, true)
+GQMMSG(4) GQMMSG(8)

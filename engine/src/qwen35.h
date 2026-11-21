@@ -27,6 +27,7 @@ static int gpu_cores() {
 #include "tree.h"
 #include "moe.h"
 #include "qwen4.h"
+#include "ops/gather.h"
 
 // Argument structs; must match kernels/core.metal.
 struct GemmArgs { int M, N, K, xr = 0; };  // xr: XOR mask for flipped 4-bit nibbles (W4A8)
@@ -1829,6 +1830,10 @@ struct Qwen35 {
   }
   int moe_sort_min = getenv("MOE_SORT_MIN") ? atoi(getenv("MOE_SORT_MIN")) : 128;  // routed rows from which to sort (fewer: per-row GEMV, faster to ~8 tokens)
   void gqmm(Enc& e, const BufRef& A, const MoeW& W, const BufRef& C, int R) {
+    if (!g.nax) {  // M1-M4: the NAX gathered qmm is wrong there (src/ops/gather.h)
+      gqmm_sg(g, e, A, W.wq, W.s, W.b, moffs, C, R, W.N, W.K, W.E, W.bits);
+      return;
+    }
     int bm = R / cfg.experts >= 16 ? 64 : 16;  // rows per expert on average
     if (cfg.qwen4 && fn_gqmm_bm) bm = fn_gqmm_bm;  // FN_GQMM_BM (16 / 64): Flash-Next prefill experiments
     char nm[40];
@@ -2097,7 +2102,10 @@ struct Qwen35 {
       bool fl = use_gqa && !nax && !ct && w[b].n >= flash_rows;
       // Flash-Next (GQ 12): blocks of fn_mpp_min..4 rows on attn_fn (kernels/qwen4.metal), mode 4
       const bool fnm = fn_mpp && !fl && !ct && w[b].n >= fn_mpp_min && w[b].n <= 48 / gq;
-      int mode = fl ? 1 : ct ? 6 : fnm ? 4 : w[b].n > 1 ? (mppk ? 4 : mpp32 ? 5 : nax ? 3 : 2) : 0;
+      // attn_paged_nax (mode 3) is MLX-NAX code (NAXTile mma) and wrong on M1-M4 (35B-A3B, last step of 8 rows: KL up
+      // to 5.8, top-1 wrong; results/m4-35b-moe-fix-2026-11-21): there such runs take the multi-row attn_gqa (mode 2).
+      // attn_mpp (modes 4/5, the 27B's 2..8-row runs) is our own matmul2d and stays.
+      int mode = fl ? 1 : ct ? 6 : fnm ? 4 : w[b].n > 1 ? (mppk ? 4 : mpp32 ? 5 : nax && g.nax ? 3 : 2) : 0;
       // QSA: rows past the dense end attend to their selected groups (mode 7, attn_qsa); the sequence's dense rows
       // (a prefix of it) go to flash when there are flash_rows of them, else to the single-row kernel.
       const int nd = qsa_on && !qsa_dense ? std::clamp(cfg.qsa_dense_end() - w[b].pos0, 0, w[b].n) : w[b].n;
