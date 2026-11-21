@@ -196,3 +196,210 @@ kernel void sg_down48_split2_residual(device const float* partial [[buffer(0)]],
   const float sum = partial[i] + partial[elements + i];
   residual[i] = bfloat(SgRoundedResidual::apply(sum, residual[i]));
 }
+
+#include "mlx/backend/metal/kernels/utils.h"
+#include "mlx/backend/metal/kernels/steel/gemm/gemm.h"
+using namespace metal;
+using namespace mlx::steel;
+using EvFrag=BaseMMAFrag<float,8,8>;
+struct EvPackParams {int k,n,flip,slab,dense;};
+kernel void ev_pack_weights(device const uchar* w [[buffer(0)]],device const bfloat* scales [[buffer(1)]],
+    device const bfloat* biases [[buffer(2)]],device ulong* codes [[buffer(3)]],device bfloat2* meta [[buffer(4)]],
+    constant EvPackParams& p [[buffer(5)]], uint i [[thread_position_in_grid]]){
+    const int lane=i%32,group=(i/32/p.slab)%(p.k/64);
+    const int frag=(i/(32*p.slab*(p.k/64)))*p.slab+(i/32)%p.slab;
+    const short2 c=EvFrag::get_coord(lane);
+    const int col=min(frag*8+c.x,p.n-2),a=col*(p.k/64)+group,b=a+p.k/64;
+    const float2 sc=float2(scales[a],scales[b]),bi=float2(biases[a],biases[b]);
+    ulong packet=0;
+    for(int s=0;s<8;++s){
+      int k=group*64+8*s+c.y;const uint shift=(k%2)*4;
+      uint2 v=(uint2(w[(col*p.k+k)/2],w[((col+1)*p.k+k)/2])>>shift)&15;
+      v^=p.flip?8u:0u;
+      if(p.dense)reinterpret_cast<device bfloat2*>(codes)[(i/32*8+s)*32+lane]=bfloat2(float2(v)*sc+bi);
+      else packet|=ulong(v.x|(v.y<<4))<<(8*s);
+    }
+    if(!p.dense)codes[i]=packet;
+    if(lane<8 && !p.dense){
+      const int column=min(frag*8+lane,p.n-1),j=column*(p.k/64)+group;
+      meta[i/32*8+lane]=bfloat2(scales[j],biases[j]);
+    }
+}
+template<int K,int N,int BN,int WM,int WN,int Slab,bool Dense,bool Native,bool Mixed>
+kernel void ev_fragment_matmul(device const uint* weights [[buffer(0)]],device const bfloat* scales [[buffer(1)]],
+    device const bfloat* biases [[buffer(2)]],device const bfloat* input [[buffer(3)]],device bfloat* output [[buffer(4)]],
+    constant int2& flags [[buffer(5)]],uint block [[threadgroup_position_in_grid]],uint sg [[simdgroup_index_in_threadgroup]],
+    uint lane [[thread_index_in_simdgroup]]){
+    constexpr int TM=48/(8*WM),TN=BN/(8*WN);
+    const short2 xy=EvFrag::get_coord(lane);const int row=(sg/WN)*8+xy.y,c0=block*BN+(sg%WN)*8;
+    MMATile<float,TM,TN> total;total.clear();MMATile<float,TM,1> a;MMATile<float,1,TN> b;
+    for(int g=0;g<K/64;g++){
+      float2 sc[TN],bi[TN];ulong packet[TN];int addr[TN];
+      for(int n=0;n<TN;n++){
+        int col=min(c0+n*WN*8+xy.x,N-2),frag=(c0+n*WN*8)/8;
+        int index=(frag/Slab*(K/64)+g)*Slab+frag%Slab;addr[n]=index;
+        if constexpr(Native){
+          int j=col*(K/64)+g;sc[n]=float2(scales[j],scales[j+K/64]);bi[n]=float2(biases[j],biases[j+K/64]);
+        }else if constexpr(!Dense){
+          packet[n]=reinterpret_cast<device const ulong*>(weights)[index*32+lane];
+          auto m=reinterpret_cast<device const bfloat2*>(scales)+index*8+xy.x;
+          sc[n]=float2(m[0].x,m[1].x);bi[n]=float2(m[0].y,m[1].y);
+        }
+      }
+      for(int sub=0;sub<8;sub++){
+        for(int m=0;m<TM;m++)a.frag_at(m,0)=float2(*reinterpret_cast<device const bfloat2*>(input+(row+m*WM*8)*K+g*64+8*sub+xy.x));
+        for(int n=0;n<TN;n++){
+          if constexpr(Dense)b.frag_at(0,n)=float2(reinterpret_cast<device const bfloat2*>(weights)[(addr[n]*8+sub)*32+lane]);
+          else{
+            uint2 v;
+            if constexpr(Native){
+              int col=min(c0+n*WN*8+xy.x,N-2),j=col*(K/8)+8*g+sub;
+              v=((uint2(weights[j],weights[j+K/8])>>(4*xy.y))&15u)^uint(flags.x?8:0);
+            }else{uint bytes=uint(packet[n]>>(8*sub));v=uint2(bytes,bytes>>4)&15u;}
+            b.frag_at(0,n)=float2(bfloat2(float2(v)*sc[n]+bi[n]));
+          }
+        }
+        if constexpr(Mixed){
+          for(int m=0;m<TM;++m)for(int n=0;n<TN;++n){
+            simdgroup_half8x8 am,bm;simdgroup_float8x8 cm,dm;
+            reinterpret_cast<thread half2&>(am.thread_elements())=half2(a.frag_at(m,0));
+            reinterpret_cast<thread half2&>(bm.thread_elements())=half2(b.frag_at(0,n));
+            reinterpret_cast<thread float2&>(cm.thread_elements())=total.frag_at(m,n);
+            simdgroup_multiply_accumulate(dm,am,bm,cm);
+            total.frag_at(m,n)=reinterpret_cast<thread float2&>(dm.thread_elements());
+          }
+        }else tile_matmad(total,a,b,total);
+      }
+    }
+    for(int m=0;m<TM;++m)for(int n=0;n<TN;++n){
+      int col=c0+n*WN*8+xy.x;if(N%BN && col>=N)continue;
+      auto dst=reinterpret_cast<device bfloat2*>(output+(row+m*WM*8)*N+col);
+      bfloat2 v=bfloat2(total.frag_at(m,n));if(flags.y)v=bfloat2(float2(v)+float2(*dst));*dst=v;
+    }
+}
+#define EV_FRAGMENT(K,N,BN,WM,WN,SL,D,A,M,NAME) template [[host_name(NAME)]] kernel void ev_fragment_matmul<K,N,BN,WM,WN,SL,D,A,M>(device const uint*,device const bfloat*,device const bfloat*,device const bfloat*,device bfloat*,constant int2&,uint,uint,uint);
+EV_FRAGMENT(5120,34816,64,2,2,1,1,0,0,"evf_5120_34816_2_1_64_2_0")
+EV_FRAGMENT(17408,5120,8,3,1,8,1,0,0,"evf_17408_5120_2_8_8_31_0")
+EV_FRAGMENT(6144,5120,16,3,2,8,1,0,0,"evf_6144_5120_2_8_16_32_0")
+EV_FRAGMENT(5120,14336,64,2,2,1,1,0,0,"evf_5120_14336_2_1_64_2_0")
+constant constexpr int CV=248320,CK=5120,CC=512;
+struct CertRow{int slot,id;float radius,norm,lower;};
+kernel void cert_norm(device const uint* w [[buffer(0)]],device const bfloat* s [[buffer(1)]],device const bfloat* b [[buffer(2)]],
+    device float* norms [[buffer(3)]],constant int& flip [[buffer(4)]],uint row [[threadgroup_position_in_grid]],uint t [[thread_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]],uint sg [[simdgroup_index_in_threadgroup]]){
+    threadgroup float p[4];float val=0;
+    for(int k=t;k<CK;k+=128){uint q=((w[row*640+k/8]>>(4*(k%8)))&15)^uint(flip?8:0);float v=bfloat(float(q)*float(s[row*80+k/64])+float(b[row*80+k/64]));val+=v*v;}
+    val=simd_sum(val);if(!lane)p[sg]=val;threadgroup_barrier(mem_flags::mem_threadgroup);
+    if(!t)norms[row]=sqrt(p[0]+p[1]+p[2]+p[3])*1.001f+.00001f;
+}
+kernel void cert_near(device const bfloat* x [[buffer(0)]],device const bfloat* xold [[buffer(1)]],device const int* proposed [[buffer(2)]],
+    device const int* ids [[buffer(3)]],device CertRow* picked [[buffer(4)]],constant float& threshold [[buffer(5)]],
+    uint row [[threadgroup_position_in_grid]],uint lane [[thread_index_in_simdgroup]],uint sg [[simdgroup_index_in_threadgroup]],uint t [[thread_index_in_threadgroup]]){
+    threadgroup float ds[8],xs[8],os[8];int slot=proposed[row*8+sg];float err=0,xn=0,on=0;
+    if(slot>=0)for(int k=lane;k<CK;k+=32){float v=x[row*CK+k],w=xold[slot*CK+k];err+=(v-w)*(v-w);xn+=v*v;on+=w*w;}
+    err=sqrt(simd_sum(err));xn=sqrt(simd_sum(xn));on=sqrt(simd_sum(on));
+    if(!lane){ds[sg]=slot<0?INFINITY:err;xs[sg]=xn;os[sg]=on;}threadgroup_barrier(mem_flags::mem_threadgroup);
+    if(!t){int best=0;for(int j=1;j<8;j++)if(ds[j]<ds[best])best=j;
+      int k=ds[best]<threshold?proposed[row*8+best]:-1;
+      picked[row]={k,k>=0?ids[k]:0,(ds[best]+.000315f*(xs[best]+os[best]))*1.001f+.0001f,xs[best]*1.001f,0};}
+}
+kernel void cert_incumbent(device const uint* w [[buffer(0)]],device const bfloat* scales [[buffer(1)]],device const bfloat* biases [[buffer(2)]],
+    device const bfloat* x [[buffer(3)]],device CertRow* picked [[buffer(4)]],device const float* wn [[buffer(5)]],
+    constant int& flip [[buffer(6)]],device atomic_uint* cnt [[buffer(7)]],uint row [[threadgroup_position_in_grid]],uint t [[thread_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]],uint sg [[simdgroup_index_in_threadgroup]]){
+    CertRow info=picked[row];if(!t)atomic_store_explicit(cnt+row,info.slot<0?CC+1:0,memory_order_relaxed);if(info.slot<0)return;
+    int id=info.id;float val=0;threadgroup float partial[4];
+    for(int k=t;k<CK;k+=128){
+      uint q=((w[id*640+k/8]>>(4*(k%8)))&15)^uint(flip?8:0);
+      val+=float(x[row*CK+k])*float(bfloat(float(q)*float(scales[id*80+k/64])+float(biases[id*80+k/64])));
+    }
+    val=simd_sum(val);if(!lane)partial[sg]=val;threadgroup_barrier(mem_flags::mem_threadgroup);
+    if(!t){float score=partial[0]+partial[1]+partial[2]+partial[3];
+      picked[row].lower=score-.00064f*wn[id]*info.norm-abs(score)/250.f-.002f;}
+}
+kernel void cert_filter(device const bfloat* old [[buffer(0)]],device const float* wn [[buffer(1)]],device const CertRow* picked [[buffer(2)]],
+    device atomic_uint* cnt [[buffer(3)]],device int* candidates [[buffer(4)]],uint2 t [[thread_position_in_grid]],uint lane [[thread_index_in_simdgroup]]){
+    CertRow p=picked[t.y];if(p.slot<0 || atomic_load_explicit(cnt+t.y,memory_order_relaxed)>CC)return;
+    float v=old[p.slot*CV+t.x],upper=v+abs(v)/250.f+p.radius*wn[t.x]+.001f;
+    bool pass=upper+abs(upper)/250.f+.001f>=p.lower;
+    uint total=simd_sum(uint(pass)),offset=simd_prefix_exclusive_sum(uint(pass)),base=0;
+    if(!lane && total)base=atomic_fetch_add_explicit(cnt+t.y,total,memory_order_relaxed);
+    base=simd_broadcast_first(base);
+    if(pass && base+offset<CC)candidates[t.y*CC+base+offset]=t.x;
+}
+kernel void cert_plan(device const uint* cnt [[buffer(0)]],device int* map [[buffer(1)]],device int* orig [[buffer(2)]],
+    device uint* grid [[buffer(3)]],uint t [[thread_position_in_grid]]){
+    if(t)return;int full=0,maxcount=0;
+    for(int i=0;i<48;++i){if(!cnt[i] || cnt[i]>CC){map[i]=full;orig[full++]=i;}else{map[i]=-1;maxcount=max(maxcount,int(cnt[i]));}}
+    for(int i=full;i<48;++i)orig[i]=0;
+    for(int k=1;k<=6;k++){grid[3*(k-1)]=k==(full+7)/8?CV/32:0;grid[3*(k-1)+1]=grid[3*(k-1)+2]=1;}
+    grid[18]=maxcount>1?(maxcount+7)/8:0;grid[19]=48;grid[20]=1;
+}
+kernel void cert_gather(device const bfloat2* x [[buffer(0)]],device bfloat2* dst [[buffer(1)]],device const int* orig [[buffer(2)]],uint2 t [[thread_position_in_grid]]){
+    dst[t.y*(CK/2)+t.x]=x[orig[t.y]*(CK/2)+t.x];
+}
+kernel void cert_short(device const uint* w [[buffer(0)]],device const bfloat* s [[buffer(1)]],device const bfloat* b [[buffer(2)]],
+    device const bfloat* x [[buffer(3)]],device const uint* count [[buffer(4)]],device const int* cand [[buffer(5)]],
+    device bfloat* val [[buffer(6)]],constant int& flip [[buffer(7)]],uint2 group [[threadgroup_position_in_grid]],uint lane [[thread_index_in_simdgroup]]){
+    uint row=group.y,off=group.x*8,ct=count[row];if(ct<=1 || ct>CC || off>=ct)return;
+    short2 xy=EvFrag::get_coord(lane);int c=off+xy.x,id=cand[row*CC+min(uint(c),ct-1)],id2=cand[row*CC+min(uint(c+1),ct-1)];
+    MMATile<float,1,1> total,a,bt;total.clear();
+    for(int g=0;g<CK/64;g++){
+      float2 scale={float(s[id*80+g]),float(s[id2*80+g])},bias={float(b[id*80+g]),float(b[id2*80+g])};
+      for(int h=0;h<8;h++){
+        a.frag_at(0,0)=float2(*reinterpret_cast<device const bfloat2*>(x+row*CK+64*g+8*h+xy.x));
+        uint2 code=((uint2(w[id*640+8*g+h],w[id2*640+8*g+h])>>(4*xy.y))&15u)^uint(flip?8:0);
+        bt.frag_at(0,0)=float2(bfloat2(float2(code)*scale+bias));tile_matmad(total,a,bt,total);
+      }
+    }
+    if(!xy.y){auto v=bfloat2(total.frag_at(0,0));if(uint(c)<ct)val[row*CC+c]=v.x;if(uint(c+1)<ct)val[row*CC+c+1]=v.y;}
+}
+kernel void cert_finish(device const bfloat* whole [[buffer(0)]],device const uint* cnt [[buffer(1)]],device const int* fmap [[buffer(2)]],
+    device const int* cand [[buffer(3)]],device const bfloat* val [[buffer(4)]],device int* pred [[buffer(5)]],
+    device int* remembered [[buffer(6)]],constant int& write [[buffer(7)]],uint row [[threadgroup_position_in_grid]],
+    uint t [[thread_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]],uint sg [[simdgroup_index_in_threadgroup]]){
+    int map=fmap[row],n=map>=0?CV:int(cnt[row]);if(n==1){if(!t)pred[row]=cand[row*CC];return;}
+    threadgroup float vals[32];threadgroup int ids[32];float best=-INFINITY;int id=INT_MAX;
+    for(int j=t;j<n;j+=1024){float v=map>=0?whole[map*CV+j]:val[row*CC+j];int k=map>=0?j:cand[row*CC+j];if(v>best || (v==best && k<id)){best=v;id=k;}}
+    float top=simd_max(best);id=simd_min(best==top?id:INT_MAX);
+    if(!lane){vals[sg]=top;ids[sg]=id;}threadgroup_barrier(mem_flags::mem_threadgroup);
+    if(!sg){float v=vals[lane],mx=simd_max(v);int key=simd_min(v==mx?ids[lane]:INT_MAX);if(!lane){pred[row]=key;if(map>=0)remembered[write+row]=key;}}
+}
+kernel void cert_store(device const bfloat2* whole [[buffer(0)]],device const bfloat2* x [[buffer(1)]],device const int* map [[buffer(2)]],
+    device bfloat2* old [[buffer(3)]],device bfloat2* ox [[buffer(4)]],constant int& slot [[buffer(5)]],uint2 t [[thread_position_in_grid]]){
+    int j=map[t.y];if(j<0)return;
+    old[(slot+t.y)*(CV/2)+t.x]=whole[j*(CV/2)+t.x];
+    if(t.x<CK/2)ox[(slot+t.y)*(CK/2)+t.x]=x[t.y*(CK/2)+t.x];
+}
+kernel void cert_block_norm(device const float* wn [[buffer(0)]],device float* maxnorm [[buffer(1)]],
+    uint block [[threadgroup_position_in_grid]],uint t [[thread_index_in_threadgroup]],uint sg [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]){
+    threadgroup float s[8];float v=simd_max(wn[block*256+t]);if(!lane)s[sg]=v;threadgroup_barrier(mem_flags::mem_threadgroup);
+    if(!sg){float top=simd_max(lane<8?s[lane]:0.f);if(!lane)maxnorm[block]=top;}
+}
+kernel void cert_reset(device uint* grid [[buffer(0)]],uint t [[thread_position_in_grid]]){grid[t]=t?1:0;}
+kernel void cert_blocks(device const bfloat* blockmax [[buffer(0)]],device const float* norms [[buffer(1)]],device const CertRow* picked [[buffer(2)]],
+    device atomic_uint* ng [[buffer(3)]],device uint* jobs [[buffer(4)]],uint2 t [[thread_position_in_grid]],uint lane [[thread_index_in_simdgroup]]){
+    constexpr uint nb=CV/256;CertRow p=picked[t.y];bool ok=false;
+    if(t.x<nb && p.slot>=0){float v=blockmax[p.slot*nb+t.x],u=v+abs(v)/250.f+p.radius*norms[t.x]+.001f;ok=u+abs(u)/250.f+.001f>=p.lower;}
+    uint n=simd_sum(uint(ok)),idx=simd_prefix_exclusive_sum(uint(ok)),offset=0;
+    if(!lane && n)offset=atomic_fetch_add_explicit(ng,n,memory_order_relaxed);offset=simd_broadcast_first(offset);
+    if(ok)jobs[offset+idx]=t.y*nb+t.x;
+}
+kernel void cert_filter_blocks(device const bfloat* old [[buffer(0)]],device const float* wn [[buffer(1)]],device const CertRow* picked [[buffer(2)]],
+    device atomic_uint* cnt [[buffer(3)]],device int* candidates [[buffer(4)]],device const uint* jobs [[buffer(5)]],
+    uint group [[threadgroup_position_in_grid]],uint t [[thread_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]){
+    constexpr int nb=CV/256;uint job=jobs[group],row=job/nb,col=job%nb*256+t;
+    if(simd_broadcast_first(atomic_load_explicit(cnt+row,memory_order_relaxed))>CC)return;
+    CertRow p=picked[row];float v=old[p.slot*CV+col],u=v+abs(v)/250.f+p.radius*wn[col]+.001f;
+    bool ok=u+abs(u)/250.f+.001f>=p.lower;uint n=simd_sum(uint(ok)),idx=simd_prefix_exclusive_sum(uint(ok)),offset=0;
+    if(!lane && n)offset=atomic_fetch_add_explicit(cnt+row,n,memory_order_relaxed);offset=simd_broadcast_first(offset);
+    if(ok && offset+idx<CC)candidates[row*CC+offset+idx]=col;
+}
+kernel void cert_store_blocks(device const bfloat2* whole [[buffer(0)]],device const bfloat2* x [[buffer(1)]],device const int* map [[buffer(2)]],
+    device bfloat2* old [[buffer(3)]],device bfloat2* ox [[buffer(4)]],constant int& slot [[buffer(5)]],device bfloat* tops [[buffer(6)]],
+    uint2 group [[threadgroup_position_in_grid]],uint t [[thread_index_in_threadgroup]],uint sg [[simdgroup_index_in_threadgroup]],uint lane [[thread_index_in_simdgroup]]){
+    int row=group.y,j=map[row];if(j<0)return;
+    uint col=group.x*128+t;auto pair=whole[j*(CV/2)+col];old[(slot+row)*(CV/2)+col]=pair;
+    if(col<CK/2)ox[(slot+row)*(CK/2)+col]=x[row*(CK/2)+col];
+    threadgroup float s[4];float v=simd_max(max(float(pair.x),float(pair.y)));
+    if(!lane)s[sg]=v;threadgroup_barrier(mem_flags::mem_threadgroup);
+    if(!sg){float top=simd_max(lane<4?s[lane]:-INFINITY);if(!lane)tops[(slot+row)*(CV/256)+group.x]=bfloat(top);}
+}

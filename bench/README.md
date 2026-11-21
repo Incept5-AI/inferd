@@ -21,3 +21,25 @@ and run discipline, are in [docs/RESULTS.md](../docs/RESULTS.md). For a first ch
 **Lab scripts.** The shell scripts that drove these harnesses on our machines (model paths, ports, external SSDs)
 are not published: they assumed one lab's layout. Every result in `docs/RESULTS.md` names the harness, its arguments and
 the raw file in `results/`, so any number can be reproduced with the harnesses above.
+
+## Cold 48-request configuration for the 40-core M4 Max
+
+The measured setup uses Qwen3.8-27B-4bit, greedy decoding, 48 simultaneous requests,
+a 4,000-token shared prefix and 256 output tokens per request. From the repository
+root, export these settings in the shell that starts the server.
+
+```sh
+export STUDY_METAL="$PWD/engine/kernels/cold48_experiment.metal"
+export STUDY_LOG=108 STUDY_PREFIX=4000 ANE_UNITS=16
+export STEP_TOKENS=2048 PREFILL_STEP=2048 INFERD_MAX_MODEL_LEN=32768
+export EV_HEAD_RING=12 EV_HEAD_DIST=28 EV_HEAD_BLOCK=1
+export SG_EXPAND_GDN=1 EV_FRAG_TABLE="$PWD/bench/cold48-fragments-m4max.txt"
+```
+
+Across four cold fixtures on a 128 GiB M4 Max, the vocabulary cache, expanded
+DeltaNet prefill projection and retiled matrices together delivered 156.72 tok/s
+from request release to last token, up from 152.02 on `cf9afce`. All 192 generated
+completions matched. The retiled matrices consumed an additional 37.81 GiB,
+reducing the automatic KV pool from 63.3 to 25.4 GiB. For the vocabulary-cache-only
+variant, omit the last export in a fresh shell. That variant delivered 154.07 tok/s
+and used about 0.27 GiB for cached scores.

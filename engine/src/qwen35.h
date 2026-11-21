@@ -1518,6 +1518,7 @@ struct Qwen35 {
   }
 
   // MLX's NAX quantized matmul (patched: buffer 11 = the weight row length of a K-slice view); mode 1 adds into C.
+#include "cold48_fragment.h"
   void mlx_qmm(Enc& e, const BufRef& A, const QLinear& W, const BufRef& C, int M, int mode, int bm) {
     char name[48];
     if (!g.nax) {  // no neural accelerators: MLX's simdgroup qmm (tile per sg_tile, 128 threads)
@@ -1579,6 +1580,7 @@ struct Qwen35 {
   void gemm(Enc& e, const BufRef& A, const QLinear& W, const BufRef& C, int M, int mode, bool defer = false) {
     if (!on("gemm")) return;
     flush_split(e);
+    if(M==48 && W.bits==4 && !a8_ready && mode<=1 && ev_run_fragment(e,A,W,C,mode))return;
     // Flipped weights: qmv4/qmv8 (xr), WxA8, and MLX's qmm / our split-K (function constant 40) all flip back.
     if (W.ldk && (M <= qmv_max || W.bits == 16 || a8_ready)) { fprintf(stderr, "K-slice view off the qmm path\n"); exit(1); }
     if (W.ldk) { mlx_qmm(e, A, W, C, M, mode, M <= 32 ? 32 : 64); return; }  // K-slice views: MLX's qmm only
@@ -3035,6 +3037,7 @@ struct Qwen35 {
       }
   }
 
+#include "cold48_certified_head.h"
   void encode_step(id<MTLCommandBuffer> __strong& cb, int T, int S, bool plain_argmax = false) {
     Enc e(g, cb);
     const int H = cfg.hidden;
@@ -3079,6 +3082,7 @@ struct Qwen35 {
       e.k("rmsnorm_gather").buf(0, x).buf(1, final_norm).buf(2, xn).args(3, na).buf(4, out_row);
       e.groups(S3(n_out), S3(1024));
     }
+    if(cert_enabled(T,S,plain_argmax)){cert_project(e,xn,logits,pred,tok.ptr<int>());e.end();return;}
     gemm(e, xn, lm_head, logits, n_out, 0);
     if (cfg.softcap > 0) {  // Glimmer: logits * output_multiplier, then cap * tanh(. / cap)
       struct { int n; float mult, cap; } sa{cfg.vocab, cfg.out_mult, cfg.softcap};

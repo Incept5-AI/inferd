@@ -292,6 +292,7 @@ int main(int argc, char** argv) {
     if(interval && atoi(interval)){m.setup_log(atoi(interval));}
     const char* prefix=getenv("STUDY_PREFIX");
     if(prefix && atoi(prefix)){m.prefix_capacity=atoi(prefix);m.setup_prefix(m.prefix_capacity);}
+    if(const char* table=getenv("EV_FRAG_TABLE"))m.ev_prepare_fragments(table);
     const double after_model = g.dev.currentAllocatedSize / gib - n_blocks * (double)block_bytes / gib;  // less the KV pool
     const double pf8_in_model = m.pf8_bytes / gib;  // copies made at construction (PF8=1 forced)
     Drafter* drafter = nullptr;
