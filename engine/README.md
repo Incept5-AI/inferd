@@ -93,6 +93,9 @@ it) and reports `finish_reason: "stop"`, streaming or not.
 
 **Images:** send them inline (`data:` URLs). Fetching `http(s)` URLs and reading local paths are off by default
 (`INFERD_IMAGE_URLS=1`, `INFERD_IMAGE_FILES=1`; see the trust model below before enabling either).
+The front end keeps up to 256 MiB of recent vision embeddings in RAM per loaded vision tower. A repeat of the
+same decoded pixels reuses these embeddings. Image loading, request limits and preprocessing still apply.
+Set `INFERD_VISION_FEATURE_CACHE_MIB=0` to disable, or set a different size in MiB.
 Logs go to `~/inference/logs/` (`INFERD_LOGS`). `run.sh` requires `MODEL`, checks its arguments and the build, uses
 `PY` (default `python3`), and on a restart stops only the processes it started on that port (pid files; SIGTERM, up
 to `STOP_WAIT`=60 s, then SIGKILL; `run.sh stop PORT` does that alone).

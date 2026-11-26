@@ -465,3 +465,13 @@ tokens (worst gap 0.375) and steps without the split are byte-identical. What hi
 split step, logits checks have no trees, and a comparison of two servers' token streams stops at the first near-tie.
 The check that found it scores every generated token against the reference model, teacher-forced on the stream's own
 output. Not re-run on the M4 Pro or the M6.
+
+### Reuse vision embeddings across chat turns (2026-11-26)
+
+Agent clients can resend the same screenshots with every turn. Text prefix hits do not skip the frontend vision
+tower. A byte-bounded, per-tower LRU of BF16 feature rows uses the existing image identity and runs the tower
+only on misses. Input loading and preprocessing still run. The cache is in RAM and respects the existing image
+request limits.
+
+The synthetic cache tests compare output order against the uncached path, count tower calls for warm and mixed
+batches, and check LRU and oversized entries. See [issue #7](https://github.com/Incept5-AI/inferd/issues/7).

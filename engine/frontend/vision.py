@@ -17,6 +17,7 @@ from transformers import AutoProcessor
 from mlx_vlm.models.qwen3_5 import config as qcfg, language as qlang, vision as qvis
 
 import image_decode  # this directory (serve.py puts it on sys.path)
+from vision_feature_cache import VisionFeatureCache
 
 
 MAX_IMAGE_BYTES = 32 << 20
@@ -166,6 +167,14 @@ class Vision:
                                                       "vocab": self.vocab, "image_token": self.image_token},
                                                      sort_keys=True, default=str).encode()).digest()
 
+        self.feature_cache = VisionFeatureCache(_env_int("INFERD_VISION_FEATURE_CACHE_MIB", 256) << 20)
+
+    def _encode_images(self, pixels, grid):
+        feats, _ = self.model(mx.array(pixels), mx.array(grid))
+        feats = feats.astype(mx.bfloat16)
+        mx.eval(feats)
+        return np.array(feats.view(mx.uint16)).astype("<u2", copy=False)
+
     def prepare(self, messages, tools=None, **template_kw):
         """OpenAI chat messages with image parts -> (tokens, embeds bytes, mrope flat list, rope_delta)."""
         images, msgs, budget = [], [], Budget()
@@ -190,10 +199,6 @@ class Vision:
         ids = np.array(enc["input_ids"])[0].astype(np.int64)
         grid_np = np.array(enc["image_grid_thw"])
         grid = mx.array(grid_np)
-        feats, _ = self.model(mx.array(np.array(enc["pixel_values"])), grid)
-        feats = feats.astype(mx.bfloat16)
-        pos, delta = qlang.LanguageModel.get_rope_index(self.rope, mx.array(ids[None]), grid, None, None)
-        mx.eval(feats, pos, delta)
         # Content-keyed ids for the pad rows: image k's tokens -> image_keys(full identity of image k), so the prefix
         # cache (which matches token ids) tells images apart by their full content, size and preprocessing.
         tokens = ids.copy()
@@ -202,12 +207,18 @@ class Vision:
         if len(grid_np) != len(images):
             raise ValueError(f"processor returned {len(grid_np)} image grids for {len(images)} images")
         start = 0
+        keys = []
         for k, g in enumerate(grid_np):
             n = int(np.prod(g)) // merge
             if start + n > len(pads):
                 raise ValueError("image pad tokens do not match the image grids")
-            tokens[pads[start:start + n]] = image_keys(image_identity(images[k], g, self.prep_digest), n, self.vocab)
+            key = image_identity(images[k], g, self.prep_digest)
+            keys.append(key)
+            tokens[pads[start:start + n]] = image_keys(key, n, self.vocab)
             start += n
-        emb = np.array(feats.view(mx.uint16)).astype("<u2").tobytes()
+
+        emb = self.feature_cache.encode(np.asarray(enc["pixel_values"]), grid_np, keys, merge, self._encode_images)
+        pos, delta = qlang.LanguageModel.get_rope_index(self.rope, mx.array(ids[None]), grid, None, None)
+        mx.eval(pos, delta)
         mrope = np.array(pos)[:, 0, :].T.reshape(-1).astype(int).tolist()  # [L, 3] flattened
         return tokens.tolist(), emb, mrope, int(np.array(delta).reshape(-1)[0])
