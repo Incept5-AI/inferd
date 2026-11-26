@@ -466,12 +466,30 @@ split step, logits checks have no trees, and a comparison of two servers' token 
 The check that found it scores every generated token against the reference model, teacher-forced on the stream's own
 output. Not re-run on the M4 Pro or the M6.
 
-### Reuse vision embeddings across chat turns (2026-11-26)
+### Reuse vision embeddings across chat turns (2026-11-26, updated 2026-11-27)
 
-Agent clients can resend the same screenshots with every turn. Text prefix hits do not skip the frontend vision
-tower. A byte-bounded, per-tower LRU of BF16 feature rows uses the existing image identity and runs the tower
-only on misses. Input loading and preprocessing still run. The cache is in RAM and respects the existing image
-request limits.
+Agent clients can resend the same screenshots with every turn. A per-tower LRU stores BF16 image embeddings
+under the existing pixel and preprocessing identity. For the Qwen3VL processor, the cache also indexes verified
+image file bytes and retains each image grid. A byte-identical hit skips decoding, resizing and the tower.
+Repacked images follow the regular path and can still hit by decoded pixels. Image count, byte and pixel
+limits apply to hits. The source index follows feature eviction and the cache is in RAM.
 
-The synthetic cache tests compare output order against the uncached path, count tower calls for warm and mixed
-batches, and check LRU and oversized entries. See [issue #7](https://github.com/Incept5-AI/inferd/issues/7).
+A side-by-side HTTP test used the Inferd Control patches for inferd v0.4.5 and the same native engine on a
+Mac Studio M5 Ultra (30 CPU cores, 64 GPU cores, 256 GB unified memory). Qwen3.8-Flash-Next-oQ4e-mtp, 1 GiB
+vision LRU, single request, generated PNG screenshots at 640×480 to 1920×1080, at most eight generated tokens.
+The baseline already cached vision features. Both sides ran the tower zero times on all of the measured warm
+requests. Table values are median frontend image preparation over three repeats on each side.
+
+| Warm images | Input tokens | Feature cache (s) | With lookup before decode (s) | Reduction |
+| ---: | ---: | ---: | ---: | ---: |
+| 19 | 17,938 | 1.5002 | 0.0619 | 95.9% |
+| 47 | 41,474 | 3.7495 | 0.1093 | 97.1% |
+
+In the mixed case, 19 cached images were reused and one new image was encoded. A repacked PNG reused the
+same pixels' features via the fallback. A malformed file returned HTTP 400 and the following request recovered.
+The first cold seed after restart finished image preparation and hit the HTTP client deadline waiting for a
+reply. The warm measurements resumed against the populated image cache and exclude that cold request.
+
+Run `test_vision_source_cache.py` from `engine/frontend` to reproduce the deterministic 19/47-image regressions
+without weights. The tests verify identical tokens, embeddings and positions, no decoder/resize/tower calls
+on warm hits, ordered mixed batches and resource limits. See [issue #7](https://github.com/Incept5-AI/inferd/issues/7).

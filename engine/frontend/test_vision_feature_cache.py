@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from vision_feature_cache import VisionFeatureCache
+from vision_feature_cache import CachedImage, VisionFeatureCache
 
 
 class VisionFeatureCacheTests(unittest.TestCase):
@@ -44,6 +44,23 @@ class VisionFeatureCacheTests(unittest.TestCase):
         self.encode(cache, "d")
         self.assertEqual(list(cache.entries), ["a", "d"])
         self.assertEqual(cache.nbytes, 8)
+
+    def test_source_digest_follows_feature_eviction(self):
+        cache = VisionFeatureCache(12)
+        self.encode(cache, "a", "b")
+        first = CachedImage("a", 16, (1, 2, 2))
+        second = CachedImage("b", 32, (1, 2, 4))
+        cache.remember_source(b"first", first)
+        cache.remember_source(b"second", second)
+        cache.remember_source(b"alternate", first)
+        self.assertIsNone(cache.find_source(b"first"))
+        self.assertEqual(cache.find_source(b"alternate"), first)
+        self.assertEqual(cache.find_source(b"second"), second)
+        self.encode(cache, "d")
+        self.assertIsNone(cache.find_source(b"alternate"))
+        cache.remember_source(b"evicted", first)
+        self.assertIsNone(cache.find_source(b"evicted"))
+        self.assertEqual(cache.find_source(b"second"), second)
 
     def test_oversize_feature_does_not_evict_reusable_features(self):
         cache = VisionFeatureCache(12)

@@ -57,7 +57,8 @@ cp -p tools/models.zsh tools/release_gate.sh tools/ref_logits.py tools/tie_check
 mkdir -p $D/tools/corpus && cp -p ../docs/ARCHITECTURE.md ../docs/RESULTS.md ../docs/EXPERIMENTS.md $D/tools/corpus/  # ref_logits.py's long prompts
 cp -p frontend/serve.py frontend/structured.py frontend/vision.py frontend/vision_feature_cache.py frontend/image_decode.py $D/frontend/
 cp -p frontend/test_hardening.py frontend/test_structured.py frontend/test_tools.py frontend/test_stream.py \
-  frontend/test_image_decode.py frontend/test_vision.py $D/frontend/  # run by release_gate.sh
+  frontend/test_image_decode.py frontend/test_vision_feature_cache.py frontend/test_vision.py \
+  frontend/test_vision_source_cache.py $D/frontend/  # run by release_gate.sh
 cp -p ../LICENSE $D/LICENSE
 cp -p third_party/mlx/LICENSE third_party/mlx/README $D/third_party/mlx/
 {
