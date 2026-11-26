@@ -50,7 +50,7 @@ step "host: spill" ./build/spill_test
 step "host: weights" ./build/weights_test
 step "gpu: speculative sampler = the sampling contract" ./build/spec_sample_test
 step "gpu: sorted-MoE chain (moe_sort, moe_gather, gathered qmm routed on this GPU) = fp64" ./build/gqmm_test
-for t in test_hardening test_structured test_tools test_stream test_image_decode test_vision; do
+for t in test_hardening test_structured test_tools test_stream test_image_decode test_vision_feature_cache test_vision test_vision_source_cache; do
   step "front end: $t" zsh -c "cd frontend && $PY $t.py"
 done
 step "logits gate fails on bad logits (fixtures)" $PY tools/test_ref_logits.py

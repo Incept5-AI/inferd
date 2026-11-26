@@ -5,6 +5,7 @@
 #   embeds  - bf16 [n_image_tokens, hidden] image features in prompt order,
 #   mrope   - interleaved M-RoPE positions [L, 3] (t, h, w), and rope_delta for the generated tokens.
 import base64, glob, hashlib, io, json, types, urllib.request
+from copy import copy
 
 import mlx.core as mx
 # Keep MLX's buffer cache small: the vision tower shares the GPU with inferd, whose KV pool is sized to the budget
@@ -17,6 +18,7 @@ from transformers import AutoProcessor
 from mlx_vlm.models.qwen3_5 import config as qcfg, language as qlang, vision as qvis
 
 import image_decode  # this directory (serve.py puts it on sys.path)
+from vision_feature_cache import CachedImage, VisionFeatureCache
 
 
 MAX_IMAGE_BYTES = 32 << 20
@@ -70,7 +72,7 @@ def _decode_data_url(url, limit):
         raise ValueError(f"invalid base64 image data: {e}") from None
 
 
-def load_image(url, budget=None):
+def _read_image_data(url, budget):
     """Inline data: URLs always; http(s) only with INFERD_IMAGE_URLS=1; local paths only with INFERD_IMAGE_FILES=1.
     Both off by default: a caller-supplied path or URL let the server read local files or reach internal hosts
     (Codex review F12). `budget` (a Budget) enforces the per-request totals."""
@@ -97,6 +99,10 @@ def load_image(url, budget=None):
     if len(data) > limit:
         raise ValueError(f"image larger than {limit >> 20} MiB" if limit == MAX_IMAGE_BYTES else
                          f"images exceed the per-request budget of {budget.max_bytes >> 20} MiB")
+    return data
+
+
+def _decode_image(data, budget):
     # Decoded only as PNG / JPEG / WebP / GIF, in a killable child process by default (image_decode.py; Codex review
     # 2026-11-04, R01): the data: URL's media type does not restrict the decoder, the allowlist does.
     remaining = None if budget is None else budget.max_pixels - budget.pixels
@@ -110,6 +116,10 @@ def load_image(url, budget=None):
     if budget is not None:
         budget.add(len(data), w * h)
     return img
+
+
+def load_image(url, budget=None):
+    return _decode_image(_read_image_data(url, budget), budget)
 
 
 def image_keys(digest, n, vocab):
@@ -166,34 +176,80 @@ class Vision:
                                                       "vocab": self.vocab, "image_token": self.image_token},
                                                      sort_keys=True, default=str).encode()).digest()
 
+        self.feature_cache = VisionFeatureCache(_env_int("INFERD_VISION_FEATURE_CACHE_MIB", 256) << 20)
+
+    def _encode_images(self, pixels, grid):
+        feats, _ = self.model(mx.array(pixels), mx.array(grid))
+        feats = feats.astype(mx.bfloat16)
+        mx.eval(feats)
+        return np.array(feats.view(mx.uint16)).astype("<u2", copy=False)
+
+    def _tokenize_with_cached_grids(self, text, images, records, prepared):
+        """Use Qwen's normal text tokenization with the original image grids."""
+        proc = copy(self.proc)
+        # The layout step expects an image at each position. A reused image's
+        # placeholder never reaches the image processor.
+        placeholder = Image.new("RGB", (1, 1))
+        inputs = [img if img is not None else placeholder for img in images]
+
+        def process_missing(_images, **kwargs):
+            grids = [record.grid if record is not None else None for record in records]
+            result = {}
+            if prepared:
+                result = dict(self.proc.image_processor([images[i] for i in prepared], **kwargs))
+                for i, grid in zip(prepared, result["image_grid_thw"], strict=True):
+                    grids[i] = grid
+            result["image_grid_thw"] = np.asarray(grids, dtype=np.int64)
+            replacements = [proc.replace_image_token(result, i, **kwargs) for i in range(len(grids))]
+            return result, replacements
+
+        proc._process_images = process_missing
+        return proc(text=[text], images=inputs, return_tensors="np")
+
     def prepare(self, messages, tools=None, **template_kw):
         """OpenAI chat messages with image parts -> (tokens, embeds bytes, mrope flat list, rope_delta)."""
-        images, msgs, budget = [], [], Budget()
+        images, sources, records, msgs, budget = [], [], [], [], Budget()
+        # Use the Qwen3VL image hook only. Other processors keep their original preprocessing.
+        cls = type(self.proc)
+        reuse = (self.feature_cache.max_bytes > 0
+                 and cls.__module__ == "transformers.models.qwen3_vl.processing_qwen3_vl"
+                 and cls.__name__ == "Qwen3VLProcessor"
+                 and callable(getattr(self.proc, "_process_images", None)))
         for m in messages:
             c = m.get("content")
             if isinstance(c, list):
                 parts = []
                 for p in c:
                     if p.get("type") == "image_url":
-                        u = p["image_url"]["url"] if isinstance(p["image_url"], dict) else p["image_url"]
-                        images.append(load_image(u, budget))
-                        parts.append({"type": "image"})
+                        url = p["image_url"]["url"] if isinstance(p["image_url"], dict) else p["image_url"]
                     elif p.get("type") == "image":
-                        images.append(load_image(p.get("image") or p.get("url"), budget))
-                        parts.append({"type": "image"})
+                        url = p.get("image") or p.get("url")
                     else:
                         parts.append(p)
+                        continue
+                    data = _read_image_data(url, budget)
+                    source = hashlib.sha256(data).digest() if reuse else None
+                    record = self.feature_cache.find_source(source) if source is not None else None
+                    if record is None:
+                        images.append(_decode_image(data, budget))
+                    else:
+                        budget.add(len(data), record.pixels)
+                        images.append(None)
+                    sources.append(source)
+                    records.append(record)
+                    parts.append({"type": "image"})
                 m = dict(m, content=parts)
             msgs.append(m)
         text = self.proc.apply_chat_template(msgs, tools=tools, add_generation_prompt=True, tokenize=False, **template_kw)
-        enc = self.proc(text=[text], images=images, return_tensors="np")
+        prepared = [i for i, img in enumerate(images) if img is not None]
+        early_hits = len(images) - len(prepared)
+        if early_hits:
+            enc = self._tokenize_with_cached_grids(text, images, records, prepared)
+        else:
+            enc = self.proc(text=[text], images=images, return_tensors="np")
         ids = np.array(enc["input_ids"])[0].astype(np.int64)
         grid_np = np.array(enc["image_grid_thw"])
         grid = mx.array(grid_np)
-        feats, _ = self.model(mx.array(np.array(enc["pixel_values"])), grid)
-        feats = feats.astype(mx.bfloat16)
-        pos, delta = qlang.LanguageModel.get_rope_index(self.rope, mx.array(ids[None]), grid, None, None)
-        mx.eval(feats, pos, delta)
         # Content-keyed ids for the pad rows: image k's tokens -> image_keys(full identity of image k), so the prefix
         # cache (which matches token ids) tells images apart by their full content, size and preprocessing.
         tokens = ids.copy()
@@ -202,12 +258,30 @@ class Vision:
         if len(grid_np) != len(images):
             raise ValueError(f"processor returned {len(grid_np)} image grids for {len(images)} images")
         start = 0
+        keys = []
         for k, g in enumerate(grid_np):
             n = int(np.prod(g)) // merge
             if start + n > len(pads):
                 raise ValueError("image pad tokens do not match the image grids")
-            tokens[pads[start:start + n]] = image_keys(image_identity(images[k], g, self.prep_digest), n, self.vocab)
+            record = records[k]
+            if record is None:
+                key = image_identity(images[k], g, self.prep_digest)
+                if sources[k] is not None:
+                    width, height = images[k].size
+                    records[k] = CachedImage(key, width * height, tuple(map(int, g)))
+            else:
+                key = record.key
+            keys.append(key)
+            tokens[pads[start:start + n]] = image_keys(key, n, self.vocab)
             start += n
-        emb = np.array(feats.view(mx.uint16)).astype("<u2").tobytes()
+
+        pixels = np.asarray(enc["pixel_values"]) if prepared else np.empty(0)
+        emb = self.feature_cache.encode(pixels, grid_np, keys, merge, self._encode_images,
+                                        prepared=prepared if early_hits else None)
+        pos, delta = qlang.LanguageModel.get_rope_index(self.rope, mx.array(ids[None]), grid, None, None)
+        mx.eval(pos, delta)
         mrope = np.array(pos)[:, 0, :].T.reshape(-1).astype(int).tolist()  # [L, 3] flattened
+        for index in prepared:
+            if sources[index] is not None:
+                self.feature_cache.remember_source(sources[index], records[index])
         return tokens.tolist(), emb, mrope, int(np.array(delta).reshape(-1)[0])
